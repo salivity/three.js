@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What is Three.js RenderPass and Why Use It First? - three.js</title>
+    <meta name="description" content="In Three.js post-processing, the EffectComposer manages a chain of visual effects to enhance a 3D scene. This article explains the fundamental role of the RenderPass within this pipeline, detailing how it captures your initial 3D scene and why it must al">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/what-is-three-js-renderpass-and-why-use-it-first">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="What is Three.js RenderPass and Why Use It First? - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/what-is-three-js-renderpass-and-why-use-it-first" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js post-processing, the EffectComposer manages a chain of visual effects to enhance a 3D scene. This article explains the fundamental role of the RenderPass within this pipeline, detailing how it captures your initial 3D scene and why it must al" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="what-is-three.js-renderpass-and-why-use-it-first">What is
+Three.js RenderPass and Why Use It First?</h1>
+<p>In Three.js post-processing, the <code>EffectComposer</code> manages
+a chain of visual effects to enhance a 3D scene. This article explains
+the fundamental role of the <code>RenderPass</code> within this
+pipeline, detailing how it captures your initial 3D scene and why it
+must almost always serve as the foundation-level first pass before any
+shaders, filters, or effects can be applied.</p>
+<h2 id="the-purpose-of-the-renderpass">The Purpose of the
+RenderPass</h2>
+<p>In a standard Three.js application, rendering is done directly to the
+screen canvas using <code>WebGLRenderer.render(scene, camera)</code>.
+However, when you want to apply post-processing effects—such as bloom,
+depth of field, film grain, or color correction—you cannot render
+directly to the screen. Instead, you must use an
+<code>EffectComposer</code>.</p>
+<p>The <code>RenderPass</code> acts as the bridge between your standard
+3D scene and the post-processing pipeline. Its primary purpose is
+to:</p>
+<ol type="1">
+<li><strong>Render the Scene to a Buffer:</strong> Instead of drawing
+your 3D objects directly to the screen, <code>RenderPass</code> renders
+your specified <code>Scene</code> using your specified
+<code>Camera</code> into an off-screen memory buffer (a render
+target).</li>
+<li><strong>Provide the Base Texture:</strong> By saving the rendered
+scene as a texture, <code>RenderPass</code> provides the raw visual data
+that subsequent effect passes need to do their jobs.</li>
+</ol>
+<p>Without a <code>RenderPass</code>, the <code>EffectComposer</code>
+has no image to manipulate.</p>
+<h2 id="why-renderpass-is-almost-always-the-first-pass">Why RenderPass
+is Almost Always the First Pass</h2>
+<p>The <code>EffectComposer</code> processes visual effects sequentially
+in a chain. Each “pass” in the composer takes the output of the previous
+pass, applies its own shader or effect, and passes the result to the
+next link in the chain.</p>
+<p>Because of this linear dependency, <code>RenderPass</code> must be
+the first pass for the following reasons:</p>
+<h3 id="it-generates-the-raw-material">1. It Generates the Raw
+Material</h3>
+<p>Post-processing effects are essentially 2D image filters. A bloom
+filter needs to know where the bright pixels are in your scene, and a
+depth-of-field effect needs the depth information of your 3D geometry.
+If you do not put <code>RenderPass</code> first, subsequent passes will
+have an empty buffer (a blank canvas) to work with, resulting in a black
+screen or errors.</p>
+<h3 id="sequential-pipeline-logic">2. Sequential Pipeline Logic</h3>
+<p>Consider the logical flow of a post-processing pipeline: *
+<strong>Pass 1 (RenderPass):</strong> Draw the 3D scene (output: raw 2D
+image). * <strong>Pass 2 (UnrealBloomPass):</strong> Take the raw image,
+find bright areas, blur them (output: glowing image). * <strong>Pass 3
+(ShaderPass / Vignette):</strong> Take the glowing image, darken the
+corners (output: final styled image).</p>
+<p>If you were to place a bloom pass before the <code>RenderPass</code>,
+the bloom pass would attempt to blur a non-existent image, and then the
+<code>RenderPass</code> would simply overwrite whatever the bloom pass
+tried to do with the fresh, un-effected 3D scene anyway.</p>
+<h2 id="are-there-any-exceptions">Are There Any Exceptions?</h2>
+<p>While <code>RenderPass</code> is the first pass in 99% of use cases,
+highly advanced rendering setups might differ. For example, if you are
+generating a scene purely from procedurally generated 2D shaders, or if
+you are feeding a pre-rendered video texture directly into the composer
+as the starting point, you might use a <code>TexturePass</code> or a
+custom shader pass as your first step instead of a standard 3D
+<code>RenderPass</code>.</p>
+<p>However, for any standard 3D application utilizing a camera and 3D
+geometry, the <code>RenderPass</code> is the indispensable starting
+block of the post-processing chain.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

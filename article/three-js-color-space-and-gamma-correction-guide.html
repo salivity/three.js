@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Color Space and Gamma Correction Guide - three.js</title>
+    <meta name="description" content="This article provides a clear overview of gamma correction and explains how modern Three.js handles output color spaces. You will learn the fundamental physics behind linear and non-linear color perception, why gamma correction is necessary for realistic">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-color-space-and-gamma-correction-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Color Space and Gamma Correction Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-color-space-and-gamma-correction-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a clear overview of gamma correction and explains how modern Three.js handles output color spaces. You will learn the fundamental physics behind linear and non-linear color perception, why gamma correction is necessary for realistic" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-color-space-and-gamma-correction-guide">Three.js Color
+Space and Gamma Correction Guide</h1>
+<p>This article provides a clear overview of gamma correction and
+explains how modern Three.js handles output color spaces. You will learn
+the fundamental physics behind linear and non-linear color perception,
+why gamma correction is necessary for realistic 3D rendering, and how to
+correctly configure color spaces for renderers and textures in recent
+versions of Three.js.</p>
+<h2 id="understanding-gamma-correction">Understanding Gamma
+Correction</h2>
+<p>Computer monitors display colors non-linearly, meaning doubling the
+input voltage does not double the physical brightness of the screen. At
+the same time, human vision is highly sensitive to changes in dark tones
+but less sensitive to changes in bright tones. To account for this,
+digital images are encoded in a non-linear format (usually sRGB) to
+allocate more data to the dark tones humans can actually perceive.</p>
+<p>However, 3D engines must perform lighting calculations (shading,
+reflections, and blending) in a mathematically accurate “linear” color
+space where light behaves naturally (double the light energy equals
+double the physical brightness).</p>
+<p>Gamma correction is the process of translating between these spaces:
+1. <strong>Decoding:</strong> Non-linear input textures (like sRGB color
+maps) are converted to linear space so the renderer can perform accurate
+lighting calculations. 2. <strong>Encoding (Gamma Correction):</strong>
+The final linear render is converted back to sRGB space before being
+sent to the monitor, ensuring the output looks correct to the viewer.
+Without this final correction, renders often appear washed out, overly
+dark, or incorrectly saturated.</p>
+<h2 id="color-space-management-in-modern-three.js">Color Space
+Management in Modern Three.js</h2>
+<p>In older versions of Three.js, developers managed encoding using
+<code>renderer.outputEncoding</code>. In modern Three.js (version r152
+and later), the API has been streamlined to use standardized color space
+terminology.</p>
+<h3 id="the-renderers-output-color-space">1. The Renderer’s Output Color
+Space</h3>
+<p>By default, modern Three.js configures the WebGL renderer to output
+to the sRGB color space. This means gamma correction is automatically
+applied to the final image. The renderer property used to control this
+is <code>outputColorSpace</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">// This is set to THREE.SRGBColorSpace by default in modern versions</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span> </span></code></pre></div>
+<p>If you are rendering to a post-processing pipeline that expects
+linear input, you may temporarily set this to
+<code>THREE.LinearSRGBColorSpace</code>, but the final output shown on
+screen should almost always be <code>THREE.SRGBColorSpace</code>.</p>
+<h3 id="texture-color-spaces">2. Texture Color Spaces</h3>
+<p>To ensure the renderer does calculations in linear space, you must
+tell Three.js how to interpret incoming textures.</p>
+<ul>
+<li><p><strong>Color/Diffuse Textures:</strong> Textures that contain
+visible colors (like <code>.map</code> or <code>.emissiveMap</code>) are
+created in sRGB space. You must explicitly set their color space so
+Three.js can decode them to linear space for rendering:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colorTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;color_map.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>colorTexture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Data Textures:</strong> Textures that store numerical
+data rather than visual colors (such as <code>.normalMap</code>,
+<code>.roughnessMap</code>, <code>.metalnessMap</code>, or
+<code>.aoMap</code>) must not be gamma-corrected. They should remain in
+linear space:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;normal_map.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>normalTexture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NoColorSpace</span><span class="op">;</span> <span class="co">// default value</span></span></code></pre></div></li>
+</ul>
+<p>By properly defining the input color spaces of your textures and
+letting the renderer handle the output color space, modern Three.js
+guarantees physically accurate lighting, consistent colors, and visually
+correct 3D scenes.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

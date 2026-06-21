@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadratic vs Cubic Bezier Curves in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, QuadraticBezierCurve3 and CubicBezierCurve3 are two classes used to create smooth, parametric curves in 3D space. The fundamental mathematical difference between them lies in the degree of their polynomial equations, which is directly determ">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/quadratic-vs-cubic-bezier-curves-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Quadratic vs Cubic Bezier Curves in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/quadratic-vs-cubic-bezier-curves-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, QuadraticBezierCurve3 and CubicBezierCurve3 are two classes used to create smooth, parametric curves in 3D space. The fundamental mathematical difference between them lies in the degree of their polynomial equations, which is directly determ" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="quadratic-vs-cubic-bezier-curves-in-three.js">Quadratic vs Cubic
+Bezier Curves in Three.js</h1>
+<p>In Three.js, <code>QuadraticBezierCurve3</code> and
+<code>CubicBezierCurve3</code> are two classes used to create smooth,
+parametric curves in 3D space. The fundamental mathematical difference
+between them lies in the degree of their polynomial equations, which is
+directly determined by the number of control points used to define the
+curve’s shape and flexibility.</p>
+<h2 id="the-core-mathematical-differences">The Core Mathematical
+Differences</h2>
+<p>Both curves are defined parametrically by an interpolating variable
+<span class="math inline">\(t\)</span>, where <span
+class="math inline">\(t\)</span> ranges from <span
+class="math inline">\(0\)</span> (the start of the curve) to <span
+class="math inline">\(1\)</span> (the end of the curve). However, they
+scale differently in terms of complexity and control.</p>
+<h3 id="quadraticbeziercurve3-degree-2">1. QuadraticBezierCurve3 (Degree
+2)</h3>
+<p>A quadratic Bezier curve is defined by <strong>three points</strong>:
+* <strong><span class="math inline">\(P_0\)</span></strong>: Start point
+* <strong><span class="math inline">\(P_1\)</span></strong>: Single
+control point (determines the bend) * <strong><span
+class="math inline">\(P_2\)</span></strong>: End point</p>
+<h4 id="the-equation">The Equation</h4>
+<p>The mathematical formula for a quadratic Bezier curve at any point
+<span class="math inline">\(t\)</span> is:</p>
+<p><span class="math display">\[B(t) = (1 - t)^2 P_0 + 2(1 - t)t P_1 +
+t^2 P_2, \quad t \in [0, 1]\]</span></p>
+<h4 id="characteristics">Characteristics</h4>
+<ul>
+<li><strong>Degree:</strong> 2 (quadratic polynomial).</li>
+<li><strong>Shape limitations:</strong> Because it is a second-degree
+polynomial, a single quadratic Bezier curve cannot contain an inflection
+point. This means the curve cannot change the direction of its
+curvature; it can only bend in one direction (forming a simple
+C-shape).</li>
+</ul>
+<hr />
+<h3 id="cubicbeziercurve3-degree-3">2. CubicBezierCurve3 (Degree 3)</h3>
+<p>A cubic Bezier curve is defined by <strong>four points</strong>: *
+<strong><span class="math inline">\(P_0\)</span></strong>: Start point *
+<strong><span class="math inline">\(P_1\)</span></strong>: First control
+point (determines the departure tangent) * <strong><span
+class="math inline">\(P_2\)</span></strong>: Second control point
+(determines the arrival tangent) * <strong><span
+class="math inline">\(P_3\)</span></strong>: End point</p>
+<h4 id="the-equation-1">The Equation</h4>
+<p>The mathematical formula for a cubic Bezier curve at any point <span
+class="math inline">\(t\)</span> is:</p>
+<p><span class="math display">\[B(t) = (1 - t)^3 P_0 + 3(1 - t)^2 t P_1
++ 3(1 - t) t^2 P_2 + t^3 P_3, \quad t \in [0, 1]\]</span></p>
+<h4 id="characteristics-1">Characteristics</h4>
+<ul>
+<li><strong>Degree:</strong> 3 (cubic polynomial).</li>
+<li><strong>Shape limitations:</strong> Because it is a third-degree
+polynomial, it can have an inflection point where the curvature changes
+direction. This allows a single cubic Bezier curve to form “S” shapes,
+loops, and more complex paths.</li>
+</ul>
+<hr />
+<h2 id="direct-comparison">Direct Comparison</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">QuadraticBezierCurve3</th>
+<th style="text-align: left;">CubicBezierCurve3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Control Points</strong></td>
+<td style="text-align: left;">3 (<span class="math inline">\(P_0, P_1,
+P_2\)</span>)</td>
+<td style="text-align: left;">4 (<span class="math inline">\(P_0, P_1,
+P_2, P_3\)</span>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Polynomial Degree</strong></td>
+<td style="text-align: left;">2nd Degree (Quadratic)</td>
+<td style="text-align: left;">3rd Degree (Cubic)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Inflection Points</strong></td>
+<td style="text-align: left;">0 (Cannot change curvature direction)</td>
+<td style="text-align: left;">Up to 1 (Can form S-curves)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Three.js Constructor</strong></td>
+<td
+style="text-align: left;"><code>new THREE.QuadraticBezierCurve3(v0, v1, v2)</code></td>
+<td
+style="text-align: left;"><code>new THREE.CubicBezierCurve3(v0, v1, v2, v3)</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Computational Cost</strong></td>
+<td style="text-align: left;">Lower (fewer multiplications)</td>
+<td style="text-align: left;">Higher (more complex polynomial
+evaluation)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="summary-of-usage-in-three.js">Summary of Usage in Three.js</h2>
+<p>When choosing between the two in Three.js, use
+<code>QuadraticBezierCurve3</code> for simpler, gently arched paths
+(like jump arcs or simple cables) to save on performance. Use
+<code>CubicBezierCurve3</code> when you need complex pathing, precise
+tangent alignment at both ends, or “S” shaped transitions.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshDepthMaterial vs MeshDistanceMaterial in Three.js - three.js</title>
+    <meta name="description" content="This article explores the differences between MeshDepthMaterial and MeshDistanceMaterial in Three.js, focusing on their distinct roles in shadow mapping. You will learn how these materials calculate depth, which light types utilize them, and how to imple">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/meshdepthmaterial-vs-meshdistancematerial-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MeshDepthMaterial vs MeshDistanceMaterial in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/meshdepthmaterial-vs-meshdistancematerial-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the differences between MeshDepthMaterial and MeshDistanceMaterial in Three.js, focusing on their distinct roles in shadow mapping. You will learn how these materials calculate depth, which light types utilize them, and how to imple" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="meshdepthmaterial-vs-meshdistancematerial-in-three.js">MeshDepthMaterial
+vs MeshDistanceMaterial in Three.js</h1>
+<p>This article explores the differences between
+<code>MeshDepthMaterial</code> and <code>MeshDistanceMaterial</code> in
+Three.js, focusing on their distinct roles in shadow mapping. You will
+learn how these materials calculate depth, which light types utilize
+them, and how to implement them to achieve accurate shadow rendering in
+your 3D scenes.</p>
+<h2 id="the-core-difference-in-depth-calculation">The Core Difference in
+Depth Calculation</h2>
+<p>The fundamental difference between these two materials lies in how
+they measure and record distance from the light source to the object’s
+surface.</p>
+<ul>
+<li><strong>MeshDepthMaterial</strong> renders an object by depth based
+on the camera’s near and far planes. It measures depth along the
+camera’s local Z-axis (planar depth). The closer an object is to the
+camera, the whiter (or blacker, depending on configuration) it
+appears.</li>
+<li><strong>MeshDistanceMaterial</strong> renders an object’s distance
+relative to a specific 3D point in space. Instead of using planar
+Z-depth, it calculates the actual Euclidean distance (radial distance)
+from the origin of a point light source to the fragment.</li>
+</ul>
+<h2 id="how-three.js-uses-them-for-shadow-mapping">How Three.js Uses
+Them for Shadow Mapping</h2>
+<p>Three.js automatically selects between these two materials behind the
+scenes when generating shadow maps, depending on the type of light
+source casting the shadow.</p>
+<h3 id="orthographic-and-perspective-shadows-meshdepthmaterial">1.
+Orthographic and Perspective Shadows (MeshDepthMaterial)</h3>
+<p>Directional lights and spotlights project shadows from a single
+direction. To generate shadow maps for these lights, Three.js uses a
+standard camera (orthographic for <code>DirectionalLight</code>,
+perspective for <code>SpotLight</code>) and renders the scene’s depth
+using <strong>MeshDepthMaterial</strong>.</p>
+<p>Because these cameras look in a single direction, measuring the
+linear Z-depth along the camera’s view axis is sufficient to determine
+which objects are in front of others.</p>
+<h3 id="omnidirectional-shadows-meshdistancematerial">2. Omnidirectional
+Shadows (MeshDistanceMaterial)</h3>
+<p>Point lights cast shadows in all directions (360 degrees). To achieve
+this, Three.js uses a cube map consisting of six virtual cameras
+pointing in different directions.</p>
+<p>Using standard planar Z-depth (<code>MeshDepthMaterial</code>) for a
+point light would cause severe distortion at the edges of the six camera
+frustums, resulting in mismatched shadow seams. To prevent this,
+Three.js uses <strong>MeshDistanceMaterial</strong> for point light
+shadow maps. This material records the absolute radial distance from the
+center of the light source, ensuring seamless, spherically accurate
+shadows across the entire cubemap.</p>
+<h2 id="custom-shadow-materials">Custom Shadow Materials</h2>
+<p>When you write custom shaders or use textures with alpha maps
+(transparency), the default shadow map generation might not render
+shadows correctly. In these cases, you must manually assign custom
+shadow materials to your meshes:</p>
+<ul>
+<li>Use <code>mesh.customDepthMaterial</code> when working with
+directional or spot lights.</li>
+<li>Use <code>mesh.customDistanceMaterial</code> when working with point
+lights.</li>
+</ul>
+<p>By assigning the correct material type to these properties, you
+ensure that custom vertex displacements or alpha-cutout textures are
+respected during the shadow map rendering pass.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

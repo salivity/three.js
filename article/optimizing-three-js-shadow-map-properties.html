@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizing Three.js Shadow Map Properties - three.js</title>
+    <meta name="description" content="This article provides a practical guide on optimizing Three.js shadows by configuring crucial shadow map properties like mapSize, camera frustum boundaries, and bias. Learning how to adjust these settings allows you to strike the perfect balance between">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/optimizing-three-js-shadow-map-properties">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimizing Three.js Shadow Map Properties - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/optimizing-three-js-shadow-map-properties" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide on optimizing Three.js shadows by configuring crucial shadow map properties like mapSize, camera frustum boundaries, and bias. Learning how to adjust these settings allows you to strike the perfect balance between" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="optimizing-three.js-shadow-map-properties">Optimizing Three.js
+Shadow Map Properties</h1>
+<p>This article provides a practical guide on optimizing Three.js
+shadows by configuring crucial shadow map properties like
+<code>mapSize</code>, camera frustum boundaries, and bias. Learning how
+to adjust these settings allows you to strike the perfect balance
+between high-fidelity visual rendering and smooth frame rates in your
+WebGL applications.</p>
+<h3 id="understanding-shadow.mapsize">Understanding shadow.mapSize</h3>
+<p>The <code>mapSize</code> property (specifically
+<code>shadow.mapSize.width</code> and
+<code>shadow.mapSize.height</code>) defines the resolution of the depth
+map texture used to calculate shadows. By default, Three.js initialized
+lights use a 512x512 pixel texture.</p>
+<ul>
+<li><strong>Performance Impact:</strong> Increasing this value (e.g., to
+1024, 2048, or 4096) creates sharper, highly detailed shadows but
+heavily consumes GPU memory and fill rate. Decreasing it (e.g., to 256)
+drastically improves performance at the cost of pixelated, blocky shadow
+edges.</li>
+<li><strong>Best Practice:</strong> Always use powers of two for map
+dimensions. For mobile optimization, keep map sizes at 512 or lower,
+while desktop applications can typically handle 1024 or 2048.</li>
+</ul>
+<h3 id="tightening-the-shadow-camera-frustum">Tightening the Shadow
+Camera Frustum</h3>
+<p>Shadows in Three.js are rendered from the perspective of a hidden
+camera attached to the light source
+(<code>light.shadow.camera</code>).</p>
+<ul>
+<li><strong>The Problem:</strong> If the shadow camera’s frustum
+(defined by <code>top</code>, <code>bottom</code>, <code>left</code>,
+<code>right</code>, <code>near</code>, and <code>far</code> properties)
+is set too wide, the shadow map resolution is stretched over an
+unnecessarily large area. This results in blurry, low-quality shadows
+even with a high <code>mapSize</code>.</li>
+<li><strong>The Optimization:</strong> Shrink the shadow camera’s
+boundaries so they tightly enclose only the objects in your scene that
+actually cast and receive shadows. Maximizing the coverage of the
+frustum ensures that every pixel of your shadow map is utilized
+efficiently.</li>
+</ul>
+<h3 id="eliminating-artifacts-with-bias-and-normalbias">Eliminating
+Artifacts with bias and normalBias</h3>
+<p>When depth calculations are slightly imprecise, virtual scenes suffer
+from “shadow acne”—an unwanted pattern of dark lines or pixel grids
+appearing across surfaces.</p>
+<ul>
+<li><strong>shadow.bias:</strong> This property offsets the depth query
+slightly. A very small positive value (e.g., <code>0.0001</code>) can
+eliminate shadow acne. However, setting it too high causes
+“peter-panning,” where shadows appear detached and float away from the
+base of the objects.</li>
+<li><strong>shadow.normalBias:</strong> This property offsets the shadow
+position along the surface normals of the geometry. It is highly
+effective at resolving shadow acne on curved surfaces without causing
+the floating effect associated with standard bias.</li>
+</ul>
+<h3 id="softening-shadows-with-shadow.radius">Softening Shadows with
+shadow.radius</h3>
+<p>If you are utilizing shadow map types that support custom filtering,
+such as <code>PCFShadowMap</code> or <code>PCFSoftShadowMap</code> on
+the <code>WebGLRenderer</code>, you can utilize the
+<code>shadow.radius</code> property.</p>
+<ul>
+<li><strong>How it works:</strong> Increasing the <code>radius</code>
+(default is <code>1</code>) blurs the edges of the shadow map. This
+allows you to simulate realistic, soft shadows.</li>
+<li><strong>Optimization Benefit:</strong> Using a low
+<code>mapSize</code> combined with a slightly higher
+<code>shadow.radius</code> can simulate smooth, expensive-looking
+shadows at a fraction of the performance cost of rendering a
+high-resolution shadow map.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

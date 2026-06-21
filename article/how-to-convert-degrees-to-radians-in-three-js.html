@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Convert Degrees to Radians in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, 3D rotations are calculated using radians rather than degrees, which can be unintuitive for developers accustomed to standard 360-degree measurements. This article explains how the Three.js MathUtils module simplifies this process by providi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-convert-degrees-to-radians-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Convert Degrees to Radians in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-convert-degrees-to-radians-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, 3D rotations are calculated using radians rather than degrees, which can be unintuitive for developers accustomed to standard 360-degree measurements. This article explains how the Three.js MathUtils module simplifies this process by providi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-convert-degrees-to-radians-in-three.js">How to Convert
+Degrees to Radians in Three.js</h1>
+<p>In Three.js, 3D rotations are calculated using radians rather than
+degrees, which can be unintuitive for developers accustomed to standard
+360-degree measurements. This article explains how the Three.js
+<code>MathUtils</code> module simplifies this process by providing the
+built-in helper functions <code>degToRad</code> and
+<code>radToDeg</code> to perform seamless angle conversions in your 3D
+applications.</p>
+<h2 id="why-three.js-uses-radians">Why Three.js Uses Radians</h2>
+<p>By default, the 3D graphics engine of Three.js uses radians for
+rotation properties on objects like meshes, cameras, and lights (e.g.,
+<code>mesh.rotation.x</code>). One full rotation of a circle is equal to
+360 degrees, which is equivalent to <span
+class="math inline">\(2\pi\)</span> radians (approximately 6.28318).</p>
+<p>Because writing math equations using fractions of <span
+class="math inline">\(\pi\)</span> can be difficult to read and
+maintain, the <code>MathUtils</code> namespace provides utility
+functions to bridge the gap between human-readable degrees and
+machine-ready radians.</p>
+<h2 id="converting-degrees-to-radians-with-degtorad">Converting Degrees
+to Radians with degToRad</h2>
+<p>The <code>THREE.MathUtils.degToRad()</code> method converts any
+degree value into its equivalent radian value.</p>
+<h3 id="syntax">Syntax</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>( degrees )<span class="op">;</span></span></code></pre></div>
+<h3 id="code-example">Code Example</h3>
+<p>Instead of manually calculating radians using the formula
+<code>degrees * (Math.PI / 180)</code>, you can pass your degree value
+directly into the utility function:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a basic mesh</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ff00</span> })<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cube <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Rotate the cube 45 degrees around the Y-axis</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>cube<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">45</span>)<span class="op">;</span></span></code></pre></div>
+<h2 id="converting-radians-to-degrees-with-radtodeg">Converting Radians
+to Degrees with radToDeg</h2>
+<p>If you are reading rotation data from a Three.js object and need to
+display it in a user interface or output it to a log in degrees, you can
+use the reverse function: <code>THREE.MathUtils.radToDeg()</code>.</p>
+<h3 id="syntax-1">Syntax</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>( radians )<span class="op">;</span></span></code></pre></div>
+<h3 id="code-example-1">Code Example</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Get the current rotation of the cube in radians</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> currentRadians <span class="op">=</span> cube<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Convert the radians back to degrees</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> currentDegrees <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>(currentRadians)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(currentDegrees)<span class="op">;</span> <span class="co">// Outputs: 45</span></span></code></pre></div>
+<h2 id="behind-the-scenes">Behind the Scenes</h2>
+<p>The mathematical equations running inside these
+<code>MathUtils</code> helpers are highly optimized standard conversion
+formulas:</p>
+<ul>
+<li><strong>Degrees to Radians:</strong>
+<code>degrees * (Math.PI / 180)</code></li>
+<li><strong>Radians to Degrees:</strong>
+<code>radians * (180 / Math.PI)</code></li>
+</ul>
+<p>Using the built-in <code>MathUtils</code> helpers keeps your code
+clean, readable, and less prone to manual mathematical errors.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

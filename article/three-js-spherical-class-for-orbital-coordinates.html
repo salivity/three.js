@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Spherical Class for Orbital Coordinates - three.js</title>
+    <meta name="description" content="This article explains how the Spherical class in Three.js is used to calculate orbital coordinates for 3D objects. You will learn the mathematical concept behind spherical coordinates, why they are highly efficient for simulating orbital paths like plane">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-spherical-class-for-orbital-coordinates">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Spherical Class for Orbital Coordinates - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-spherical-class-for-orbital-coordinates" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Spherical class in Three.js is used to calculate orbital coordinates for 3D objects. You will learn the mathematical concept behind spherical coordinates, why they are highly efficient for simulating orbital paths like plane" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-spherical-class-for-orbital-coordinates">Three.js
+Spherical Class for Orbital Coordinates</h1>
+<p>This article explains how the <code>Spherical</code> class in
+Three.js is used to calculate orbital coordinates for 3D objects. You
+will learn the mathematical concept behind spherical coordinates, why
+they are highly efficient for simulating orbital paths like planets or
+camera rigs, and how to implement them in your Three.js projects.</p>
+<h2 id="understanding-spherical-coordinates">Understanding Spherical
+Coordinates</h2>
+<p>In a standard 3D Cartesian coordinate system, a position is defined
+by three perpendicular axes: X, Y, and Z. While Cartesian coordinates
+are ideal for positioning objects on a grid, they make calculating
+curved or circular paths mathematically complex, requiring manual
+trigonometric equations involving sines and cosines.</p>
+<p>The <code>Spherical</code> class in Three.js solves this by
+representing coordinates using a spherical coordinate system. Instead of
+X, Y, and Z, a point is defined by three values: * <strong>Radius (<span
+class="math inline">\(r\)</span>):</strong> The distance from the origin
+(the center of the sphere or the object being orbited). * <strong>Phi
+(<span class="math inline">\(\phi\)</span>):</strong> The polar angle
+(or inclination) from the positive Y-axis (ranging from <span
+class="math inline">\(0\)</span> to <span
+class="math inline">\(\pi\)</span> radians). * <strong>Theta (<span
+class="math inline">\(\theta\)</span>):</strong> The equator or
+azimuthal angle around the Y-axis (ranging from <span
+class="math inline">\(0\)</span> to <span
+class="math inline">\(2\pi\)</span> radians).</p>
+<h2 id="why-use-the-spherical-class-for-orbits">Why Use the Spherical
+Class for Orbits?</h2>
+<p>When simulating an orbit—such as a planet orbiting a sun, a satellite
+orbiting Earth, or a camera rotating around a target—the distance
+(radius) usually remains constant, while the angles change.</p>
+<p>Using the <code>Spherical</code> class simplifies orbital
+calculations because you only need to increment the angles (<span
+class="math inline">\(\theta\)</span> or <span
+class="math inline">\(\phi\)</span>) over time to move an object along a
+perfect orbital sphere. Three.js handles the complex translation from
+these spherical angles back into the Cartesian (X, Y, Z) coordinates
+required by the GPU for rendering.</p>
+<h2 id="how-to-calculate-orbital-coordinates-in-code">How to Calculate
+Orbital Coordinates in Code</h2>
+<p>To position an orbiting object using the <code>Spherical</code>
+class, you define the spherical coordinates, update them over time, and
+map them to a <code>Vector3</code> object.</p>
+<h3 id="initialize-the-spherical-coordinates">1. Initialize the
+Spherical Coordinates</h3>
+<p>First, create an instance of the <code>Spherical</code> class and a
+<code>Vector3</code> to store the target Cartesian coordinates.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radius <span class="op">=</span> <span class="dv">10</span><span class="op">;</span>      <span class="co">// Distance from the orbital center</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> phi <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span> <span class="co">// Positioned on the equator (vertical angle)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> theta <span class="op">=</span> <span class="dv">0</span><span class="op">;</span>         <span class="co">// Starting horizontal angle</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> spherical <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Spherical</span>(radius<span class="op">,</span> phi<span class="op">,</span> theta)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> orbitalPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="update-the-angles-in-the-animation-loop">2. Update the Angles in
+the Animation Loop</h3>
+<p>To create the orbiting motion, increment the <code>theta</code> value
+(for horizontal orbits) or <code>phi</code> value (for vertical orbits)
+in your animation loop. Once updated, use the
+<code>setFromSpherical()</code> method to convert the spherical
+coordinates to Cartesian coordinates.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Increment theta to make the object orbit horizontally</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    spherical<span class="op">.</span><span class="at">theta</span> <span class="op">+=</span> <span class="fl">0.01</span><span class="op">;</span> </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Keep phi within bounds to avoid gimbal lock if adjusting vertically</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Convert spherical coordinates back to Cartesian (X, Y, Z)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    orbitalPosition<span class="op">.</span><span class="fu">setFromSpherical</span>(spherical)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply the coordinates to your orbiting mesh</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    orbitingMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(orbitalPosition)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By leveraging the <code>Spherical</code> class, you avoid manual
+trigonometric calculations, making your code cleaner, more readable, and
+less prone to mathematical errors when creating complex orbital
+systems.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

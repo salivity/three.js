@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert SVG to 3D Paths with Three.js SVGLoader - three.js</title>
+    <meta name="description" content="This article explains how Three.js utilizes the SVGLoader utility to translate two-dimensional XML-based SVG data into three-dimensional geometry. We will explore the step-by-step pipeline of parsing vector paths, converting them into 2D shapes, and fina">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/convert-svg-to-3d-paths-with-three-js-svgloader">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Convert SVG to 3D Paths with Three.js SVGLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/convert-svg-to-3d-paths-with-three-js-svgloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Three.js utilizes the SVGLoader utility to translate two-dimensional XML-based SVG data into three-dimensional geometry. We will explore the step-by-step pipeline of parsing vector paths, converting them into 2D shapes, and fina" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="convert-svg-to-3d-paths-with-three.js-svgloader">Convert SVG to
+3D Paths with Three.js SVGLoader</h1>
+<p>This article explains how Three.js utilizes the
+<code>SVGLoader</code> utility to translate two-dimensional XML-based
+SVG data into three-dimensional geometry. We will explore the
+step-by-step pipeline of parsing vector paths, converting them into 2D
+shapes, and finally extruding those shapes into 3D meshes using
+<code>ExtrudeGeometry</code>.</p>
+<h2 id="parsing-the-svg-xml-data">1. Parsing the SVG XML Data</h2>
+<p>The process begins when <code>SVGLoader</code> loads and parses an
+SVG file. The loader scans the XML document for vector elements such as
+<code>&lt;path&gt;</code>, <code>&lt;rect&gt;</code>,
+<code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>,
+<code>&lt;line&gt;</code>, <code>&lt;polyline&gt;</code>, and
+<code>&lt;polygon&gt;</code>.</p>
+<p>For each vector element found, <code>SVGLoader</code> reads its
+geometric attributes (like the <code>d</code> attribute in paths) and
+style properties (such as fill color, stroke color, and opacity). It
+then translates these elements into an array of <code>SVGResult</code>
+objects, containing <code>paths</code> represented as Three.js
+<code>ShapePath</code> instances.</p>
+<h2 id="converting-vector-commands-to-shapepaths">2. Converting Vector
+Commands to ShapePaths</h2>
+<p>A <code>ShapePath</code> is a 2D representation in Three.js that
+supports drawing commands similar to the HTML5 Canvas 2D Context.
+<code>SVGLoader</code> translates standard SVG path commands into
+Three.js drawing commands:</p>
+<ul>
+<li><strong>M / m (Move to):</strong> Translated to
+<code>ShapePath.moveTo()</code></li>
+<li><strong>L / l (Line to):</strong> Translated to
+<code>ShapePath.lineTo()</code></li>
+<li><strong>C / c (Cubic Bezier Curve):</strong> Translated to
+<code>ShapePath.bezierCurveTo()</code></li>
+<li><strong>S / s (Smooth Cubic Bezier):</strong> Computed and converted
+to <code>ShapePath.bezierCurveTo()</code></li>
+<li><strong>Q / q (Quadratic Bezier Curve):</strong> Translated to
+<code>ShapePath.quadraticCurveTo()</code></li>
+<li><strong>A / a (Elliptical Arc):</strong> Translated using
+mathematical approximations to native curves.</li>
+</ul>
+<p>These commands construct a series of sub-paths within each
+<code>ShapePath</code> object.</p>
+<h2 id="extracting-2d-shapes-and-handling-holes">3. Extracting 2D Shapes
+and Handling Holes</h2>
+<p>To extrude geometry, Three.js requires solid 2D shapes.
+<code>SVGLoader</code> converts the raw <code>ShapePath</code> data into
+an array of <code>Shape</code> objects using the <code>toShapes()</code>
+method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shapes <span class="op">=</span> SVGPath<span class="op">.</span><span class="fu">toShapes</span>(isCCW)<span class="op">;</span></span></code></pre></div>
+<p>During this conversion, Three.js determines which paths are solid
+contours and which are “holes” (cutouts inside the shapes). This is
+achieved using path winding rules (clockwise versus counter-clockwise
+orientation):</p>
+<ul>
+<li><strong>Solid shapes</strong> are defined by outer boundaries drawn
+in one direction.</li>
+<li><strong>Holes</strong> are identified by nested paths drawn in the
+opposite direction.</li>
+<li>The <code>toShapes()</code> method automatically associates the hole
+paths with their parent outer shapes, creating a hierarchy of
+<code>Shape</code> objects with populated <code>.holes</code>
+arrays.</li>
+</ul>
+<h2 id="extruding-shapes-into-3d-geometry">4. Extruding Shapes into 3D
+Geometry</h2>
+<p>Once the 2D <code>Shape</code> objects are generated, they can be
+transformed into 3D meshes using <code>ExtrudeGeometry</code>. This
+geometry generator takes the 2D contours and projectively extends them
+along the Z-axis.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ExtrudeGeometry</span>(shapes<span class="op">,</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">depth</span><span class="op">:</span> <span class="dv">20</span><span class="op">,</span>           <span class="co">// How far to extrude the 2D shape along the Z-axis</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bevelEnabled</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span>  <span class="co">// Adds a bevel to the edges</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bevelThickness</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bevelSize</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bevelSegments</span><span class="op">:</span> <span class="dv">3</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><code>ExtrudeGeometry</code> performs two main operations: 1.
+<strong>Triangulating the 2D Face:</strong> It uses a triangulation
+algorithm (such as Earcut) to fill the 2D shape (including any holes)
+with flat triangles for the front and back caps. 2. <strong>Generating
+Side Walls:</strong> It creates rectangular vertical strips of triangles
+connecting the front cap vertices to the offset back cap vertices along
+the extrusion depth.</p>
+<h2 id="rendering-the-3d-mesh">5. Rendering the 3D Mesh</h2>
+<p>The final step is to combine the generated
+<code>ExtrudeGeometry</code> with a material (such as
+<code>MeshStandardMaterial</code>) and add it to the Three.js scene as a
+<code>Mesh</code>.</p>
+<p>Because SVGs use a 2D coordinate system where the Y-axis points
+downwards, the extruded 3D model will initially appear upside down in
+the Three.js 3D space. To correct this, developers typically invert the
+Y-axis or rotate the final mesh 180 degrees around the X-axis.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

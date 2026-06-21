@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orthographic vs Perspective Camera in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, rendering a 3D scene onto a 2D screen requires a camera, with PerspectiveCamera and OrthographicCamera being the two primary options. This article explains the fundamental differences between these camera types, how their mathematical projec">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/orthographic-vs-perspective-camera-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Orthographic vs Perspective Camera in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/orthographic-vs-perspective-camera-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, rendering a 3D scene onto a 2D screen requires a camera, with PerspectiveCamera and OrthographicCamera being the two primary options. This article explains the fundamental differences between these camera types, how their mathematical projec" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="orthographic-vs-perspective-camera-in-three.js">Orthographic vs
+Perspective Camera in Three.js</h1>
+<p>In Three.js, rendering a 3D scene onto a 2D screen requires a camera,
+with <code>PerspectiveCamera</code> and <code>OrthographicCamera</code>
+being the two primary options. This article explains the fundamental
+differences between these camera types, how their mathematical
+projections alter visual depth, and how to choose the right one for your
+WebGL project.</p>
+<hr />
+<h2 id="perspectivecamera-realistic-3d-depth">PerspectiveCamera:
+Realistic 3D Depth</h2>
+<p>The <code>PerspectiveCamera</code> mimics the behavior of the human
+eye and real-world cameras. It projects the 3D scene using perspective
+projection, meaning that objects appear smaller as they get further away
+from the camera.</p>
+<p>Parallel lines (like railway tracks) will appear to converge at a
+distant vanishing point. This creates a natural sense of depth and
+scale, which is essential for realistic 3D environments.</p>
+<h3 id="parameters">Parameters</h3>
+<p>To define a <code>PerspectiveCamera</code>, you use a viewing volume
+shaped like a pyramid with the top cut off, known as a
+<strong>frustum</strong>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(fov<span class="op">,</span> aspect<span class="op">,</span> near<span class="op">,</span> far)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong>FOV (Field of View):</strong> The vertical angle of the
+camera’s view (in degrees). A wider angle lets you see more of the scene
+but can distort the edges.</li>
+<li><strong>Aspect Ratio:</strong> Typically the width of the canvas
+divided by its height.</li>
+<li><strong>Near:</strong> The closest distance at which objects are
+rendered.</li>
+<li><strong>Far:</strong> The furthest distance at which objects are
+rendered.</li>
+</ul>
+<h3 id="best-used-for">Best Used For</h3>
+<ul>
+<li>First-person and third-person 3D games.</li>
+<li>Architectural walk-throughs and realistic virtual tours.</li>
+<li>General 3D scenes where depth perception is crucial.</li>
+</ul>
+<hr />
+<h2
+id="orthographiccamera-constant-scale-and-precision">OrthographicCamera:
+Constant Scale and Precision</h2>
+<p>The <code>OrthographicCamera</code> renders objects using parallel
+projection. In this projection mode, an object’s size remains constant
+on the screen regardless of its distance from the camera.</p>
+<p>There is no perspective foreshortening, and parallel lines always
+remain perfectly parallel. This eliminates realistic depth perception
+but provides highly accurate geometric proportions.</p>
+<h3 id="parameters-1">Parameters</h3>
+<p>The viewing volume of an <code>OrthographicCamera</code> is a
+<strong>rectangular box</strong> rather than a frustum:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(left<span class="op">,</span> right<span class="op">,</span> top<span class="op">,</span> bottom<span class="op">,</span> near<span class="op">,</span> far)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong>Left, Right, Top, Bottom:</strong> The boundaries of the
+camera’s rendering box. Adjusting these parameters scales the view.</li>
+<li><strong>Near:</strong> The closest rendering limit.</li>
+<li><strong>Far:</strong> The furthest rendering limit.</li>
+</ul>
+<h3 id="best-used-for-1">Best Used For</h3>
+<ul>
+<li>Isometric games (such as tactical RPGs or city builders).</li>
+<li>2D games and user interface overlays (HUDs).</li>
+<li>CAD (Computer-Aided Design) software and modeling tools where
+precise measurements are required.</li>
+</ul>
+<hr />
+<h2 id="key-differences-at-a-glance">Key Differences At a Glance</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">PerspectiveCamera</th>
+<th style="text-align: left;">OrthographicCamera</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Viewing Volume</strong></td>
+<td style="text-align: left;">Frustum (truncated pyramid)</td>
+<td style="text-align: left;">Cuboid (rectangular box)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Object Scaling</strong></td>
+<td style="text-align: left;">Gets smaller with distance</td>
+<td style="text-align: left;">Remains constant</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Parallel Lines</strong></td>
+<td style="text-align: left;">Converge in the distance</td>
+<td style="text-align: left;">Remain parallel</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Visual Style</strong></td>
+<td style="text-align: left;">Realistic, three-dimensional</td>
+<td style="text-align: left;">Flat, isometric, or 2D</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary Use Case</strong></td>
+<td style="text-align: left;">3D games, simulations</td>
+<td style="text-align: left;">CAD, UI, isometric strategy games</td>
+</tr>
+</tbody>
+</table>
+<h2 id="code-comparison">Code Comparison</h2>
+<p>Setting up a basic scene with each camera highlights how their setup
+differs due to their frustum shapes.</p>
+<h3 id="setting-up-a-perspectivecamera">Setting up a
+PerspectiveCamera</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dv">75</span><span class="op">,</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.1</span><span class="op">,</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1000</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="setting-up-an-orthographiccamera">Setting up an
+OrthographicCamera</h3>
+<p>Because the orthographic camera uses fixed unit boundaries, you must
+factor in the aspect ratio manually to prevent visual stretching:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> aspect <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frustumSize <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  (frustumSize <span class="op">*</span> aspect) <span class="op">/</span> <span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="co">// Left</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  (frustumSize <span class="op">*</span> aspect) <span class="op">/</span> <span class="dv">2</span><span class="op">,</span>  <span class="co">// Right</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  frustumSize <span class="op">/</span> <span class="dv">2</span><span class="op">,</span>             <span class="co">// Top</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  frustumSize <span class="op">/</span> <span class="op">-</span><span class="dv">2</span><span class="op">,</span>            <span class="co">// Bottom</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.1</span><span class="op">,</span>                         <span class="co">// Near</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1000</span>                         <span class="co">// Far</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span></code></pre></div></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

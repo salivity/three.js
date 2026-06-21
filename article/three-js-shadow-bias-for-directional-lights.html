@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Shadow Bias for Directional Lights - three.js</title>
+    <meta name="description" content="In Three.js, achieving realistic shadows with directional lights often requires fine-tuning the shadow.bias property. This article explains what shadow.bias is, how it resolves common rendering artifacts like "shadow acne" and "peter panning," and how to">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-shadow-bias-for-directional-lights">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Shadow Bias for Directional Lights - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-shadow-bias-for-directional-lights" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, achieving realistic shadows with directional lights often requires fine-tuning the shadow.bias property. This article explains what shadow.bias is, how it resolves common rendering artifacts like "shadow acne" and "peter panning," and how to" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-shadow-bias-for-directional-lights">Three.js Shadow
+Bias for Directional Lights</h1>
+<p>In Three.js, achieving realistic shadows with directional lights
+often requires fine-tuning the <code>shadow.bias</code> property. This
+article explains what <code>shadow.bias</code> is, how it resolves
+common rendering artifacts like “shadow acne” and “peter panning,” and
+how to find the optimal values for your 3D scenes.</p>
+<h2 id="what-is-shadow-bias">What is Shadow Bias?</h2>
+<p>Three.js uses shadow mapping to render shadows. The engine renders
+the scene’s depth from the perspective of the directional light, storing
+this data in a texture called a shadow map. When rendering the final
+scene, Three.js compares the depth of each pixel with the shadow map to
+determine if it is in shadow.</p>
+<p>Due to the limited resolution of shadow maps and precision limits in
+floating-point calculations, surfaces can incorrectly shadow themselves.
+This results in an unwanted visual artifact known as <strong>shadow
+acne</strong>, which appears as ugly, dark patterns or stripes across
+surfaces that should be lit.</p>
+<p>The <code>shadow.bias</code> property solves this by adding a tiny
+offset to the depth comparison. It slightly pushes the depth calculation
+away from the light source, preventing surfaces from self-shadowing.</p>
+<h2 id="tuning-shadow-bias-finding-the-balance">Tuning Shadow Bias:
+Finding the Balance</h2>
+<p>Adjusting <code>shadow.bias</code> is a balancing act between two
+common artifacts:</p>
+<h3 id="shadow-acne-bias-is-too-low">1. Shadow Acne (Bias is too
+low)</h3>
+<p>If your <code>shadow.bias</code> is set to <code>0</code> (the
+default) or is too low, you will see shadow acne. To fix this, you
+gradually increase the bias value.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example of applying shadow bias to a directional light</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Start with a very small positive value</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.0005</span><span class="op">;</span> </span></code></pre></div>
+<h3 id="peter-panning-bias-is-too-high">2. Peter Panning (Bias is too
+high)</h3>
+<p>If you increase the bias too much, you will encounter an artifact
+called <strong>Peter Panning</strong> (named after the character whose
+shadow is detached from his body). The shadow will appear to float,
+detached from the base of the object casting it.</p>
+<p>To resolve Peter Panning, decrease the <code>shadow.bias</code> until
+the shadow reconnects with the object, while keeping it high enough to
+prevent shadow acne.</p>
+<h2 id="using-normal-bias">Using Normal Bias</h2>
+<p>In addition to <code>shadow.bias</code>, Three.js offers
+<code>shadow.normalBias</code>. While standard bias offsets the depth
+along the light’s direction, normal bias offsets the depth along the
+geometry’s surface normals.</p>
+<p>Using <code>shadow.normalBias</code> is highly effective for
+directional lights, especially on curved surfaces, as it reduces shadow
+acne without causing severe Peter Panning.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// A common setup combining both properties</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.0005</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">normalBias</span> <span class="op">=</span> <span class="fl">0.02</span><span class="op">;</span></span></code></pre></div>
+<h2 id="best-practices-for-tuning-directional-light-shadows">Best
+Practices for Tuning Directional Light Shadows</h2>
+<p>To minimize the need for extreme bias values, optimize your shadow
+camera’s frustum first:</p>
+<ul>
+<li><strong>Tighten the Shadow Camera Frustum:</strong> Directional
+lights use an orthographic camera for shadows
+(<code>directionalLight.shadow.camera</code>). Shrink the
+<code>top</code>, <code>bottom</code>, <code>left</code>,
+<code>right</code>, <code>near</code>, and <code>far</code> planes of
+this camera so they tightly fit only the area where shadows are needed.
+A smaller frustum increases shadow map resolution and depth precision,
+drastically reducing shadow acne.</li>
+<li><strong>Adjust incrementally:</strong> Always tune
+<code>shadow.bias</code> and <code>shadow.normalBias</code> in very
+small increments (e.g., steps of <code>0.0001</code> or
+<code>0.01</code> respectively) until you find the sweet spot for your
+specific scene scale.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

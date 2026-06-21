@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrate Anime Models in Three.js with MMDLoader - three.js</title>
+    <meta name="description" content="This article explains how the Three.js library utilizes the MMDLoader to import and animate Japanese MikuMikuDance (MMD) assets. You will learn how this specialized loader parses PMD and PMX 3D models, processes VMD motion files, manages inverse kinemati">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/integrate-anime-models-in-three-js-with-mmdloader">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Integrate Anime Models in Three.js with MMDLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/integrate-anime-models-in-three-js-with-mmdloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Three.js library utilizes the MMDLoader to import and animate Japanese MikuMikuDance (MMD) assets. You will learn how this specialized loader parses PMD and PMX 3D models, processes VMD motion files, manages inverse kinemati" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="integrate-anime-models-in-three.js-with-mmdloader">Integrate
+Anime Models in Three.js with MMDLoader</h1>
+<p>This article explains how the Three.js library utilizes the
+<code>MMDLoader</code> to import and animate Japanese MikuMikuDance
+(MMD) assets. You will learn how this specialized loader parses PMD and
+PMX 3D models, processes VMD motion files, manages inverse kinematics,
+and synchronizes audio to recreate complex anime-style dance animations
+directly within a web browser.</p>
+<h3 id="understanding-mmd-formats-and-mmdloader">Understanding MMD
+Formats and MMDLoader</h3>
+<p>MikuMikuDance is a popular freeware animation program that uses
+proprietary file formats for 3D models and motion data. Specifically,
+models use the <code>.pmd</code> or <code>.pmx</code> extensions, while
+motion data—including character movement, facial expressions, and camera
+angles—is saved in <code>.vmd</code> files.</p>
+<p>Because these formats do not align with standard web graphics formats
+like glTF or FBX, Three.js provides a dedicated addon called
+<code>MMDLoader</code>. This loader parses the binary data of MMD files
+and translates them into native Three.js objects, such as
+<code>SkinnedMesh</code>, materials, and textures, making them readable
+by the WebGL renderer.</p>
+<h3 id="loading-the-model-and-textures">Loading the Model and
+Textures</h3>
+<p>The integration process begins by instantiating the
+<code>MMDLoader</code>. When loading a <code>.pmx</code> or
+<code>.pmd</code> file, the loader reads the geometry, bone hierarchy,
+morph targets (for facial expressions), and material properties.</p>
+<p>MMD models rely heavily on toon shading and distinct black outlines
+to achieve their signature anime aesthetic. <code>MMDLoader</code>
+automatically generates <code>MeshToonMaterial</code> instances and
+utilizes the <code>OutlineEffect</code> post-processing pass in Three.js
+to render these artistic outlines, ensuring the 3D model retains its
+original 2D-inspired look.</p>
+<h3 id="applying-motion-and-facial-expressions">Applying Motion and
+Facial Expressions</h3>
+<p>Once the model is loaded into the scene, motion is applied using
+<code>.vmd</code> files. The <code>MMDLoader</code> parses these files
+to extract keyframe animation data for bones and morph targets.</p>
+<p>To coordinate these complex movements, Three.js uses a helper class
+called <code>MMDAnimationHelper</code>. This helper acts as the central
+controller, binding the loaded model to the animation timeline. It
+translates the VMD keyframe data into a Three.js
+<code>AnimationMixer</code>, which smoothly interpolates the character’s
+positions, rotations, and facial morphs frame-by-frame.</p>
+<h3 id="physics-and-inverse-kinematics-ik">Physics and Inverse
+Kinematics (IK)</h3>
+<p>Anime dance animations often feature highly dynamic movements,
+requiring realistic physics for hair, skirts, and accessories, as well
+as precise limb positioning. <code>MMDLoader</code> and
+<code>MMDAnimationHelper</code> handle these through two main
+systems:</p>
+<ul>
+<li><strong>Inverse Kinematics (IK):</strong> MMD models use Coordinate
+Descent Inverse Kinematics (CCDIK) to calculate how joints should bend.
+When a dancer’s foot is pinned to the floor, the IK solver automatically
+calculates the correct rotation for the ankles, knees, and hips.</li>
+<li><strong>Physics Integration:</strong> To prevent hair and clothing
+from clipping through the body, <code>MMDAnimationHelper</code>
+integrates with <code>Ammo.js</code> (a WebAssembly port of the Bullet
+physics engine). It translates MMD rigid bodies and constraints into
+physical colliders, allowing hair and clothing to bounce and flow
+naturally in response to the character’s dance movements.</li>
+</ul>
+<h3 id="audio-synchronization">Audio Synchronization</h3>
+<p>A dancing model must remain perfectly in sync with its accompanying
+music track. The <code>MMDAnimationHelper</code> achieves this by
+binding a Three.js <code>Audio</code> listener directly to the animation
+clock.</p>
+<p>Instead of relying on browser frame rates—which can fluctuate and
+cause the visual animation to drift away from the audio—the helper
+constantly calibrates the animation mixer’s time to match the exact
+playback timestamp of the audio file. This guarantees that the anime
+character’s dance moves remain perfectly synchronized with the beat of
+the music.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Local vs World Space Coordinates - three.js</title>
+    <meta name="description" content="This article explains the core differences between local space and world space coordinate transformations in Three.js. You will learn how these two coordinate systems function, how parent-child relationships affect 3D object transformations, and how to p">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-local-vs-world-space-coordinates">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Local vs World Space Coordinates - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-local-vs-world-space-coordinates" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the core differences between local space and world space coordinate transformations in Three.js. You will learn how these two coordinate systems function, how parent-child relationships affect 3D object transformations, and how to p" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-local-vs-world-space-coordinates">Three.js Local vs
+World Space Coordinates</h1>
+<p>This article explains the core differences between local space and
+world space coordinate transformations in Three.js. You will learn how
+these two coordinate systems function, how parent-child relationships
+affect 3D object transformations, and how to programmatically convert
+coordinates between local and world spaces using the Three.js API.</p>
+<h3 id="understanding-local-space">Understanding Local Space</h3>
+<p>Local space (also known as object space) is the coordinate system
+that is local to a specific 3D object. The origin <code>(0, 0, 0)</code>
+of local space is the object’s own anchor or pivot point.</p>
+<p>When you modify an object’s position, rotation, or scale, you are
+altering its local transform properties. If an object is added directly
+to the Three.js <code>Scene</code>, its local space aligns with the
+global world space. However, if the object is added as a child of
+another object (such as a group), its local coordinates become relative
+to the parent object’s position, rotation, and scale.</p>
+<h3 id="understanding-world-space">Understanding World Space</h3>
+<p>World space is the global coordinate system shared by every object in
+the 3D scene. The origin <code>(0, 0, 0)</code> of world space is the
+absolute center of the entire virtual universe.</p>
+<p>Regardless of how deeply nested an object is within groups or parent
+objects, its world space coordinates represent its actual, absolute
+position, rotation, and scale relative to the scene’s root.</p>
+<h3 id="the-core-difference-hierarchy">The Core Difference:
+Hierarchy</h3>
+<p>The fundamental difference between local and world space lies in the
+<strong>parent-child hierarchy</strong>:</p>
+<ul>
+<li><strong>Local Space</strong> is relative. It defines where an object
+is in relation to its immediate parent.</li>
+<li><strong>World Space</strong> is absolute. It defines where an object
+is in relation to the scene origin, calculated by combining the local
+transformations of the object and all of its ancestors.</li>
+</ul>
+<h3 id="a-practical-example">A Practical Example</h3>
+<p>Imagine a 3D model of a car: 1. The <strong>Car</strong> (parent) is
+placed at world coordinates <code>(10, 0, 0)</code>. 2. The
+<strong>Wheel</strong> (child) is attached to the car at a local
+position of <code>(0, 1, 0)</code>.</p>
+<ul>
+<li>The Wheel’s <strong>local position</strong> is
+<code>(0, 1, 0)</code> because it is 1 unit above the center of the
+car.</li>
+<li>The Wheel’s <strong>world position</strong> is
+<code>(10, 1, 0)</code> because Three.js combines the car’s position
+<code>(10, 0, 0)</code> and the wheel’s local position
+<code>(0, 1, 0)</code>.</li>
+</ul>
+<p>If you rotate the car, the wheel’s local position remains
+<code>(0, 1, 0)</code>, but its world position changes as it orbits
+around the turning car.</p>
+<h3 id="coordinate-conversion-in-three.js">Coordinate Conversion in
+Three.js</h3>
+<p>Three.js provides built-in methods to easily convert vectors between
+these two coordinate spaces.</p>
+<h4 id="get-the-absolute-world-position">1. Get the Absolute World
+Position</h4>
+<p>To find where an object is in the global scene, use
+<code>getWorldPosition()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldVector <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>myObject<span class="op">.</span><span class="fu">getWorldPosition</span>(worldVector)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(worldVector)<span class="op">;</span> <span class="co">// Outputs the absolute world coordinates</span></span></code></pre></div>
+<h4 id="local-to-world-transformation">2. Local to World
+Transformation</h4>
+<p>To convert a specific point from an object’s local coordinate system
+into world coordinates, use <code>localToWorld()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> localPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>myObject<span class="op">.</span><span class="fu">localToWorld</span>(localPoint)<span class="op">;</span> </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// localPoint is now mutated to represent the corresponding world coordinates</span></span></code></pre></div>
+<h4 id="world-to-local-transformation">3. World to Local
+Transformation</h4>
+<p>To convert a global world coordinate into an object’s local
+coordinate system, use <code>worldToLocal()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>myObject<span class="op">.</span><span class="fu">worldToLocal</span>(worldPoint)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// worldPoint is now mutated to show where that point lies relative to myObject</span></span></code></pre></div></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

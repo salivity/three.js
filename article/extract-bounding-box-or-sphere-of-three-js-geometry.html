@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Bounding Box or Sphere of Three.js Geometry - three.js</title>
+    <meta name="description" content="Calculating the spatial boundaries of 3D models is essential for implementing collision detection, centering objects, and framing cameras. This guide demonstrates how to extract both the bounding box (THREE.Box3) and bounding sphere (THREE.Sphere) for si">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/extract-bounding-box-or-sphere-of-three-js-geometry">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Extract Bounding Box or Sphere of Three.js Geometry - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/extract-bounding-box-or-sphere-of-three-js-geometry" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the spatial boundaries of 3D models is essential for implementing collision detection, centering objects, and framing cameras. This guide demonstrates how to extract both the bounding box (THREE.Box3) and bounding sphere (THREE.Sphere) for si" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="extract-bounding-box-or-sphere-of-three.js-geometry">Extract
+Bounding Box or Sphere of Three.js Geometry</h1>
+<p>Calculating the spatial boundaries of 3D models is essential for
+implementing collision detection, centering objects, and framing
+cameras. This guide demonstrates how to extract both the bounding box
+(<code>THREE.Box3</code>) and bounding sphere
+(<code>THREE.Sphere</code>) for single geometries and complex,
+multi-mesh hierarchies in Three.js.</p>
+<h2 id="extracting-bounding-boxes">Extracting Bounding Boxes</h2>
+<p>A bounding box represents the minimum and maximum coordinates (X, Y,
+and Z) that enclose a 3D object.</p>
+<h3 id="method-1-for-a-single-meshgeometry">Method 1: For a Single
+Mesh/Geometry</h3>
+<p>If you are working with a single <code>THREE.Mesh</code>, you can
+calculate the bounding box directly from its geometry. By default,
+Three.js does not calculate bounding volumes automatically to save
+memory, so you must invoke the computation method first.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure the bounding box is calculated</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Access the bounding box</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> localBox <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingBox</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Get min and max coordinates</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> min <span class="op">=</span> localBox<span class="op">.</span><span class="at">min</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> max <span class="op">=</span> localBox<span class="op">.</span><span class="at">max</span><span class="op">;</span></span></code></pre></div>
+<p><em>Note: This returns the bounding box in local space. If the mesh
+is scaled, rotated, or translated, these coordinates will not reflect
+those world space changes.</em></p>
+<h3 id="method-2-for-complex-hierarchies-and-groups-world-space">Method
+2: For Complex Hierarchies and Groups (World Space)</h3>
+<p>For complex geometries (such as imported GLTF models containing
+multiple nested meshes, groups, or bones), you should use
+<code>THREE.Box3().setFromObject()</code>. This method automatically
+traverses the object’s entire hierarchy and computes a bounding box
+aligned with world space, accounting for all transformations.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> box <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Box3</span>()<span class="op">.</span><span class="fu">setFromObject</span>(complexModel)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract size and center</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> size <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">getSize</span>(size)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> center <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">getCenter</span>(center)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Size:&#39;</span><span class="op">,</span> size)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Center:&#39;</span><span class="op">,</span> center)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="extracting-bounding-spheres">Extracting Bounding Spheres</h2>
+<p>A bounding sphere is the smallest sphere that completely encloses an
+object, defined by a center point and a radius.</p>
+<h3 id="method-1-for-a-single-meshgeometry-1">Method 1: For a Single
+Mesh/Geometry</h3>
+<p>Similar to bounding boxes, you must compute the bounding sphere on
+the geometry level before accessing it.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure the bounding sphere is calculated</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Access the bounding sphere</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> localSphere <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Radius:&#39;</span><span class="op">,</span> localSphere<span class="op">.</span><span class="at">radius</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Local Center:&#39;</span><span class="op">,</span> localSphere<span class="op">.</span><span class="at">center</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="method-2-for-complex-hierarchies-and-groups">Method 2: For
+Complex Hierarchies and Groups</h3>
+<p>To calculate the bounding sphere of a complex hierarchy, you must
+first calculate its <code>Box3</code> bounding box and then derive the
+sphere from it. Three.js does not provide a direct
+<code>setFromObject</code> method for spheres, making this the most
+accurate approach.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Calculate the bounding box of the entire group/model</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> box <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Box3</span>()<span class="op">.</span><span class="fu">setFromObject</span>(complexModel)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Instantiate a target Sphere and Vector3</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>()<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Populate the sphere using the bounding box</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">getBoundingSphere</span>(sphere)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Sphere Center:&#39;</span><span class="op">,</span> sphere<span class="op">.</span><span class="at">center</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Sphere Radius:&#39;</span><span class="op">,</span> sphere<span class="op">.</span><span class="at">radius</span>)<span class="op">;</span></span></code></pre></div></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

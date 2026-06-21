@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How depthWrite Affects Transparency in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, managing how transparent objects render in relation to the depth buffer (z-buffer) is crucial for avoiding visual artifacts like clipping and invisible geometry. This article explains how the depthWrite property controls whether transparent">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-depthwrite-affects-transparency-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How depthWrite Affects Transparency in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-depthwrite-affects-transparency-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, managing how transparent objects render in relation to the depth buffer (z-buffer) is crucial for avoiding visual artifacts like clipping and invisible geometry. This article explains how the depthWrite property controls whether transparent" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-depthwrite-affects-transparency-in-three.js">How depthWrite
+Affects Transparency in Three.js</h1>
+<p>In Three.js, managing how transparent objects render in relation to
+the depth buffer (z-buffer) is crucial for avoiding visual artifacts
+like clipping and invisible geometry. This article explains how the
+<code>depthWrite</code> property controls whether transparent objects
+write their depth data to the z-buffer, how this impacts rendering
+order, and how to configure it to resolve common transparency sorting
+issues in 3D scenes.</p>
+<h2 id="understanding-the-z-buffer-and-depthwrite">Understanding the
+Z-Buffer and depthWrite</h2>
+<p>The z-buffer (or depth buffer) is a grayscale image corresponding to
+the screen viewport that keeps track of the depth (distance from the
+camera) of every pixel rendered in a 3D scene. When a new pixel is about
+to be drawn, the renderer compares its depth to the value already stored
+in the z-buffer (the depth test). If the new pixel is closer, it is
+drawn, and the z-buffer is updated with the new depth value.</p>
+<p>The <code>depthWrite</code> property is a boolean on Three.js
+materials (<code>Material.depthWrite</code>) that dictates whether a
+material’s depth values are saved to this z-buffer.</p>
+<ul>
+<li><strong><code>depthWrite: true</code> (Default):</strong> The object
+writes its depth to the z-buffer. Subsequent objects behind it will fail
+the depth test and will not be rendered.</li>
+<li><strong><code>depthWrite: false</code>:</strong> The object is
+rendered on the screen, but its depth is not written to the z-buffer.
+Objects behind it can still be drawn afterward.</li>
+</ul>
+<h2 id="the-problem-with-transparency-and-depthwrite-true">The Problem
+with Transparency and depthWrite: true</h2>
+<p>By default, Three.js renders opaque objects first (from front to
+back) to optimize rendering performance, followed by transparent objects
+(from back to front) to ensure proper color blending.</p>
+<p>However, if a transparent material has <code>depthWrite</code> set to
+<code>true</code>, it writes its depth to the z-buffer. If the
+renderer’s sorting algorithm incorrectly estimates the distance of
+overlapping transparent objects, a transparent object in the foreground
+might be rendered before a transparent (or even opaque) object behind
+it.</p>
+<p>Because <code>depthWrite</code> is active, the foreground transparent
+object writes its “close” depth to the z-buffer. When the renderer tries
+to draw the object behind it, the z-buffer block prevents the background
+object from rendering. This results in “transparency clipping,” where
+objects behind a transparent surface mysteriously disappear.</p>
+<h2 id="how-depthwrite-false-solves-transparency-artifacts">How
+depthWrite: false Solves Transparency Artifacts</h2>
+<p>Setting <code>depthWrite: false</code> on transparent materials is
+the standard solution for these rendering artifacts.</p>
+<p>When you set <code>depthWrite: false</code> on a transparent
+material: 1. The transparent object is still drawn on the screen and
+blends its colors with whatever is already behind it. 2. It does
+<em>not</em> write its depth to the z-buffer. 3. Any geometry rendered
+<em>after</em> this transparent object will still pass the depth test
+and be drawn correctly, allowing you to see through the transparent
+object to the objects behind it.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> transparentMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">opacity</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span> <span class="co">// Prevents this material from blocking objects behind it</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="when-to-use-and-when-to-avoid-depthwrite-false">When to Use and
+When to Avoid depthWrite: false</h2>
+<p>While disabling depth writing solves most transparency sorting
+issues, it is not a one-size-fits-all solution.</p>
+<h3 id="use-depthwrite-false-for">Use <code>depthWrite: false</code>
+for:</h3>
+<ul>
+<li><strong>Particles and Volumetrics:</strong> Smoke, fire, dust, and
+clouds should almost always have <code>depthWrite</code> set to
+<code>false</code> to allow smooth blending without clipping.</li>
+<li><strong>Glass and Liquids:</strong> Simple glass planes, windows,
+and water surfaces.</li>
+<li><strong>Overlapping Transparent UI Elements:</strong> Billboards or
+2D sprites floating in 3D space.</li>
+</ul>
+<h3 id="avoid-depthwrite-false-keep-depthwrite-true-for">Avoid
+<code>depthWrite: false</code> (Keep <code>depthWrite: true</code>)
+for:</h3>
+<ul>
+<li><strong>Opaque Objects:</strong> Standard solid models must write to
+the depth buffer to occlude objects behind them.</li>
+<li><strong>Complex Semi-Transparent Solids:</strong> If a single
+transparent 3D model has complex internal geometry (like a
+semi-transparent car body or human figure), setting
+<code>depthWrite: false</code> can cause self-sorting issues where the
+back of the object renders on top of the front. In these cases, you may
+need to keep <code>depthWrite: true</code> and rely on splitting the
+mesh or adjusting the <code>renderOrder</code> property.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js TorusKnotGeometry Mathematical Customization - three.js</title>
+    <meta name="description" content="This article provides a comprehensive overview of TorusKnotGeometry in Three.js, explaining what it is and how you can mathematically customize its shape. By understanding the underlying parameters—specifically the relationship between its winding numb">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-torusknotgeometry-mathematical-customization">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js TorusKnotGeometry Mathematical Customization - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-torusknotgeometry-mathematical-customization" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive overview of TorusKnotGeometry in Three.js, explaining what it is and how you can mathematically customize its shape. By understanding the underlying parameters—specifically the relationship between its winding numb" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-torusknotgeometry-mathematical-customization">Three.js
+TorusKnotGeometry Mathematical Customization</h1>
+<p>This article provides a comprehensive overview of
+<code>TorusKnotGeometry</code> in Three.js, explaining what it is and
+how you can mathematically customize its shape. By understanding the
+underlying parameters—specifically the relationship between its winding
+numbers—you can manipulate this complex 3D shape to create a wide
+variety of intricate, knotted structures for your web graphics
+projects.</p>
+<h2 id="what-is-torusknotgeometry">What is TorusKnotGeometry?</h2>
+<p>In Three.js, <code>TorusKnotGeometry</code> is a built-in class used
+to generate a torus knot mesh. A torus knot is a mathematical curve that
+wraps around the surface of a torus (a donut shape) a specified number
+of times. Unlike a standard torus, which is a simple ring, a torus knot
+loops through and around itself, creating a complex, continuous 3D
+knot.</p>
+<h2 id="the-constructor-and-its-parameters">The Constructor and Its
+Parameters</h2>
+<p>To customize a torus knot, you pass specific mathematical arguments
+into the <code>TorusKnotGeometry</code> constructor:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(radius<span class="op">,</span> tube<span class="op">,</span> tubularSegments<span class="op">,</span> radialSegments<span class="op">,</span> p<span class="op">,</span> q)<span class="op">;</span></span></code></pre></div>
+<p>Each parameter directly controls the mathematical formulation of the
+knot:</p>
+<ul>
+<li><strong><code>radius</code></strong> (Default: 1): The radius of the
+overall torus on which the knot is wound.</li>
+<li><strong><code>tube</code></strong> (Default: 0.4): The thickness of
+the tube making up the knot.</li>
+<li><strong><code>tubularSegments</code></strong> (Default: 64): The
+number of segments that make up the length of the tube. Higher values
+make the curve smoother.</li>
+<li><strong><code>radialSegments</code></strong> (Default: 8): The
+number of segments that make up the cross-section of the tube. Higher
+values make the tube look rounder.</li>
+<li><strong><code>p</code></strong> (Default: 2): This integer defines
+how many times the knot winds around its axis of rotational symmetry
+(co-axial with the torus hole).</li>
+<li><strong><code>q</code></strong> (Default: 3): This integer defines
+how many times the knot winds around a circle inside the torus.</li>
+</ul>
+<h2 id="mathematical-customization-via-p-and-q">Mathematical
+Customization via p and q</h2>
+<p>The core visual identity of the torus knot is determined by the ratio
+of <strong>p</strong> to <strong>q</strong>. By changing these two
+integers, you alter the fundamental topology of the knot.</p>
+<h3 id="creating-standard-knots">Creating Standard Knots</h3>
+<p>To create a true, single-loop mathematical knot, <strong>p</strong>
+and <strong>q</strong> must be coprime (meaning their greatest common
+divisor is 1).</p>
+<ul>
+<li><strong>Trefoil Knot (p = 2, q = 3):</strong> This is the simplest
+non-trivial knot. It loops around the central axis twice and around the
+interior of the tube three times.</li>
+<li><strong>Cinquefoil Knot (p = 2, q = 5):</strong> A more star-like
+knot that winds around five times internally.</li>
+<li><strong>Decorative “Granny” style knots (p = 3, q = 4):</strong>
+This produces a highly symmetrical, blockier knot structure.</li>
+</ul>
+<h3 id="what-happens-when-p-and-q-are-not-coprime">What Happens When p
+and q are Not Coprime?</h3>
+<p>If <strong>p</strong> and <strong>q</strong> share a common divisor
+(for example, p = 2, q = 4), the geometry mathematically resolves into a
+link (multiple disconnected loops) rather than a single continuous knot.
+In Three.js, this will still render as a single continuous tube, but it
+may visually overlap or appear distorted because the generator forces a
+single-loop path through a multi-loop mathematical space.</p>
+<h2 id="dynamic-customization">Dynamic Customization</h2>
+<p>For advanced mathematical customization, you do not have to rely
+solely on the static constructor. You can dynamically modify the
+geometry by creating a custom curve using the <code>THREE.Curve</code>
+class, defining your own trigonometric equations for <span
+class="math inline">\(X\)</span>, <span
+class="math inline">\(Y\)</span>, and <span
+class="math inline">\(Z\)</span> coordinates, and passing that custom
+curve into a <code>THREE.TubeGeometry</code>.</p>
+<p>However, for standard torus knots, simply adjusting the
+<strong>p</strong> and <strong>q</strong> parameters in
+<code>TorusKnotGeometry</code> remains the most efficient way to achieve
+complex, mathematically precise symmetry in Three.js.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

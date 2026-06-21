@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Prevent Memory Leaks in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, failing to properly clean up unused assets can quickly lead to severe memory leaks, browser slowdowns, and application crashes. Because JavaScript's automatic garbage collection cannot release memory allocated on the GPU, WebGL resources mus">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-prevent-memory-leaks-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Prevent Memory Leaks in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-prevent-memory-leaks-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, failing to properly clean up unused assets can quickly lead to severe memory leaks, browser slowdowns, and application crashes. Because JavaScript's automatic garbage collection cannot release memory allocated on the GPU, WebGL resources mus" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-prevent-memory-leaks-in-three.js">How to Prevent Memory
+Leaks in Three.js</h1>
+<p>In Three.js, failing to properly clean up unused assets can quickly
+lead to severe memory leaks, browser slowdowns, and application crashes.
+Because JavaScript’s automatic garbage collection cannot release memory
+allocated on the GPU, WebGL resources must be freed manually. This
+article provides a direct, step-by-step guide on how to properly dispose
+of geometries, materials, and textures to keep your 3D applications
+running efficiently.</p>
+<h2 id="why-manual-disposal-is-necessary">Why Manual Disposal is
+Necessary</h2>
+<p>When you create objects like geometries, materials, and textures,
+Three.js allocates memory on both the CPU (JavaScript heap) and the GPU
+(WebGL buffers). Removing a mesh from your scene using
+<code>scene.remove(mesh)</code> only stops it from rendering; it does
+not free the GPU memory. To release these resources, you must explicitly
+call the <code>.dispose()</code> method on each component.</p>
+<h2 id="disposing-of-geometries">Disposing of Geometries</h2>
+<p>Geometries store vertex attributes, faces, and index buffers on the
+GPU. To free this memory, call <code>.dispose()</code> directly on the
+geometry instance.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p>Once disposed of, the geometry cannot be rendered again. If you need
+to use it later, you will have to create a new instance.</p>
+<h2 id="disposing-of-textures">Disposing of Textures</h2>
+<p>Textures represent substantial image data sent to the GPU. To release
+this memory, call <code>.dispose()</code> on the texture object.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p>If you loaded the texture using a <code>TextureLoader</code>, you
+must still keep a reference to the loaded texture to call its dispose
+method when it is no longer needed.</p>
+<h2 id="disposing-of-materials">Disposing of Materials</h2>
+<p>Materials define how objects look and link shaders and textures
+together. Disposing of a material frees the WebGL program (shaders)
+associated with it.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p><strong>Crucial Note:</strong> Disposing of a material does
+<em>not</em> automatically dispose of its map textures. You must loop
+through the material’s properties and dispose of any attached textures
+individually.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (material<span class="op">.</span><span class="at">map</span>) material<span class="op">.</span><span class="at">map</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (material<span class="op">.</span><span class="at">lightMap</span>) material<span class="op">.</span><span class="at">lightMap</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (material<span class="op">.</span><span class="at">bumpMap</span>) material<span class="op">.</span><span class="at">bumpMap</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Repeat for other texture slots if used</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="cleaning-up-a-mesh-completely">Cleaning Up a Mesh
+Completely</h2>
+<p>To fully remove a mesh from memory, you must remove it from the scene
+parent, dispose of its geometry, dispose of its material (including
+textures), and nullify any references to allow JavaScript garbage
+collection to clean up CPU memory.</p>
+<p>Here is a clean helper function to recursively dispose of a 3D object
+and all of its children:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">disposeHierarchy</span>(object) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    object<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Dispose Geometry</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (child<span class="op">.</span><span class="at">geometry</span>) {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Dispose Material(s)</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (child<span class="op">.</span><span class="at">material</span>) {</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (<span class="bu">Array</span><span class="op">.</span><span class="fu">isArray</span>(child<span class="op">.</span><span class="at">material</span>)) {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                    child<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="fu">forEach</span>((material) <span class="kw">=&gt;</span> <span class="fu">disposeMaterial</span>(material))<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                } <span class="cf">else</span> {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>                    <span class="fu">disposeMaterial</span>(child<span class="op">.</span><span class="at">material</span>)<span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">disposeMaterial</span>(material) {</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose textures</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">const</span> key <span class="kw">in</span> material) {</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (material[key] <span class="op">&amp;&amp;</span> <span class="kw">typeof</span> material[key]<span class="op">.</span><span class="at">dispose</span> <span class="op">===</span> <span class="st">&#39;function&#39;</span>) {</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>            material[key]<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose the material itself</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    material<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">remove</span>(myMesh)<span class="op">;</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="fu">disposeHierarchy</span>(myMesh)<span class="op">;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>myMesh <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span></code></pre></div>
+<h2 id="disposing-of-render-targets">Disposing of Render Targets</h2>
+<p>If you are using post-processing, custom shaders, or shadow maps, you
+likely use <code>WebGLRenderTarget</code>. These also consume
+significant GPU memory and must be cleaned up:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>renderTarget<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p>By integrating these disposal practices into your object destruction
+lifecycles, you ensure that GPU and CPU resources are fully reclaimed,
+preventing memory leaks in long-running Three.js applications.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

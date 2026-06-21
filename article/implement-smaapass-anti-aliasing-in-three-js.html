@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implement SMAAPass Anti-Aliasing in Three.js - three.js</title>
+    <meta name="description" content="When utilizing the EffectComposer for post-processing in Three.js, the browser's default hardware anti-aliasing (MSAA) is automatically disabled, resulting in jagged edges on 3D meshes. To resolve this visual degradation without sacrificing performance,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/implement-smaapass-anti-aliasing-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Implement SMAAPass Anti-Aliasing in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/implement-smaapass-anti-aliasing-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When utilizing the EffectComposer for post-processing in Three.js, the browser's default hardware anti-aliasing (MSAA) is automatically disabled, resulting in jagged edges on 3D meshes. To resolve this visual degradation without sacrificing performance," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="implement-smaapass-anti-aliasing-in-three.js">Implement SMAAPass
+Anti-Aliasing in Three.js</h1>
+<p>When utilizing the <code>EffectComposer</code> for post-processing in
+Three.js, the browser’s default hardware anti-aliasing (MSAA) is
+automatically disabled, resulting in jagged edges on 3D meshes. To
+resolve this visual degradation without sacrificing performance, you can
+implement Subpixel Morphological Anti-Aliasing (SMAA) via the
+<code>SMAAPass</code>. This article provides a direct, step-by-step
+guide to integrating <code>SMAAPass</code> into your Three.js
+post-processing pipeline to restore smooth, high-quality edges.</p>
+<h2 id="why-use-smaapass">Why Use SMAAPass?</h2>
+<p>By default, the <code>WebGLRenderer</code> handles anti-aliasing.
+However, once rendering is redirected to an off-screen frame buffer for
+post-processing effects, this built-in anti-aliasing no longer
+functions. <code>SMAAPass</code> is an efficient, screen-space
+anti-aliasing filter that reconstructs sharp details and smooths aliased
+edges during the post-processing pass with a minimal performance
+footprint, making it ideal for web-based 3D applications.</p>
+<h2 id="step-1-import-the-required-modules">Step 1: Import the Required
+Modules</h2>
+<p>First, import the core Three.js library alongside the necessary
+post-processing classes. You will need <code>EffectComposer</code>,
+<code>RenderPass</code>, and <code>SMAAPass</code> from the Three.js
+examples directory.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { SMAAPass } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/SMAAPass.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h2 id="step-2-initialize-the-renderer-and-composer">Step 2: Initialize
+the Renderer and Composer</h2>
+<p>When initializing your <code>WebGLRenderer</code>, set
+<code>antialias</code> to <code>false</code>. Since the built-in MSAA
+does not work with post-processing, disabling it saves rendering
+performance.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize WebGLRenderer without hardware anti-aliasing</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">false</span> })<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setPixelRatio</span>(<span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(<span class="bu">window</span><span class="op">.</span><span class="at">devicePixelRatio</span><span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the main Scene and Camera</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up the EffectComposer</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span></code></pre></div>
+<h2 id="step-3-add-the-passes-to-the-composer">Step 3: Add the Passes to
+the Composer</h2>
+<p>You must first pass the scene and camera through a
+<code>RenderPass</code> to generate the initial image. After the
+<code>RenderPass</code>, append the <code>SMAAPass</code> to apply the
+anti-aliasing filter.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Add the base RenderPass</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(renderPass)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Add the SMAAPass</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pixelRatio <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getPixelRatio</span>()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> smaaPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">SMAAPass</span>(</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">*</span> pixelRatio<span class="op">,</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span> <span class="op">*</span> pixelRatio</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(smaaPass)<span class="op">;</span></span></code></pre></div>
+<p><em>Note: Passing the correct pixel-ratio-adjusted width and height
+to the <code>SMAAPass</code> constructor ensures that the
+post-processing textures match the rendering resolution
+perfectly.</em></p>
+<h2 id="step-4-handle-window-resizing">Step 4: Handle Window
+Resizing</h2>
+<p>If the browser window resizes, both the <code>EffectComposer</code>
+and the <code>SMAAPass</code> must be updated with the new viewport
+dimensions to prevent rendering distortions or blurred artifacts.</p>
+<p>```window.addEventListener(‘resize’, () =&gt; { const width =
+window.innerWidth; const height = window.innerHeight; const pixelRatio =
+renderer.getPixelRatio();</p>
+<pre><code>// Update Camera
+camera.aspect = width / height;
+camera.updateProjectionMatrix();
+
+// Update Renderer and Composer
+renderer.setSize(width, height);
+composer.setSize(width, height);
+
+// Update SMAAPass dimensions
+smaaPass.setSize(width * pixelRatio, height * pixelRatio);</code></pre>
+<p>});</p>
+<pre><code>
+## Step 5: Update the Render Loop
+
+To output the anti-aliased frame, replace your standard `renderer.render(scene, camera)` call inside your animation loop with `composer.render()`.
+
+```javascript
+function animate() {
+    requestAnimationFrame(animate);
+
+    // Perform animations or physics updates here
+
+    // Render the scene through the post-processing pipeline
+    composer.render();
+}
+
+animate();</code></pre></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

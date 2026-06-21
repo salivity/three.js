@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create 2D Billboards in Three.js with SpriteMaterial - three.js</title>
+    <meta name="description" content="In Three.js, creating 2D elements that constantly face the camera—commonly known as billboards—is highly efficient using the Sprite and SpriteMaterial classes. This article provides a quick, step-by-step guide on how to set up a SpriteMaterial, apply">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/create-2d-billboards-in-three-js-with-spritematerial">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Create 2D Billboards in Three.js with SpriteMaterial - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/create-2d-billboards-in-three-js-with-spritematerial" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, creating 2D elements that constantly face the camera—commonly known as billboards—is highly efficient using the Sprite and SpriteMaterial classes. This article provides a quick, step-by-step guide on how to set up a SpriteMaterial, apply" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="create-2d-billboards-in-three.js-with-spritematerial">Create 2D
+Billboards in Three.js with SpriteMaterial</h1>
+<p>In Three.js, creating 2D elements that constantly face the
+camera—commonly known as billboards—is highly efficient using the
+<code>Sprite</code> and <code>SpriteMaterial</code> classes. This
+article provides a quick, step-by-step guide on how to set up a
+<code>SpriteMaterial</code>, apply a texture to it, and render a 2D
+sprite that automatically rotates to face the viewer in a 3D scene.</p>
+<h3 id="what-is-a-sprite">What is a Sprite?</h3>
+<p>A <code>Sprite</code> is a special type of 3D object in Three.js that
+always faces the camera. Unlike a standard <code>Mesh</code> created
+with a <code>PlaneGeometry</code>, a <code>Sprite</code> does not
+require you to manually update its rotation matrix in the animation
+loop; Three.js handles the camera-facing calculation automatically under
+the hood.</p>
+<p>To create a billboard, you must pair a <code>Sprite</code> object
+with a <code>SpriteMaterial</code>.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>Follow these steps to implement a 2D billboard in your Three.js
+project:</p>
+<h4 id="load-the-texture">1. Load the Texture</h4>
+<p>First, load the image file you want to display on your billboard
+using the <code>TextureLoader</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a texture loader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Load your image texture</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> spriteMap <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/your/image.png&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="create-the-spritematerial">2. Create the SpriteMaterial</h4>
+<p>Next, instantiate a <code>SpriteMaterial</code>. This material is
+specifically designed to work with <code>Sprite</code> objects. You can
+pass your loaded texture into the <code>map</code> property.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> spriteMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SpriteMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">map</span><span class="op">:</span> spriteMap<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span> <span class="co">// Use white to preserve original texture colors</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span> <span class="co">// Enable transparency if your image has an alpha channel</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="instantiate-the-sprite">3. Instantiate the Sprite</h4>
+<p>Create the <code>Sprite</code> object by passing the material into
+its constructor. Then, position it in your 3D space.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sprite <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sprite</span>(spriteMaterial)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Position the sprite in the scene</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sprite<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Scale the sprite (Sprites are 1x1 units by default)</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sprite<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span> </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Add the sprite to your scene</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(sprite)<span class="op">;</span></span></code></pre></div>
+<h3 id="key-considerations-for-sprites">Key Considerations for
+Sprites</h3>
+<ul>
+<li><strong>Scaling:</strong> Because sprites do not have custom
+geometry, you control their size entirely using the
+<code>.scale.set(width, height, depth)</code> method. The depth value is
+usually kept at <code>1</code> since sprites are flat 2D planes.</li>
+<li><strong>Rotation:</strong> Sprites always face the camera on the X
+and Y axes. However, you can still rotate them along the Z-axis
+(clockwise or counter-clockwise) by adjusting the
+<code>.material.rotation</code> property.</li>
+<li><strong>Depth Testing:</strong> If you are using billboards for UI
+elements or labels that should always appear on top of other 3D objects,
+set <code>depthTest: false</code> and <code>depthWrite: false</code>
+inside your <code>SpriteMaterial</code> configuration.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

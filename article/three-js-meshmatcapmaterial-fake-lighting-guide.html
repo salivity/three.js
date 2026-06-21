@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js MeshMatcapMaterial Fake Lighting Guide - three.js</title>
+    <meta name="description" content="In Three.js, rendering realistic 3D objects usually requires complex light calculations that can degrade application performance. This article explains how MeshMatcapMaterial bypasses these hardware-heavy calculations by using a pre-rendered 2D texture t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-meshmatcapmaterial-fake-lighting-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js MeshMatcapMaterial Fake Lighting Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-meshmatcapmaterial-fake-lighting-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, rendering realistic 3D objects usually requires complex light calculations that can degrade application performance. This article explains how MeshMatcapMaterial bypasses these hardware-heavy calculations by using a pre-rendered 2D texture t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-meshmatcapmaterial-fake-lighting-guide">Three.js
+MeshMatcapMaterial Fake Lighting Guide</h1>
+<p>In Three.js, rendering realistic 3D objects usually requires complex
+light calculations that can degrade application performance. This
+article explains how <code>MeshMatcapMaterial</code> bypasses these
+hardware-heavy calculations by using a pre-rendered 2D texture to fake
+realistic lighting, reflections, and shading without placing a single
+light source in your scene. You will learn how this material works under
+the hood, its performance benefits, and how to implement it in your
+projects.</p>
+<h2 id="what-is-meshmatcapmaterial">What is MeshMatcapMaterial?</h2>
+<p><code>MeshMatcapMaterial</code> is a material in Three.js designed
+for high-performance rendering. The word “MatCap” stands for “Material
+Capture.”</p>
+<p>Instead of calculating how light bounces off a 3D object dynamically,
+<code>MeshMatcapMaterial</code> uses a pre-rendered, spherical 2D
+texture (a MatCap image) that already contains all the desired lighting,
+shading, and reflections. The material then projects this 2D texture
+onto your 3D geometry based on the angle of the object’s surface
+relative to the camera.</p>
+<h2 id="how-it-fakes-lighting-without-lights">How It Fakes Lighting
+Without Lights</h2>
+<p>To understand how <code>MeshMatcapMaterial</code> works, imagine a 2D
+image of a sphere. This sphere contains all the lighting information: a
+bright highlight on top, a shadow on the bottom, and a mid-tone in the
+middle.</p>
+<p>When Three.js renders a 3D object using this material, it performs
+the following steps:</p>
+<ol type="1">
+<li><strong>Calculate Surface Normals:</strong> The renderer determines
+the direction each face of your 3D model is pointing relative to the
+camera (this is called “view-space normals”).</li>
+<li><strong>Map Normals to UV Coordinates:</strong> The X and Y
+coordinates of these camera-relative normals are mapped directly to the
+X and Y coordinates of the 2D MatCap texture.</li>
+<li><strong>Sample the Texture:</strong>
+<ul>
+<li>If a part of your 3D object points directly at the camera, it
+samples the color from the center of the 2D MatCap image.</li>
+<li>If a part points upward and to the right relative to the camera, it
+samples the color from the top-right edge of the 2D MatCap image.</li>
+</ul></li>
+<li><strong>Apply Color:</strong> The model is shaded using these
+sampled colors, creating the illusion of complex, three-dimensional
+lighting.</li>
+</ol>
+<p>Because the lighting is baked directly into the 2D texture, the GPU
+does not have to calculate light vectors, specular highlights, or
+ambient occlusion in real-time.</p>
+<h2 id="advantages-of-using-matcaps">Advantages of Using MatCaps</h2>
+<ul>
+<li><strong>Exceptional Performance:</strong> Because it requires no
+light sources, it is incredibly cheap for the GPU to render. This makes
+it ideal for mobile devices, VR headsets, and complex scenes with high
+polygon counts.</li>
+<li><strong>Easy Setup:</strong> You do not need to add ambient,
+directional, or point lights to your Three.js scene. The object will
+look fully lit even in complete digital darkness.</li>
+<li><strong>Stylistic Versatility:</strong> By swapping out the 2D
+MatCap image, you can instantly make your object look like shiny metal,
+clay, plastic, cartoon cell-shading, or blown glass.</li>
+</ul>
+<h2 id="limitations-of-matcaps">Limitations of MatCaps</h2>
+<p>While powerful, <code>MeshMatcapMaterial</code> has two major
+limitations:</p>
+<ul>
+<li><strong>Camera-Locked Lighting:</strong> Because the texture
+coordinates are calculated relative to the camera, the “lights” will
+rotate with the camera. If you pan around the object, the highlights and
+shadows will move with your view, which can sometimes look
+unnatural.</li>
+<li><strong>No Real Shadows:</strong> Objects using MatCaps cannot
+receive shadows cast by other objects, nor can they cast dynamic shadows
+on their surroundings without separate depth-mapping workarounds.</li>
+</ul>
+<h2 id="implementation-example">Implementation Example</h2>
+<p>To use <code>MeshMatcapMaterial</code>, you need a MatCap texture (a
+square image of a lit sphere) and the following basic Three.js
+setup:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Initialize the texture loader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Load your MatCap texture (usually a .png or .jpg of a sphere)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> matcapTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/your/matcap-sphere.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the material and assign the texture</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshMatcapMaterial</span>({</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">matcap</span><span class="op">:</span> matcapTexture</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Apply the material to a 3D mesh</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">16</span>)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Add the mesh to the scene</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

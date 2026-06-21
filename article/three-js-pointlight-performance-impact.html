@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js PointLight Performance Impact - three.js</title>
+    <meta name="description" content="In Three.js, lighting is crucial for creating realistic 3D environments, but overusing independent PointLight objects can severely degrade rendering performance. This article explains how too many point lights impact GPU performance, details the underlyi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-pointlight-performance-impact">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js PointLight Performance Impact - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-pointlight-performance-impact" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, lighting is crucial for creating realistic 3D environments, but overusing independent PointLight objects can severely degrade rendering performance. This article explains how too many point lights impact GPU performance, details the underlyi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-pointlight-performance-impact">Three.js PointLight
+Performance Impact</h1>
+<p>In Three.js, lighting is crucial for creating realistic 3D
+environments, but overusing independent <code>PointLight</code> objects
+can severely degrade rendering performance. This article explains how
+too many point lights impact GPU performance, details the underlying
+technical limitations of WebGL shaders, and provides actionable
+optimization strategies to keep your 3D scenes running smoothly.</p>
+<h2 id="how-webgl-handles-lights">How WebGL Handles Lights</h2>
+<p>Standard Three.js uses a forward rendering pipeline. In forward
+rendering, the lighting calculations for every active light are computed
+for every single pixel (fragment) of an object during the draw
+phase.</p>
+<p>When you add a <code>PointLight</code> to a scene, Three.js
+dynamically rebuilds and recompiles the materials’ fragment shaders to
+include the math for that light. If you have 20 point lights and 50
+meshes, the GPU must calculate the math for all 20 lights for every
+pixel of those 50 meshes, regardless of whether the light actually
+reaches the mesh. This drastically increases the arithmetic load (ALU
+instructions) on the GPU, leading to a drop in frame rates.</p>
+<h2 id="the-impact-of-shadow-maps">The Impact of Shadow Maps</h2>
+<p>The performance penalty of point lights increases exponentially when
+shadows are enabled (<code>light.castShadow = true</code>).</p>
+<p>Unlike directional lights, which use a single flat texture map for
+shadows, a <code>PointLight</code> shines in all directions. To
+calculate shadows, Three.js must render the scene six times per
+light—once for each face of a cube map. If you have five point lights
+casting shadows, your scene requires 30 additional render passes every
+frame just to update the shadow maps. This quickly bottlenecks the CPU
+with draw calls and overwhelms the GPU’s memory bandwidth.</p>
+<h2 id="hardware-and-shader-limits">Hardware and Shader Limits</h2>
+<p>Aside from slowing down the frame rate, there is a hard limit to how
+many lights WebGL can support simultaneously.</p>
+<p>Shaders rely on “uniforms” to receive light data (such as position,
+color, and intensity) from the CPU. GPUs have a strict limit on the
+maximum number of uniform vectors allowed in a shader. If you exceed
+this limit by adding too many independent lights, the shader will fail
+to compile, and your materials will render completely black or fail to
+load entirely.</p>
+<h2 id="best-practices-for-optimization">Best Practices for
+Optimization</h2>
+<p>To maintain a high frame rate while using point lights, consider the
+following optimization techniques:</p>
+<ul>
+<li><strong>Limit Active Lights:</strong> Only keep lights active if
+they are close to the camera. Implement a distance-checking script to
+add/remove lights from the scene dynamically or toggle their
+<code>visible</code> property.</li>
+<li><strong>Disable Shadows:</strong> Only enable shadows on one or two
+key lights. For the rest of the point lights, keep
+<code>castShadow</code> set to <code>false</code>.</li>
+<li><strong>Adjust Light Decay and Distance:</strong> Set the
+<code>distance</code> property on your <code>PointLight</code>. While
+this doesn’t automatically stop shader calculations, it helps Three.js
+optimize certain internal calculations when lights have a defined
+boundary.</li>
+<li><strong>Light Baking:</strong> For static environments, pre-compute
+(bake) the lighting and shadows into the textures using 3D modeling
+software like Blender. This allows you to achieve complex lighting
+layouts with zero run-time performance cost.</li>
+<li><strong>Use Light Probes:</strong> For general ambient color
+variations, use <code>LightProbe</code> or <code>AmbientLight</code>
+instead of multiple low-intensity point lights.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

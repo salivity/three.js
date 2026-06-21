@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js renderOrder for Transparent Overlapping Objects - three.js</title>
+    <meta name="description" content="In WebGL and Three.js, rendering overlapping transparent objects often leads to visual artifacts, such as background objects incorrectly clipping or disappearing behind foreground ones. This article explains the functional significance of the renderOrder">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-renderorder-for-transparent-overlapping-objects">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js renderOrder for Transparent Overlapping Objects - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-renderorder-for-transparent-overlapping-objects" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In WebGL and Three.js, rendering overlapping transparent objects often leads to visual artifacts, such as background objects incorrectly clipping or disappearing behind foreground ones. This article explains the functional significance of the renderOrder" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="three.js-renderorder-for-transparent-overlapping-objects">Three.js
+renderOrder for Transparent Overlapping Objects</h1>
+<p>In WebGL and Three.js, rendering overlapping transparent objects
+often leads to visual artifacts, such as background objects incorrectly
+clipping or disappearing behind foreground ones. This article explains
+the functional significance of the <code>renderOrder</code> property,
+detailing how it overrides default WebGL depth-sorting behavior to
+ensure transparent 3D models render in the correct visual sequence.</p>
+<h2 id="the-challenge-of-transparency-in-three.js">The Challenge of
+Transparency in Three.js</h2>
+<p>To understand why <code>renderOrder</code> is necessary, you must
+first understand how WebGL handles rendering. For opaque objects,
+Three.js uses the GPU’s depth buffer (Z-buffer) to determine which
+pixels are in front. If a pixel is behind another already-rendered
+pixel, the GPU discards it.</p>
+<p>However, transparent objects require alpha blending, meaning the
+colors of background and foreground objects must be mixed together. To
+blend colors correctly, transparent objects must be drawn from back to
+front (the Painter’s Algorithm).</p>
+<p>Three.js attempts to handle this automatically by sorting transparent
+objects based on their center point’s distance to the camera. While this
+works for simple scenes, it fails under several common conditions: *
+<strong>Intersecting or nested geometry:</strong> When one transparent
+object is inside another. * <strong>Large or elongated objects:</strong>
+Where the center point of an object does not accurately represent which
+parts are closer to the camera. * <strong>Complex overlapping
+structures:</strong> Where the relative depth order changes depending on
+the camera angle.</p>
+<p>When the automatic sorting fails, Three.js renders the foreground
+object first. Because it writes to the depth buffer, any transparent
+object behind it is discarded, resulting in ugly visual glitches where
+background objects disappear.</p>
+<h2 id="what-is-the-renderorder-property">What is the renderOrder
+Property?</h2>
+<p>The <code>renderOrder</code> property is a user-defined integer
+available on all Three.js objects inheriting from <code>Object3D</code>
+(such as <code>Mesh</code>, <code>Group</code>, and
+<code>Sprite</code>). By default, all objects have a
+<code>renderOrder</code> of <code>0</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>object<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// Default</span></span></code></pre></div>
+<p>When rendering a scene, Three.js groups and sorts objects based on
+the following hierarchy: 1. <strong>Opaque vs. Transparent:</strong>
+Opaque objects are always rendered before transparent objects. 2.
+<strong>renderOrder:</strong> Objects are sorted ascendingly by their
+<code>renderOrder</code> value. 3. <strong>Z-depth:</strong> Within the
+same <code>renderOrder</code> group, transparent objects are sorted by
+their distance from the camera (back-to-front).</p>
+<h2 id="functional-significance-of-renderorder">Functional Significance
+of renderOrder</h2>
+<p>By manually defining the <code>renderOrder</code>, you take absolute
+control over the rendering sequence, bypassing the limitations of
+distance-based sorting.</p>
+<h3 id="guaranteeing-correct-layering">1. Guaranteeing Correct
+Layering</h3>
+<p>By assigning a lower <code>renderOrder</code> to background elements
+and a higher <code>renderOrder</code> to foreground elements, you
+guarantee that the background is drawn first.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Background transparent glass wall</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>glassWall<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Foreground transparent holographic UI</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>holoUI<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span></code></pre></div>
+<p>Even if the camera moves closer to the glass wall than the UI, the
+glass wall will always render first, ensuring the UI blends seamlessly
+on top of it without disappearing.</p>
+<h3 id="solving-complex-geometry-clipping">2. Solving Complex Geometry
+Clipping</h3>
+<p>In complex models, like a transparent outer shell surrounding an
+inner transparent engine, automatic sorting will cause the inner engine
+to clip out as the camera rotates. Setting the inner geometry to
+<code>renderOrder = 1</code> and the outer shell to
+<code>renderOrder = 2</code> permanently resolves the clipping,
+regardless of camera rotation.</p>
+<h3 id="creating-visual-effects">3. Creating Visual Effects</h3>
+<p><code>renderOrder</code> can be used to force specific visual styles.
+For example, you can force a transparent X-ray overlay to render on top
+of everything else in the scene, regardless of its physical depth, by
+assigning it a very high <code>renderOrder</code> (e.g.,
+<code>999</code>).</p>
+<h2 id="best-practices-when-using-renderorder">Best Practices When Using
+renderOrder</h2>
+<p>To get the best results when using <code>renderOrder</code> for
+transparent objects, keep these practices in mind:</p>
+<ul>
+<li><strong>Use with depthWrite = false:</strong> For transparent
+materials, setting <code>material.depthWrite = false</code> prevents the
+object from writing to the depth buffer. This allows objects rendered
+afterward (with a higher <code>renderOrder</code>) to blend correctly
+instead of being blocked by invisible pixels.</li>
+<li><strong>Keep Opaque Objects Default:</strong> Do not change the
+<code>renderOrder</code> of opaque objects unless absolutely necessary.
+Opaque objects should render first so WebGL can optimize performance via
+depth-testing.</li>
+<li><strong>Be Mindful of Dynamic Scenes:</strong> If transparent
+objects constantly swap their physical depth relationship (e.g., two
+objects orbiting each other), static <code>renderOrder</code> values
+will cause visual errors when their positions invert. In such cases, you
+must dynamically update their <code>renderOrder</code> values via code
+based on their positions relative to the camera.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

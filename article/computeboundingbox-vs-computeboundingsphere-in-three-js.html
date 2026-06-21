@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>computeBoundingBox vs computeBoundingSphere in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, calculating boundary volumes is essential for frustum culling, raycasting, and collision detection. This article analyzes the performance differences between computeBoundingBox and computeBoundingSphere, explaining how they work under the ho">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/computeboundingbox-vs-computeboundingsphere-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="computeBoundingBox vs computeBoundingSphere in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/computeboundingbox-vs-computeboundingsphere-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, calculating boundary volumes is essential for frustum culling, raycasting, and collision detection. This article analyzes the performance differences between computeBoundingBox and computeBoundingSphere, explaining how they work under the ho" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="computeboundingbox-vs-computeboundingsphere-in-three.js">computeBoundingBox
+vs computeBoundingSphere in Three.js</h1>
+<p>In Three.js, calculating boundary volumes is essential for frustum
+culling, raycasting, and collision detection. This article analyzes the
+performance differences between <code>computeBoundingBox</code> and
+<code>computeBoundingSphere</code>, explaining how they work under the
+hood, their computational overhead during creation, and their efficiency
+during runtime rendering tests.</p>
+<h2 id="mathematical-and-computational-complexity">Mathematical and
+Computational Complexity</h2>
+<p>To understand the performance difference, we must look at how
+Three.js calculates these two spatial boundaries over a 3D mesh’s
+geometry.</p>
+<h3 id="computeboundingbox">1. computeBoundingBox()</h3>
+<p>This method calculates an Axis-Aligned Bounding Box (AABB) by finding
+the minimum and maximum X, Y, and Z coordinates among all vertices in
+the geometry.</p>
+<ul>
+<li><strong>Algorithm:</strong> A single-pass loop through the vertex
+buffer array.</li>
+<li><strong>Complexity:</strong> <span
+class="math inline">\(O(N)\)</span>, where <span
+class="math inline">\(N\)</span> is the number of vertices.</li>
+<li><strong>Operations:</strong> For each vertex, it performs simple
+comparison operations (min/max checks) for the X, Y, and Z coordinates.
+Because comparison operations are incredibly cheap on modern CPUs, this
+calculation is highly efficient.</li>
+</ul>
+<h3 id="computeboundingsphere">2. computeBoundingSphere()</h3>
+<p>This method calculates a bounding sphere that encapsulates all
+vertices of the geometry. It determines a center point and a radius.</p>
+<ul>
+<li><strong>Algorithm:</strong> Three.js calculates the bounding box
+first (or uses the existing one) to find the center of the geometry.
+Then, it loops through all vertices to find the maximum Euclidean
+distance from this center point to any vertex, which becomes the
+radius.</li>
+<li><strong>Complexity:</strong> <span
+class="math inline">\(O(N)\)</span> but requires more mathematical
+operations per vertex than the bounding box.</li>
+<li><strong>Operations:</strong> For each vertex, it calculates the
+squared distance to the center (subtractions and multiplications). Once
+the maximum squared distance is found, a single square root operation
+(<code>Math.sqrt</code>) is performed at the end to get the actual
+radius.</li>
+</ul>
+<p><strong>Creation Phase Winner:</strong>
+<code>computeBoundingBox</code> is computationally cheaper to generate
+than <code>computeBoundingSphere</code> because it relies solely on
+simple comparison operations rather than arithmetic distance
+calculations.</p>
+<hr />
+<h2 id="runtime-performance-usage-phase">Runtime Performance (Usage
+Phase)</h2>
+<p>While generating a bounding box is faster than generating a bounding
+sphere, the primary performance difference lies in how Three.js
+<em>uses</em> these boundaries during the render loop.</p>
+<p>By default, Three.js uses these boundaries for <strong>frustum
+culling</strong>—the process of ignoring objects that are outside the
+camera’s field of view to save GPU processing power.</p>
+<h3 id="frustum-culling-with-spheres">Frustum Culling with Spheres</h3>
+<p>Testing whether a sphere is inside the camera frustum is incredibly
+fast. The engine only needs to calculate the distance from the sphere’s
+center to the six frustum planes and compare it to the sphere’s radius.
+This involves simple dot products and addition.</p>
+<h3 id="frustum-culling-with-boxes">Frustum Culling with Boxes</h3>
+<p>Testing an Axis-Aligned Bounding Box against the camera frustum is
+mathematically more complex. It requires testing the eight corners of
+the box against the frustum planes, which involves significantly more
+conditional checks and floating-point operations.</p>
+<p><strong>Rendering Phase Winner:</strong> Bounding spheres are
+significantly faster for real-time frustum culling and collision
+detection checks.</p>
+<hr />
+<h2 id="best-practices-for-optimization">Best Practices for
+Optimization</h2>
+<p>To ensure your Three.js application runs at a fluid 60 FPS or higher,
+follow these optimization guidelines:</p>
+<ul>
+<li><strong>Avoid Calling Them in the Animation Loop:</strong> Both
+<code>computeBoundingBox()</code> and
+<code>computeBoundingSphere()</code> should be called once after loading
+or modifying geometry. Never call them inside a
+<code>requestAnimationFrame</code> loop, as iterating through thousands
+of vertices every frame will cause severe CPU bottlenecks.</li>
+<li><strong>Leverage Default Culling:</strong> Three.js automatically
+computes bounding spheres behind the scenes the first time a mesh is
+rendered to perform frustum culling. You rarely need to manually call
+<code>computeBoundingSphere()</code> unless you are doing custom
+raycasting or physics calculations before the first render.</li>
+<li><strong>Use Spheres for Broad-Phase, Boxes for
+Narrow-Phase:</strong> If you are building a custom collision system,
+use bounding spheres first to quickly rule out objects that are far
+apart (broad-phase). Only use the more computationally expensive
+bounding boxes when spheres intersect and you need more precise spatial
+alignment (narrow-phase).</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

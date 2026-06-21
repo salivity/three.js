@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js lightMap vs aoMap: What is the Difference? - three.js</title>
+    <meta name="description" content="When rendering 3D scenes in Three.js, baking lighting into textures is a highly effective way to achieve realistic visuals without the performance cost of real-time lights and shadows. Two primary texture maps used for this purpose are lightMap and aoMap">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-lightmap-vs-aomap-what-is-the-difference">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js lightMap vs aoMap: What is the Difference? - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-lightmap-vs-aomap-what-is-the-difference" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When rendering 3D scenes in Three.js, baking lighting into textures is a highly effective way to achieve realistic visuals without the performance cost of real-time lights and shadows. Two primary texture maps used for this purpose are lightMap and aoMap" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-lightmap-vs-aomap-what-is-the-difference">Three.js
+lightMap vs aoMap: What is the Difference?</h1>
+<p>When rendering 3D scenes in Three.js, baking lighting into textures
+is a highly effective way to achieve realistic visuals without the
+performance cost of real-time lights and shadows. Two primary texture
+maps used for this purpose are <code>lightMap</code> and
+<code>aoMap</code> (Ambient Occlusion map). While both influence how
+light interacts with a material, they serve distinct purposes: a
+<code>lightMap</code> stores pre-calculated direct and indirect
+illumination, whereas an <code>aoMap</code> simulates soft, localized
+shadows in crevices and corners where ambient light cannot reach.
+Understanding the technical differences between these two maps is
+crucial for optimizing your Three.js materials and scene
+performance.</p>
+<h2 id="what-is-a-lightmap">What is a lightMap?</h2>
+<p>A <code>lightMap</code> contains baked lighting data, which includes
+both direct light (such as the sun or lamps) and indirect bounced light
+(global illumination).</p>
+<ul>
+<li><strong>Color and Intensity:</strong> Unlike grayscale maps, a
+<code>lightMap</code> is typically a full-color (RGB) texture. It
+dictates the exact color and brightness of the light hitting a
+surface.</li>
+<li><strong>Functionality:</strong> In Three.js, when you apply a
+<code>lightMap</code> to a material (such as
+<code>MeshStandardMaterial</code> or <code>MeshBasicMaterial</code>), it
+adds illumination to the surface. It can be used to make a scene look
+fully lit even when there are zero real-time lights active in your
+Three.js scene.</li>
+<li><strong>Three.js Property:</strong>
+<code>material.lightMap</code></li>
+<li><strong>Control:</strong> You can adjust its influence using
+<code>material.lightMapIntensity</code> (default is
+<code>1.0</code>).</li>
+</ul>
+<h2 id="what-is-an-aomap">What is an aoMap?</h2>
+<p>An <code>aoMap</code> (Ambient Occlusion map) is a grayscale texture
+used to simulate contact shadows in areas where geometry blocks ambient
+light, such as corners, creases, and joints.</p>
+<ul>
+<li><strong>Color and Intensity:</strong> It is a monochrome (grayscale)
+map where white represents fully lit areas and black represents fully
+shadowed areas.</li>
+<li><strong>Functionality:</strong> The <code>aoMap</code> does not
+contain directional light, colored light, or specular reflections.
+Instead, it acts as a multiplier for the ambient (indirect) light in the
+scene. It darkens crevices to add depth and realism, but it does not
+affect direct light sources. If a strong directional light hits an
+occluded area, that area will still be lit.</li>
+<li><strong>Three.js Property:</strong> <code>material.aoMap</code></li>
+<li><strong>Control:</strong> You can adjust its strength using
+<code>material.aoMapIntensity</code> (default is <code>1.0</code>).</li>
+</ul>
+<h2 id="key-differences">Key Differences</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;">lightMap</th>
+<th style="text-align: left;">aoMap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Primary Purpose</strong></td>
+<td style="text-align: left;">Bakes overall lighting (brightness, color,
+and bounced light) onto a surface.</td>
+<td style="text-align: left;">Bakes micro-shadows in crevices where
+ambient light is blocked.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Color Space</strong></td>
+<td style="text-align: left;">RGB (Color)</td>
+<td style="text-align: left;">Grayscale (Monochrome)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Interaction with
+Lights</strong></td>
+<td style="text-align: left;">Adds light to the material; can completely
+replace real-time lights.</td>
+<td style="text-align: left;">Multiplies (darkens) ambient light; does
+not affect direct light.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Visual Effect</strong></td>
+<td style="text-align: left;">Warmth, cool tones, shadows, and
+highlights.</td>
+<td style="text-align: left;">Soft, realistic depth in corners and
+cracks.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-uv2-requirement-in-three.js">The UV2 Requirement in
+Three.js</h2>
+<p>A critical technical detail in Three.js is that both
+<code>lightMap</code> and <code>aoMap</code> require a second set of UV
+coordinates (the <code>uv2</code> attribute) on your geometry to map
+correctly.</p>
+<p>By default, the standard <code>uv</code> attribute is used for the
+main texture maps (like <code>map</code>, <code>roughnessMap</code>, and
+<code>normalMap</code>), which often tile across the surface. Because
+baked lighting and ambient occlusion maps must map uniquely to the
+entire 3D object without tiling, they require a unique, non-overlapping
+UV layout assigned to the <code>uv2</code> channel.</p>
+<p>You can copy the primary UV channel to the secondary UV channel in
+JavaScript like this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;uv2&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">uv</span><span class="op">.</span><span class="at">array</span><span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span></code></pre></div>
+<h2 id="when-to-use-which">When to Use Which?</h2>
+<ul>
+<li><strong>Use a <code>lightMap</code></strong> when you want to target
+mobile devices or web browsers with strict performance budgets. By
+baking all your light, color, and shadows into a <code>lightMap</code>,
+you can use <code>MeshBasicMaterial</code> (which requires no light
+calculations) and still achieve high-fidelity graphics.</li>
+<li><strong>Use an <code>aoMap</code></strong> when you are using
+real-time dynamic lights but want to add extra depth and realism to your
+models. The <code>aoMap</code> ensures that corners and cracks remain
+dark, preventing the flat look often associated with real-time web
+rendering.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

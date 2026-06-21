@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Three.js Lens Flare with Directional Light - three.js</title>
+    <meta name="description" content="Adding realistic lens flare effects to a directional light in Three.js enhances the visual depth and realism of your 3D scenes. This guide provides a straightforward, step-by-step tutorial on how to import the necessary Three.js addons, load flare textur">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/create-three-js-lens-flare-with-directional-light">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Create Three.js Lens Flare with Directional Light - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/create-three-js-lens-flare-with-directional-light" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Adding realistic lens flare effects to a directional light in Three.js enhances the visual depth and realism of your 3D scenes. This guide provides a straightforward, step-by-step tutorial on how to import the necessary Three.js addons, load flare textur" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="create-three.js-lens-flare-with-directional-light">Create
+Three.js Lens Flare with Directional Light</h1>
+<p>Adding realistic lens flare effects to a directional light in
+Three.js enhances the visual depth and realism of your 3D scenes. This
+guide provides a straightforward, step-by-step tutorial on how to import
+the necessary Three.js addons, load flare textures, and attach a
+customizable lens flare effect directly to a directional light
+source.</p>
+<h3 id="import-the-required-modules">1. Import the Required Modules</h3>
+<p>The lens flare effect is not part of the core Three.js library, so
+you must import <code>Lensflare</code> and <code>LensflareElement</code>
+from the examples/addons directory alongside the main Three.js
+library.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Lensflare<span class="op">,</span> LensflareElement } <span class="im">from</span> <span class="st">&#39;three/addons/objects/Lensflare.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="set-up-the-directional-light">2. Set Up the Directional
+Light</h3>
+<p>Create a directional light and add it to your scene. This light will
+serve as the source and anchor point for the lens flare effect.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the directional light (color, intensity)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.5</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">50</span><span class="op">,</span> <span class="op">-</span><span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(directionalLight)<span class="op">;</span></span></code></pre></div>
+<h3 id="load-flare-textures">3. Load Flare Textures</h3>
+<p>Lens flares require textures (usually simple glow and ring PNG images
+with black backgrounds) to render the optical artifacts. Use
+<code>TextureLoader</code> to load these assets.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureFlare0 <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/flare0.png&#39;</span>)<span class="op">;</span> <span class="co">// Main sun glow</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureFlare3 <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/flare3.png&#39;</span>)<span class="op">;</span> <span class="co">// Smaller hexagonal artifacts</span></span></code></pre></div>
+<h3 id="create-and-configure-the-lens-flare">4. Create and Configure the
+Lens Flare</h3>
+<p>Instantiate the <code>Lensflare</code> object. Then, use
+<code>LensflareElement</code> to define individual flare reflections.
+Each element takes four parameters: the texture, the size in pixels, the
+distance from the light source (0.0 to 1.0), and the color.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lensflare <span class="op">=</span> <span class="kw">new</span> <span class="fu">Lensflare</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Add the main light glow at the light source position (distance 0)</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>lensflare<span class="op">.</span><span class="fu">addElement</span>(<span class="kw">new</span> <span class="fu">LensflareElement</span>(textureFlare0<span class="op">,</span> <span class="dv">700</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> directionalLight<span class="op">.</span><span class="at">color</span>))<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Add smaller secondary flare elements along the light path</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>lensflare<span class="op">.</span><span class="fu">addElement</span>(<span class="kw">new</span> <span class="fu">LensflareElement</span>(textureFlare3<span class="op">,</span> <span class="dv">60</span><span class="op">,</span> <span class="fl">0.6</span>))<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>lensflare<span class="op">.</span><span class="fu">addElement</span>(<span class="kw">new</span> <span class="fu">LensflareElement</span>(textureFlare3<span class="op">,</span> <span class="dv">70</span><span class="op">,</span> <span class="fl">0.7</span>))<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>lensflare<span class="op">.</span><span class="fu">addElement</span>(<span class="kw">new</span> <span class="fu">LensflareElement</span>(textureFlare3<span class="op">,</span> <span class="dv">120</span><span class="op">,</span> <span class="fl">0.9</span>))<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>lensflare<span class="op">.</span><span class="fu">addElement</span>(<span class="kw">new</span> <span class="fu">LensflareElement</span>(textureFlare3<span class="op">,</span> <span class="dv">70</span><span class="op">,</span> <span class="fl">1.0</span>))<span class="op">;</span></span></code></pre></div>
+<h3 id="attach-the-lens-flare-to-the-light">5. Attach the Lens Flare to
+the Light</h3>
+<p>To ensure the lens flare moves dynamically with your light source,
+add the lens flare instance directly as a child of the directional
+light.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="fu">add</span>(lensflare)<span class="op">;</span></span></code></pre></div>
+<p>Whenever the position of the <code>directionalLight</code> changes,
+the lens flare will automatically update its position in the 3D
+space.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Three.js Uses ShaderChunks for Shaders - three.js</title>
+    <meta name="description" content="In Three.js, shaders are essential for rendering 3D graphics, but writing them from scratch for every material is highly repetitive. This article explains what ShaderChunks are—reusable snippets of GLSL (OpenGL Shading Language) code—and details how">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-three-js-uses-shaderchunks-for-shaders">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Three.js Uses ShaderChunks for Shaders - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-three-js-uses-shaderchunks-for-shaders" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, shaders are essential for rendering 3D graphics, but writing them from scratch for every material is highly repetitive. This article explains what ShaderChunks are—reusable snippets of GLSL (OpenGL Shading Language) code—and details how" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-three.js-uses-shaderchunks-for-shaders">How Three.js Uses
+ShaderChunks for Shaders</h1>
+<p>In Three.js, shaders are essential for rendering 3D graphics, but
+writing them from scratch for every material is highly repetitive. This
+article explains what ShaderChunks are—reusable snippets of GLSL (OpenGL
+Shading Language) code—and details how Three.js dynamically assembles
+them to build complex material shaders, allowing developers to customize
+rendering without rewriting boilerplate graphics code.</p>
+<h2 id="what-are-shaderchunks">What are ShaderChunks?</h2>
+<p>ShaderChunks are modular, reusable blocks of GLSL code stored in the
+Three.js library under the <code>THREE.ShaderChunk</code> object.
+Instead of writing massive, monolithic shader programs for every
+material (such as <code>MeshBasicMaterial</code> or
+<code>MeshPhysicalMaterial</code>), Three.js breaks the rendering
+pipeline down into smaller, logical pieces.</p>
+<p>Each ShaderChunk handles a specific graphics task. For example: *
+<strong><code>fog_vertex</code> and <code>fog_fragment</code></strong>:
+Manage fog calculations. *
+<strong><code>lights_pars_begin</code></strong>: Defines uniforms and
+varying variables for lighting. *
+<strong><code>shadowmap_pars_vertex</code></strong>: Handles shadow
+mapping calculations in the vertex shader. *
+<strong><code>common</code></strong>: Contains mathematical constants
+and utility functions used across multiple shaders.</p>
+<p>By organizing GLSL code into these chunks, Three.js maintains a
+highly organized, DRY (Don’t Repeat Yourself) codebase for WebGL
+rendering.</p>
+<h2 id="how-three.js-assembles-materials-using-shaderchunks">How
+Three.js Assembles Materials Using ShaderChunks</h2>
+<p>When you instantiate a built-in material, Three.js does not use a
+single, static shader file. Instead, it dynamically assembles the vertex
+and fragment shaders using a pre-processing system.</p>
+<h3 id="the-template-shaders">1. The Template Shaders</h3>
+<p>Every built-in material has a corresponding shader template (found in
+the Three.js source code under
+<code>src/renderers/shaders/ShaderLib/</code>). These templates consist
+of basic GLSL structures interspersed with custom <code>#include</code>
+directives.</p>
+<p>For example, a simplified vertex shader template might look like
+this:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="pp">#include &lt;uv_vertex&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="pp">#include &lt;color_vertex&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="pp">#include &lt;begin_vertex&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="pp">#include &lt;project_vertex&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="the-pre-processing-step">2. The Pre-processing Step</h3>
+<p>Before compiling the shader on the GPU, the Three.js
+<code>WebGLRenderer</code> parses these template strings. It searches
+for any line containing <code>#include &lt;chunk_name&gt;</code>.</p>
+<p>The renderer then looks up the corresponding GLSL code in
+<code>THREE.ShaderChunk</code> and replaces the <code>#include</code>
+directive with the actual code snippet. For instance,
+<code>#include &lt;begin_vertex&gt;</code> is replaced with:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">vec3</span> transformed <span class="op">=</span> <span class="dt">vec3</span><span class="op">(</span> position <span class="op">);</span></span></code></pre></div>
+<p>This replacement happens recursively until all <code>#include</code>
+statements are resolved, resulting in a complete, valid GLSL program
+ready for WebGL compilation.</p>
+<h3 id="conditional-assembly">3. Conditional Assembly</h3>
+<p>Three.js only includes the chunks that are actually needed for the
+material’s current configuration. If a material has no map, fog, or
+lights enabled, the renderer will skip the corresponding chunks. This
+keeps the final compiled shader as lightweight and performant as
+possible.</p>
+<h2 id="how-developers-can-use-shaderchunks">How Developers Can Use
+ShaderChunks</h2>
+<p>Understanding ShaderChunks allows developers to customize built-in
+Three.js materials without writing entirely custom shaders from
+scratch.</p>
+<h3 id="modifying-materials-with-onbeforecompile">Modifying Materials
+with <code>onBeforeCompile</code></h3>
+<p>The most common way to leverage ShaderChunks is through the
+<code>onBeforeCompile</code> callback available on all Three.js
+materials. This callback gives you access to the assembled shader source
+code before it is sent to the GPU, allowing you to swap out default
+chunks with custom code.</p>
+<p>Here is an example of modifying a standard material to inject custom
+displacement logic:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">onBeforeCompile</span> <span class="op">=</span> (shader) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Replace the default begin_vertex chunk with custom movement code</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  shader<span class="op">.</span><span class="at">vertexShader</span> <span class="op">=</span> shader<span class="op">.</span><span class="at">vertexShader</span><span class="op">.</span><span class="fu">replace</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;#include &lt;begin_vertex&gt;&#39;</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="vs">`</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="vs">    vec3 transformed = vec3( position );</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="vs">    transformed.x += sin(position.y + time) * 0.5;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="vs">    `</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<h3 id="building-custom-shadermaterial">Building Custom
+<code>ShaderMaterial</code></h3>
+<p>If you are writing a completely custom <code>ShaderMaterial</code>
+but still want to use Three.js features like fog, lighting, or shadow
+maps, you can reference <code>THREE.ShaderChunk</code> directly inside
+your custom GLSL code.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vertexShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="vs">    varying vec2 vUv;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="vs">    #include &lt;common&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="vs">    #include &lt;fog_pars_vertex&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="vs">    </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="vs">      vUv = uv;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="vs">      #include &lt;begin_vertex&gt;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="vs">      #include &lt;project_vertex&gt;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="vs">      #include &lt;fog_vertex&gt;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span><span class="op">,</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">fragmentShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="vs">    varying vec2 vUv;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="vs">    #include &lt;common&gt;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="vs">    #include &lt;fog_pars_fragment&gt;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="vs">    </span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="vs">      vec4 color = vec4(vUv, 1.0, 1.0);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="vs">      gl_FragColor = color;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="vs">      #include &lt;fog_fragment&gt;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span><span class="op">,</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">fog</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>By utilizing ShaderChunks, you avoid writing complex WebGL
+boilerplate for systems like fog and matrices, allowing you to focus
+purely on your custom visual effects.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

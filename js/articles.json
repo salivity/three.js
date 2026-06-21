@@ -1,0 +1,2318 @@
+[
+  [
+    387,
+    "Three.js premultipliedAlpha and Transparent PNGs",
+    "This article explains how the material.premultipliedAlpha property affects the rendering of transparent PNG textures in Three.js. You will learn how WebGL handles color blending under the hood, why transparent PNGs sometimes exhibit dark halos, and how t",
+    false
+  ],
+  [
+    386,
+    "Three.js: Track a Moving Object with Object3D.lookAt",
+    "In Three.js, orienting a 3D object to face another moving target is a fundamental task for creating dynamic scenes, interactive cameras, or responsive character behaviors. This article provides a straightforward guide on how to use the Object3D.lookAt me",
+    false
+  ],
+  [
+    385,
+    "Use SVG as Texture in Three.js",
+    "This article provides a direct, step-by-step guide on how to load and apply an external SVG file as a texture onto 3D surfaces in Three.js. Instead of parsing the SVG into complex 3D vector paths using SVGLoader, you will learn how to render the SVG as a",
+    false
+  ],
+  [
+    384,
+    "How to Configure Three.js WebGLRenderer for Screenshots",
+    "This article explains how to configure the Three.js WebGLRenderer using the preserveDrawingBuffer property so users can successfully capture and download screenshots of a 3D canvas. By default, WebGL clears the drawing buffer after presenting the render,",
+    false
+  ],
+  [
+    383,
+    "Fix OrthographicCamera Zoom with OrbitControls in Three.js",
+    "Using an OrthographicCamera alongside OrbitControls in Three.js often results in broken or unresponsive zooming because orthographic projection does not rely on camera distance to scale objects. This article explains why this limitation occurs and provid",
+    false
+  ],
+  [
+    382,
+    "Sync HTML Elements to 3D Positions with CSS2DRenderer",
+    "This article explains how to use the Three.js CSS2DRenderer to align and synchronize 2D HTML elements with 3D positions in a WebGL scene. You will learn how to set up the renderer, bind HTML elements to 3D Object3D instances, and apply localized CSS tran",
+    false
+  ],
+  [
+    381,
+    "How to Convert Euler to Quaternion in Three.js",
+    "In Three.js, 3D rotations can be represented using either Euler angles (orientations along the X, Y, and Z axes) or Quaternions (four-dimensional numbers that avoid gimbal lock). This article provides a quick, practical guide on how to convert an Object3",
+    false
+  ],
+  [
+    380,
+    "Calculate Angle Between Two Vectors in Three.js",
+    "This article explains how to calculate the angle between two 3D vectors in Three.js using the Vector3.angleTo() method. You will learn the syntax of the method, see a practical code example, and understand how to convert the resulting angle from radians",
+    false
+  ],
+  [
+    379,
+    "Why You Must Normalize Vector3 Directions in Three.js",
+    "In Three.js and 3D computer graphics, normalizing a Vector3 means scaling its length to exactly 1 unit while preserving its original direction. Mathematically, this process is essential because directional calculations—such as lighting models, camera o",
+    false
+  ],
+  [
+    378,
+    "Align Object to Raycast Normal in Three.js",
+    "This article explains how to align a 3D object to match the exact surface normal vector at the point of intersection using the Three.js Raycaster. You will learn how to extract the normal vector from raycaster intersection data, convert it if necessary,",
+    false
+  ],
+  [
+    377,
+    "Prevent Three.js Texture Bleeding with ClampToEdge",
+    "When rendering textures on 3D planes in Three.js, you may notice unsightly artifacts or \"bleeding\" at the outer boundaries of your geometry. This article explains how to resolve this visual glitch by configuring your texture's wrapping properties to use",
+    false
+  ],
+  [
+    376,
+    "Play GLTF Animations by Name in Three.js",
+    "This article explains how to target, extract, and play a specific animation from a loaded GLTF file in Three.js. You will learn how to initialize the AnimationMixer, locate an animation clip by its string name within the GLTF asset's animation array, and",
+    false
+  ],
+  [
+    375,
+    "Three.js Y-Axis Billboard Using Quaternions",
+    "This article explains how to implement a Y-axis billboard constraint in Three.js using quaternions. You will learn how to make a 3D object rotate to face the camera continuously while restricting its movement solely to the vertical Y-axis, preventing unw",
+    false
+  ],
+  [
+    374,
+    "Float32Array vs Float64Array in Three.js BufferGeometry",
+    "When building custom BufferGeometry in Three.js, choosing between Float32Array and Float64Array for attribute data significantly impacts memory allocation, CPU-to-GPU bandwidth, and rendering performance. This article explains the direct differences in m",
+    false
+  ],
+  [
+    373,
+    "Three.js Endless Grid Floor with UV Offset",
+    "This article explains how to create an endless, repeating grid floor in Three.js by manipulating texture UV offsets. You will learn how to set up a repeating texture on a ground plane and programmatically update its offset relative to the camera's moveme",
+    false
+  ],
+  [
+    372,
+    "Limit Three.js Pixel Ratio for Retina Performance",
+    "This article explains how to optimize Three.js application performance on high-DPI (Retina) screens by capping the device pixel ratio. You will learn why rendering at native high-resolution pixel ratios causes performance bottlenecks and how to use the r",
+    false
+  ],
+  [
+    371,
+    "How to Dispose of WebGLRenderTarget in Three.js",
+    "Properly managing GPU memory in Three.js is crucial for maintaining high performance and preventing application crashes, especially when dealing with offscreen rendering. This article explains how to correctly dispose of a WebGLRenderTarget to free up fr",
+    false
+  ],
+  [
+    370,
+    "Extract Camera View Vector for Three.js Rim Lighting",
+    "This article explains how to extract the camera viewing direction vector in a Three.js custom shader to create a rim lighting (Fresnel) effect. You will learn how to leverage Three.js's built-in matrices to calculate the view direction in view space, wri",
+    false
+  ],
+  [
+    369,
+    "Deform Three.js Geometry with Shader Noise",
+    "Dynamic geometry deformation in Three.js is most efficiently achieved by calculating noise directly on the GPU using custom vertex shaders. This approach avoids the massive CPU-to-GPU bandwidth bottleneck associated with modifying geometry vertices in Ja",
+    false
+  ],
+  [
+    368,
+    "Difference Between setHex and setStyle in Three.js",
+    "In Three.js, the THREE.Color class provides several methods to update the color of a material. This article explains the key differences between material.color.setHex() and material.color.setStyle(), highlighting their distinct input formats, performance",
+    false
+  ],
+  [
+    367,
+    "Load Mipmaps Manually in Three.js CompressedTexture",
+    "This article explains how to manually load specific mipmap levels into a CompressedTexture in Three.js. You will learn how to structure your raw binary mipmap data, assign it to a custom texture object, and configure the rendering filters to ensure Three",
+    false
+  ],
+  [
+    366,
+    "Custom PBR Shader Equations in Three.js",
+    "This guide explains how to implement custom Physically Based Rendering (PBR) equations in Three.js by extending its built-in shader chunks. By leveraging the onBeforeCompile callback on standard materials, you can inject custom GLSL code to modify light-",
+    false
+  ],
+  [
+    365,
+    "How to Use AlphaTest in Three.js for Leaf Textures",
+    "This article explains how to resolve depth sorting and transparency glitches on leaf and foliage textures in Three.js using the alphaTest property. You will learn why these rendering issues occur, how to apply alphaTest to your materials, and how to fine",
+    false
+  ],
+  [
+    364,
+    "How to Use Global Uniforms in Three.js NodeMaterial",
+    "This article explains how to access and utilize global uniforms, specifically time and viewport resolution, within the modern Three.js NodeMaterial system. With the transition to WebGPU and the Three Shading Language (TSL), managing uniforms has become h",
+    false
+  ],
+  [
+    363,
+    "Guide to Three.js NodeMaterial for Shaders",
+    "This article explores how to leverage the Three.js NodeMaterial system to create sophisticated shaders without writing a single line of raw GLSL. We will cover the core concepts of node-based material creation, demonstrate how to construct shaders progra",
+    false
+  ],
+  [
+    362,
+    "Custom Transparent Sorting in Three.js",
+    "This article explains how to implement custom sorting for transparent and opaque objects in Three.js using the setTransparentSort and setOpaqueSort methods on the WebGLRenderer. You will learn how the default sorting mechanism works, how to override it w",
+    false
+  ],
+  [
+    361,
+    "How depthWrite Affects Transparency in Three.js",
+    "In Three.js, managing how transparent objects render in relation to the depth buffer (z-buffer) is crucial for avoiding visual artifacts like clipping and invisible geometry. This article explains how the depthWrite property controls whether transparent",
+    false
+  ],
+  [
+    360,
+    "Get Bounding Box of Three.js InstancedMesh Instance",
+    "Working with InstancedMesh in Three.js is highly efficient for rendering thousands of identical objects, but retrieving the bounding box of a single instance requires a specific approach. This article explains how to calculate the precise world-space bou",
+    false
+  ],
+  [
+    359,
+    "How to Update InstancedMesh Instance Matrix in Three.js",
+    "Working with InstancedMesh in Three.js allows you to render thousands of identical geometries efficiently, but updating individual instances requires a specific workflow. This article explains how to safely modify the transformation matrix (position, rot",
+    false
+  ],
+  [
+    358,
+    "Three.js InstancedMesh Custom Color Attribute",
+    "This article explains how to structure and apply a custom attribute array to assign individual colors to instances within a Three.js InstancedMesh. You will learn how to define a flat Float32Array containing RGB values, wrap it in an InstancedBufferAttri",
+    false
+  ],
+  [
+    357,
+    "How to Clear a Three.js Scene and Remove All Children",
+    "In Three.js, managing memory and scene states is crucial for maintaining application performance. This article explains how to use the built-in scene.clear() method to efficiently remove all child objects, lights, and cameras from a Three.js Scene, reset",
+    false
+  ],
+  [
+    356,
+    "Dynamic CubeCamera Reflections in Three.js",
+    "Creating realistic, real-time reflections in Three.js can significantly enhance the visual fidelity of a 3D scene. This article explains how to implement a dynamic reflection probe using CubeCamera and WebGLCubeRenderTarget to capture the surrounding env",
+    false
+  ],
+  [
+    355,
+    "How to Use Metalness Maps in Three.js PBR Materials",
+    "In modern 3D web development, achieving realistic surfaces requires Physically Based Rendering (PBR). This article explains how to use a metalness map within a Three.js MeshStandardMaterial to define which areas of a 3D model's texture are conductive (me",
+    false
+  ],
+  [
+    354,
+    "Apply Roughness Map to MeshStandardMaterial in Three.js",
+    "This article explains how to simulate realistic, varying surface reflections on a 3D object in Three.js by applying a roughness map to a MeshStandardMaterial. You will learn how to load a grayscale texture, assign it to the material's roughness property,",
+    false
+  ],
+  [
+    353,
+    "How to Detect WebGL Support Before Three.js",
+    "Before initializing a Three.js application, it is crucial to verify whether the user's browser and hardware support WebGL. Detecting this compatibility beforehand prevents runtime crashes, avoids loading heavy 3D assets unnecessarily, and allows you to d",
+    false
+  ],
+  [
+    352,
+    "How to Clone a Mesh with Unique Material in Three.js",
+    "In Three.js, cloning a 3D mesh using the default .clone() method duplicates the mesh object but keeps references to the original geometry and material. If you modify the material of the cloned mesh, the original mesh will change as well. To prevent this,",
+    false
+  ],
+  [
+    351,
+    "Serialize Three.js Object3D Hierarchy to JSON",
+    "Serializing a Three.js scene or Object3D hierarchy into a standard JSON format allows you to save, transmit, or dynamically load 3D assets. This article explains how to use the built-in toJSON() method in Three.js to export an entire object hierarchy—i",
+    false
+  ],
+  [
+    350,
+    "Three.js Bounding Sphere Margin and Frustum Culling",
+    "This article explains the concept of the bounding sphere margin in Three.js and its role in frustum culling. You will learn how frustum culling determines object visibility, why animated or deformed meshes sometimes disappear prematurely at the edges of",
+    false
+  ],
+  [
+    349,
+    "Handle WebXR Session End Event in Three.js",
+    "When developing Virtual Reality (VR) or Augmented Reality (AR) experiences with Three.js, properly managing the lifecycle of a WebXR session is crucial for a seamless user experience. This article provides a direct, step-by-step guide on how to listen fo",
+    false
+  ],
+  [
+    348,
+    "Access WebXR Depth Sensing Data in Three.js",
+    "This article explains how to retrieve and utilize real-world depth sensing data within an augmented reality (AR) session using Three.js and the WebXR Device API. You will learn how to configure your WebXR session to request depth data, access depth buffe",
+    false
+  ],
+  [
+    347,
+    "Target Ray Space vs Grip Space in Three.js WebXR",
+    "When developing virtual reality (VR) and augmented reality (AR) applications with Three.js and WebXR, tracking user input accurately is crucial. WebXR provides two distinct spatial representations for controllers: the target ray space and the grip space.",
+    false
+  ],
+  [
+    346,
+    "How to Clear Depth Buffer in Three.js Post-Processing",
+    "Rendering 3D user interface (UI) elements on top of a post-processed scene in Three.js requires clearing the depth buffer mid-way through your rendering pipeline. This article explains how to configure Three.js’s EffectComposer to clear the depth buffe",
+    false
+  ],
+  [
+    345,
+    "How to Use CopyShader in Three.js EffectComposer",
+    "This article explains how to use the CopyShader in Three.js to render the final post-processing results of an EffectComposer directly to the screen. You will learn how to set up the post-processing pipeline, configure a ShaderPass with the CopyShader, an",
+    false
+  ],
+  [
+    344,
+    "How Three.js Handles WebGL2 and WebGL1 Fallback",
+    "This article explores how Three.js manages graphics rendering contexts behind the scenes, focusing on its automatic initialization of WebGL2 and its internal fallback mechanism to WebGL1. You will learn how the engine detects browser capabilities, negoti",
+    false
+  ],
+  [
+    343,
+    "Enable MSAA on WebGLRenderTarget in Three.js",
+    "This article explains how to configure the samples property on a WebGLRenderTarget to enable Multi-Sample Anti-Aliasing (MSAA) in Three.js. You will learn the correct property settings, see a practical code implementation, and understand the requirements",
+    false
+  ],
+  [
+    342,
+    "Handle Asset Loading Errors with Three.js LoadingManager",
+    "Managing asset loading in Three.js is crucial for creating seamless 3D web experiences. This article explains how to use the THREE.LoadingManager class, specifically focusing on its onError callback, to intercept, identify, and handle individual asset lo",
+    false
+  ],
+  [
+    341,
+    "BasisTextureLoader and KTX2 Workflow in Three.js",
+    "This article explains the purpose of the BasisTextureLoader in Three.js and explores its transition into the modern KTX2 workflow. It details how the 3D web graphics community evolved from proprietary .basis files to the standardized .ktx2 container form",
+    false
+  ],
+  [
+    340,
+    "Support KHR_materials_unlit in Three.js GLTFLoader",
+    "This article explains how to parse and support the KHRmaterialsunlit extension when loading 3D models using GLTFLoader in Three.js. It covers how Three.js handles unlit materials automatically, provides a code implementation, and explains how to verify t",
+    false
+  ],
+  [
+    339,
+    "Fix glTF Texture flipY Issue in Three.js",
+    "This article explains how to resolve the common texture inversion (flipY) issue when loading glTF models in Three.js. You will learn why this coordinate mismatch occurs between WebGL and the glTF standard, and how to apply the correct code configurations",
+    false
+  ],
+  [
+    338,
+    "How to Autoplay and Loop Three.js VideoTexture",
+    "To display autoplaying video in Three.js, you must configure the underlying HTML5 <video> element to comply with modern browser autoplay policies. Browsers block autoplaying videos with audio to prevent intrusive user experiences. By programmatically set",
+    false
+  ],
+  [
+    337,
+    "How to Update CanvasTexture in Three.js",
+    "When using an HTML canvas as a texture source in Three.js, changes made to the canvas 2D context are not automatically reflected in your 3D scene. To render these changes, you must manually signal to Three.js that the texture's data has changed. This art",
+    false
+  ],
+  [
+    336,
+    "Three.js RepeatWrapping vs MirroredRepeatWrapping",
+    "When texturing 3D models in Three.js, controlling how textures tile across a surface is crucial for achieving realistic visuals. This article explains the differences between RepeatWrapping and MirroredRepeatWrapping, demonstrating how each mode affects",
+    false
+  ],
+  [
+    335,
+    "Achieve Pixel Art Look in Three.js with NearestFilter",
+    "This article explains how to use the NearestFilter property in Three.js to prevent low-resolution textures from becoming blurry when scaled up. By forcing the renderer to use nearest-neighbor interpolation, you can preserve sharp edges and achieve a clea",
+    false
+  ],
+  [
+    334,
+    "Calculate Three.js HemisphereLight Color on a Mesh",
+    "This article explains how to programmatically calculate the exact color contribution of a HemisphereLight on a specific mesh surface in Three.js. You will learn the mathematical formula Three.js uses internally and how to implement a JavaScript function",
+    false
+  ],
+  [
+    333,
+    "Three.js RectAreaLight Shadow Limitations",
+    "In a standard Three.js setup, the primary limitation of RectAreaLight is that it cannot cast dynamic shadows. Unlike other light sources in Three.js, such as DirectionalLight or SpotLight, RectAreaLight does not support shadow maps out of the box, meanin",
+    false
+  ],
+  [
+    332,
+    "Three.js WebGLRenderer Global Clipping Planes",
+    "This article provides a straightforward guide on how to enable and utilize global clipping planes using the WebGLRenderer in Three.js. You will learn how to define a mathematical clipping plane, apply it globally to affect all rendered objects in your sc",
+    false
+  ],
+  [
+    331,
+    "Monitor Geometries and Textures in Three.js GPU Memory",
+    "This article explains how to monitor active geometries and textures in GPU memory using the WebGLRenderer.info object in Three.js. You will learn how to access real-time memory telemetry, understand the specific properties of the info.memory object, and",
+    false
+  ],
+  [
+    330,
+    "How to Adjust toneMappingExposure in Three.js",
+    "This article explains how to properly use the toneMappingExposure property in Three.js to control the brightness of physically rendered scenes. You will learn how to enable tone mapping on the renderer, adjust the exposure values to brighten or darken yo",
+    false
+  ],
+  [
+    329,
+    "CineonToneMapping vs Other Three.js Tone Mapping",
+    "In Three.js, selecting the right tone mapping algorithm is crucial for achieving the desired visual aesthetic and realism in 3D scenes. This article explores the unique visual characteristics of CineonToneMapping, detailing how its cinematic, film-like r",
+    false
+  ],
+  [
+    328,
+    "Configure ACESFilmicToneMapping in Three.js for HDR",
+    "Achieving a cinematic, photorealistic look in Three.js requires proper color management and tone mapping. This article provides a direct guide on how to configure ACESFilmicToneMapping on the WebGLRenderer, adjust exposure settings, and set up your scene",
+    false
+  ],
+  [
+    327,
+    "Three.js AnimationMixer Loop Event Tracking",
+    "In Three.js, tracking when an animation cycle completes and loops is essential for synchronizing game logic, triggering audio, or chaining character behaviors. This article explains how to listen for the 'loop' event dispatched by the AnimationMixer, ide",
+    false
+  ],
+  [
+    326,
+    "Three.js Additive Animations and blendMode Guide",
+    "This article explains what additive animations are in 3D web development and provides a step-by-step guide on how to configure the blendMode of an AnimationAction in Three.js. You will learn how to layer multiple animations on a single 3D model to create",
+    false
+  ],
+  [
+    325,
+    "Three.js Animation Transition with crossFadeTo",
+    "This article provides a practical guide on how to smoothly transition a character's animation from walking to running in Three.js using the AnimationAction.crossFadeTo() method. You will learn how to set up your animation actions, configure the crossfade",
+    false
+  ],
+  [
+    324,
+    "How to Use LoopPingPong in Three.js Animation",
+    "In Three.js, creating dynamic and realistic 3D animations often requires repeating motions in a natural cycle. This article provides a quick, step-by-step guide on how to configure a Three.js AnimationAction to use the LoopPingPong loop mode, which autom",
+    false
+  ],
+  [
+    323,
+    "Control Three.js Animation Speed Globally",
+    "This article explains how to control the playback speed of all animations globally in Three.js using the AnimationMixer class. You will learn how to use the timeScale property to speed up, slow down, pause, or reverse multiple animations simultaneously w",
+    false
+  ],
+  [
+    322,
+    "Three.js Camera Zoom Without updateProjectionMatrix",
+    "Modifying a camera's zoom property in Three.js without updating its projection matrix results in no visual change to the rendered scene. This article explains why Three.js requires an explicit matrix update to apply zoom changes, what happens behind the",
+    false
+  ],
+  [
+    321,
+    "How to Auto-Rotate OrbitControls in Three.js",
+    "This article explains how to enable automatic camera rotation and control its speed using the OrbitControls library in Three.js. You will learn the exact properties to modify and how to properly configure your animation loop so that the auto-rotation eff",
+    false
+  ],
+  [
+    320,
+    "Three.js DeviceOrientationControls Gyroscope Mapping",
+    "This article explains how the DeviceOrientationControls class in Three.js maps a mobile device's gyroscope and accelerometer data to rotate the virtual camera. It covers the retrieval of physical orientation angles, the translation of these angles into 3",
+    false
+  ],
+  [
+    319,
+    "Configure Three.js FlyControls for Flight Simulation",
+    "This guide explains how to implement and configure FlyControls in Three.js to achieve unrestricted 3D movement, mimicking a flight simulator. You will learn how to import the controller, initialize it with a camera, adjust key configuration settings like",
+    false
+  ],
+  [
+    318,
+    "TrackballControls vs OrbitControls in Three.js",
+    "In Three.js, both TrackballControls and OrbitControls are popular utilities used to navigate 3D scenes by manipulating the camera. This article explains the primary differences in their interaction styles, focusing on camera rotation, orientation constra",
+    false
+  ],
+  [
+    317,
+    "How to Resize Three.js PerspectiveCamera",
+    "When building 3D applications with Three.js, handling browser window resizing is crucial to prevent your scene from looking stretched or squished. This article provides a quick, step-by-step guide on how to dynamically calculate the correct aspect ratio",
+    false
+  ],
+  [
+    316,
+    "Use LightProbe Spherical Harmonics in Three.js",
+    "This article explains how to utilize spherical harmonics (SH) coefficients within a Three.js LightProbe to create realistic, low-frequency ambient lighting in a 3D scene. You will learn how to instantiate a light probe, populate its spherical harmonics d",
+    false
+  ],
+  [
+    315,
+    "Fixing Three.js Shadow Artifacts with normalBias",
+    "This article explains the role of the normalBias property in Three.js and how it is used to eliminate shadow artifacts, such as shadow acne, without causing detached shadows. You will learn the mechanical differences between standard bias and normalBias,",
+    false
+  ],
+  [
+    314,
+    "Spin a 2D Billboard in Three.js Using SpriteMaterial",
+    "In Three.js, 2D billboards are represented by Sprite objects, which automatically rotate to always face the camera. Because of this camera-facing behavior, attempting to rotate the Sprite mesh itself using its rotation property will not produce the expec",
+    false
+  ],
+  [
+    313,
+    "Configure sizeAttenuation in Three.js PointsMaterial",
+    "In Three.js, creating realistic particle systems often requires particles to look smaller as they move further away from the camera. This article explains how to configure the sizeAttenuation property on a PointsMaterial to enable perspective-based parti",
+    false
+  ],
+  [
+    312,
+    "Three.js lightMap vs aoMap: What is the Difference?",
+    "When rendering 3D scenes in Three.js, baking lighting into textures is a highly effective way to achieve realistic visuals without the performance cost of real-time lights and shadows. Two primary texture maps used for this purpose are lightMap and aoMap",
+    false
+  ],
+  [
+    311,
+    "Use aoMap in Three.js MeshStandardMaterial",
+    "This article explains how to utilize an aoMap (Ambient Occlusion map) with MeshStandardMaterial in Three.js to add realistic, pre-calculated shadows to your 3D models. You will learn how to load the ambient occlusion texture, apply it to the material, ad",
+    false
+  ],
+  [
+    310,
+    "Fix Three.js Z-Fighting Using polygonOffset",
+    "This article explains how to resolve z-fighting in Three.js using the polygonOffset material property. You will learn what causes this rendering artifact when dealing with coplanar geometry and receive a step-by-step guide on how to configure your materi",
+    false
+  ],
+  [
+    309,
+    "computeBoundingBox vs computeBoundingSphere in Three.js",
+    "In Three.js, calculating boundary volumes is essential for frustum culling, raycasting, and collision detection. This article analyzes the performance differences between computeBoundingBox and computeBoundingSphere, explaining how they work under the ho",
+    false
+  ],
+  [
+    308,
+    "How to Add a Secondary UV Map in Three.js",
+    "This article explains how to correctly apply a secondary UV map (uv2) to a BufferGeometry in Three.js. You will learn how to define the uv2 attribute by either cloning existing UV coordinates or assigning custom ones, which is a necessary step for render",
+    false
+  ],
+  [
+    307,
+    "Three.js MathUtils.smoothstep for Non-Linear Transitions",
+    "In Three.js, creating natural, organic animations often requires non-linear interpolation rather than rigid linear movement. The MathUtils.smoothstep function is a built-in utility that calculates a smooth, S-shaped transition between two boundary values",
+    false
+  ],
+  [
+    306,
+    "How to Use MathUtils.pingpong in Three.js",
+    "In Three.js, creating smooth, back-and-forth animations often requires oscillating values. This article explains how to utilize the MathUtils.pingpong function to generate these oscillating values over time, complete with practical code examples showing",
+    false
+  ],
+  [
+    305,
+    "Three.js Cylindrical Coordinate System Guide",
+    "This article provides an overview of the Cylindrical coordinate system class in Three.js, explaining its mathematical foundation, key parameters, and practical use cases. You will learn how to instantiate this class, convert coordinates between Cartesian",
+    false
+  ],
+  [
+    304,
+    "How to Use Three.js Ray Without Raycaster",
+    "In Three.js, while the Raycaster class is the standard tool for mouse picking and object collision, you can perform lower-level, high-performance manual intersection calculations using the lightweight Ray class. This article explains how to instantiate a",
+    false
+  ],
+  [
+    303,
+    "Find Closest Point on a Line Segment in Three.js",
+    "In 3D computer graphics, finding the nearest point on a line segment to an arbitrary point in space is a common task used for collision detection, pathfinding, and user interactions. The Three.js library simplifies this mathematical challenge through its",
+    false
+  ],
+  [
+    302,
+    "Three.js Triangle Barycentric Coordinates Explained",
+    "This article explains how the Triangle class in Three.js calculates barycentric coordinates using the getBarycoord method. It details the underlying mathematical formulas, specifically the algebraic projection method based on Cramer's Rule, and explains",
+    false
+  ],
+  [
+    301,
+    "Smooth Rotations in Three.js Using Quaternion Slerp",
+    "In 3D game development and animation, smoothly rotating objects from one orientation to another is a common requirement. This article guides you through using the Quaternion.slerp (Spherical Linear Interpolation) method in Three.js to achieve seamless, n",
+    false
+  ],
+  [
+    300,
+    "How to Check if a Three.js Object Faces the Camera",
+    "In Three.js, determining whether a 3D object is facing the camera is a common task for optimizing rendering, implementing billboarding, or triggering interaction events. This article explains how to use the mathematical dot product on two THREE.Vector3 o",
+    false
+  ],
+  [
+    299,
+    "How to Parent 3D Model to Three.js AR Marker",
+    "To successfully display a dynamically loaded 3D model on a tracking marker in a WebXR or Three.js augmented reality application, you must load the asset asynchronously and attach it directly to the anchor group associated with your tracking marker. This",
+    false
+  ],
+  [
+    298,
+    "Three.js Depth Pass Using Scene overrideMaterial",
+    "This article explains how to efficiently render a depth pass in Three.js by utilizing the Scene.overrideMaterial property. You will learn how to temporarily force all meshes in a scene to render using a single MeshDepthMaterial to capture depth data, whi",
+    false
+  ],
+  [
+    297,
+    "Three.js Scene Inheritance and Global Properties",
+    "In Three.js, the Scene object serves as the root container for the entire 3D graphical universe, allowing you to organize and render cameras, lights, and 3D objects. This article explains how the Scene class inherits its core functionality from the found",
+    false
+  ],
+  [
+    296,
+    "Three.js Raycaster Navmesh Pathfinding",
+    "This article explains how to use the Three.js Raycaster to detect intersections against an invisible navigation mesh (navmesh) for character pathfinding and movement. You will learn how to set up the invisible navmesh, configure a downward-pointing rayca",
+    false
+  ],
+  [
+    295,
+    "Check if Point is Inside ConvexGeometry in Three.js",
+    "This article explains how to efficiently determine if a specific 3D point lies strictly inside a complex ConvexGeometry in Three.js. We will explore the mathematical approach of using face planes and provide a clean, high-performance JavaScript function",
+    false
+  ],
+  [
+    294,
+    "Convert Local Direction to World Trajectory in Three.js",
+    "In Three.js, moving an object along its own local axes requires converting local direction vectors into world space. This article explains how to use the localToWorld method to transform a localized direction vector into a global trajectory, allowing you",
+    false
+  ],
+  [
+    293,
+    "Get Bounding Box of a Group in Three.js",
+    "In Three.js, calculating the exact bounding box of a THREE.Group containing multiple distinct meshes requires traversing the group's hierarchy and expanding a 3D bounding box to encompass all child geometries. This article provides a direct guide and cod",
+    false
+  ],
+  [
+    292,
+    "Get World Quaternion of Child Object in Three.js",
+    "Extracting the global rotation of a nested child object in Three.js is a common task when working with complex 3D hierarchies. This article explains how to use the Object3D.getWorldQuaternion() method to accurately retrieve a child object's world rotatio",
+    false
+  ],
+  [
+    291,
+    "Get Global World Position of Child Object in Three.js",
+    "In Three.js, obtaining the exact coordinates of a deeply nested 3D object relative to the global scene, rather than its local parent, is a common challenge. This article provides a straightforward guide on how to correctly extract the global world positi",
+    false
+  ],
+  [
+    290,
+    "Programmatically Enter WebXR in Three.js with Custom UI",
+    "This article explains how to bypass the default, pre-styled VRButton provided by Three.js and programmatically trigger a WebXR immersive session using your own custom user interface. By leveraging the browser's native WebXR Device API alongside Three.js'",
+    false
+  ],
+  [
+    289,
+    "Three.js setAnimationLoop vs requestAnimationFrame",
+    "Transitioning from standard web 3D to WebVR/WebXR in Three.js requires a shift in how you handle your rendering loop. While traditional desktop and mobile 3D projects rely on the browser's native window.requestAnimationFrame, virtual and augmented realit",
+    false
+  ],
+  [
+    288,
+    "WebXR Lighting Estimation with Three.js",
+    "Integrating real-world lighting into a virtual scene creates highly realistic Augmented Reality (AR) experiences. This article explains how to configure a WebXR session using the WebXR Light Estimation API and apply those real-time lighting values to ill",
+    false
+  ],
+  [
+    287,
+    "TeleportVR Locomotion Guide for Three.js WebXR",
+    "This article explores the TeleportVR utility pattern, a widely used design pattern for user locomotion in virtual reality. We will define what the TeleportVR pattern is, examine its benefits in mitigating motion sickness, and provide a step-by-step techn",
+    false
+  ],
+  [
+    286,
+    "Map Gamepad Buttons to WebXR Animations in Three.js",
+    "In WebXR applications built with Three.js, leveraging VR controllers can significantly enhance user immersion. This article provides a step-by-step guide on how to detect gamepad inputs, identify specific button presses, and map them to trigger custom 3D",
+    false
+  ],
+  [
+    285,
+    "How to Check if User is in VR with Three.js",
+    "This article explains how to determine if a user is actively viewing a Three.js scene inside a VR headset using the WebXR API. You will learn how to access the isPresenting boolean on the Three.js WebXR manager and listen to session changes to dynamicall",
+    false
+  ],
+  [
+    284,
+    "Three.js AR Hit Testing: Anchor Objects to the Real World",
+    "This article explains how to use the WebXR Hit Test API within Three.js to detect physical surfaces in the real world and anchor 3D objects directly onto them. You will learn how to configure an AR session, request a hit-test source, retrieve collision c",
+    false
+  ],
+  [
+    283,
+    "Create WebXR DOM Overlays in Three.js",
+    "This article explains how to build an interactive HTML/DOM overlay that floats seamlessly over a WebXR augmented reality (AR) camera feed using Three.js. You will learn how to configure the WebXR session, structure the HTML and CSS for proper layering, a",
+    false
+  ],
+  [
+    282,
+    "Three.js VR Hand Tracking with XRHandModelFactory",
+    "This article provides a step-by-step guide on how to implement fully articulated, realistic hand tracking in a Three.js WebXR scene using the XRHandModelFactory. You will learn how to configure the WebXR renderer, load the necessary hand tracking modules",
+    false
+  ],
+  [
+    281,
+    "Enable WebXR Hit Test for Floor Detection in Three.js",
+    "This article provides a step-by-step guide on how to request and enable the WebXR Hit-Test API within a Three.js augmented reality (AR) session to detect physical floors and surfaces. You will learn how to configure the WebXR manager, request the require",
+    false
+  ],
+  [
+    280,
+    "Three.js LOD Tutorial: Optimize 3D Performance",
+    "In this article, you will learn how to implement a Level-of-Detail (LOD) system in Three.js to automatically swap high-polygon models for low-polygon ones based on their distance from the camera. We will cover the core mechanics of the THREE.LOD class, p",
+    false
+  ],
+  [
+    279,
+    "Offload Three.js Geometry Generation to Web Workers",
+    "Generating complex 3D geometries in Three.js can cause noticeable frame rate drops and freeze the user interface because JavaScript runs on a single thread. To maintain a smooth 60 FPS, you can offload these CPU-intensive mathematical calculations to a W",
+    false
+  ],
+  [
+    278,
+    "How to Free GPU Memory in Three.js Using Texture Dispose",
+    "This article explains how to properly release GPU memory in Three.js by explicitly disposing of textures that are no longer needed. You will learn why manual memory management is necessary in WebGL, how to call the dispose() method on textures and materi",
+    false
+  ],
+  [
+    277,
+    "Three.js PointLight Performance Impact",
+    "In Three.js, lighting is crucial for creating realistic 3D environments, but overusing independent PointLight objects can severely degrade rendering performance. This article explains how too many point lights impact GPU performance, details the underlyi",
+    false
+  ],
+  [
+    276,
+    "Reduce Three.js Draw Calls in renderer.info.render.calls",
+    "In Three.js, rendering performance is heavily tied to the number of draw calls sent to the GPU. This article explains how to measure these draw calls using the renderer.info.render.calls property and outlines actionable techniques—such as geometry merg",
+    false
+  ],
+  [
+    275,
+    "Share BufferGeometry Across Multiple Meshes in Three.js",
+    "This article explains how to optimize memory usage in Three.js by sharing a single BufferGeometry instance across thousands of individual Mesh objects without using InstancedMesh. You will learn the implementation process, how memory reuse works on the G",
+    false
+  ],
+  [
+    274,
+    "WebGLRenderer Precision and Mobile Performance in Three.js",
+    "Configuring the precision attribute in Three.js's WebGLRenderer is a critical step in optimizing web-based 3D applications for mobile devices. This article explores how choosing between high, medium, and low precision settings directly impacts GPU utiliz",
+    false
+  ],
+  [
+    273,
+    "Optimize Three.js Raycasting with Bounding Spheres",
+    "Raycasting in Three.js is a powerful tool for user interaction and collision detection, but it can quickly degrade application performance when testing against complex 3D meshes with thousands of polygons. This article explains how to optimize this proce",
+    false
+  ],
+  [
+    272,
+    "Static Batching in Three.js with mergeGeometries",
+    "This article explains the concept of static batching in 3D web development and provides a step-by-step guide on how to implement it in Three.js using the mergeGeometries utility. You will learn how combining multiple individual geometries into a single m",
+    false
+  ],
+  [
+    271,
+    "Disable Automatic Matrix Computation in Three.js",
+    "This article explains how to optimize performance in Three.js by disabling automatic matrix calculations for static 3D objects. You will learn how to set the matrixAutoUpdate property to false and how to manually update an object's matrix when positional",
+    false
+  ],
+  [
+    270,
+    "Configure Three.js Texture colorSpace for sRGB",
+    "Achieving color-accurate rendering in Three.js requires proper color space management, especially when dealing with web-standard sRGB textures. This article explains how to configure the colorSpace property on Three.js textures to ensure colors display c",
+    false
+  ],
+  [
+    269,
+    "How to Use generateMipmaps with NPOT Textures in Three.js",
+    "Working with non-power-of-two (NPOT) textures in Three.js often requires careful management of mipmaps to ensure optimal rendering performance and visual quality. This article explains how to properly configure the generateMipmaps property for NPOT textu",
+    false
+  ],
+  [
+    268,
+    "Difference Between magFilter and minFilter in Three.js",
+    "When rendering 3D graphics in Three.js, texture filtering determines how pixels are mapped to your 3D models when the texture resolution does not perfectly match the screen space it occupies. This article explains the fundamental differences between magF",
+    false
+  ],
+  [
+    267,
+    "Stream Textures with ImageBitmapLoader in Three.js",
+    "Loading large textures in Three.js can cause noticeable frame rate drops and stuttering on the main thread. This article explains how to use ImageBitmapLoader to asynchronously decode images on a background thread, enabling progressive texture streaming",
+    false
+  ],
+  [
+    266,
+    "Integrate Anime Models in Three.js with MMDLoader",
+    "This article explains how the Three.js library utilizes the MMDLoader to import and animate Japanese MikuMikuDance (MMD) assets. You will learn how this specialized loader parses PMD and PMX 3D models, processes VMD motion files, manages inverse kinemati",
+    false
+  ],
+  [
+    265,
+    "Load Lego Models in Three.js with LDrawLoader",
+    "This article explains how to import and render realistic, Lego-like brick models in a web browser using Three.js and the LDrawLoader. You will learn how to configure the loader, set up the required LDraw parts library, and add the loaded 3D models direct",
+    false
+  ],
+  [
+    264,
+    "Load and Visualize PCD Point Clouds with Three.js",
+    "This article explains how to load, parse, and render 3D point cloud data from external .pcd files using the PCDLoader in Three.js. You will learn how to set up the necessary boilerplate scene, import the loader, retrieve the point data, and customize its",
+    false
+  ],
+  [
+    263,
+    "Three.js RGBELoader for HDR Environment Maps",
+    "In Three.js, achieving realistic lighting and reflections often requires the use of High Dynamic Range (HDR) images. This article explains the purpose of the RGBELoader, how it processes .hdr files to create immersive environment maps, and why it is esse",
+    false
+  ],
+  [
+    262,
+    "Render Volumetric Data with Three.js Data3DTexture",
+    "This article provides a step-by-step guide on how to load, configure, and render 3D volumetric data in Three.js using the Data3DTexture class. You will learn how to structure raw binary volume data, instantiate a 3D texture, and utilize a custom shader m",
+    false
+  ],
+  [
+    261,
+    "How KTX2Loader and Basis Universal Reduce VRAM in Three.js",
+    "WebGL applications often suffer from performance bottlenecks and browser crashes due to high GPU memory (VRAM) consumption from large image textures. This article explains how Three.js utilizes the KTX2Loader alongside Basis Universal compression to solv",
+    false
+  ],
+  [
+    260,
+    "Random Point on Sphere Surface in Three.js",
+    "Generating a pseudo-random point on the surface of a sphere is a common requirement in 3D graphics, often used for positioning particles, spawning objects, or calculating lighting effects. This article demonstrates how to achieve a uniform distribution o",
+    false
+  ],
+  [
+    259,
+    "Using Three.js MathUtils.mapLinear for Rotation Ranges",
+    "In Three.js, translating arbitrary input data—such as mouse coordinates, scroll positions, or sensor data—into controlled 3D rotations can be challenging. The MathUtils.mapLinear function simplifies this process by taking an input value from a known",
+    false
+  ],
+  [
+    258,
+    "Limit Object Position in Three.js with MathUtils.clamp",
+    "Keeping 3D objects within a specific boundary is a common requirement in interactive web applications and game development. This article explains how to use the MathUtils.clamp function in Three.js to restrict a moving object's position coordinates, ensu",
+    false
+  ],
+  [
+    257,
+    "Extract Evenly Spaced Points from Three.js Curves",
+    "This article explains how to use the getSpacedPoints method in Three.js to extract a set of equidistant points along a 3D curve. You will learn the difference between standard curve sampling and arc-length sampling, see a practical code implementation, a",
+    false
+  ],
+  [
+    256,
+    "Quadratic vs Cubic Bezier Curves in Three.js",
+    "In Three.js, QuadraticBezierCurve3 and CubicBezierCurve3 are two classes used to create smooth, parametric curves in 3D space. The fundamental mathematical difference between them lies in the degree of their polynomial equations, which is directly determ",
+    false
+  ],
+  [
+    255,
+    "Create Smooth 3D Paths with Three.js CatmullRomCurve3",
+    "Generating smooth, curved trajectories through a set of coordinates is a common requirement in 3D web development, whether for camera animations or character movement. This article provides a step-by-step guide on how to use CatmullRomCurve3 in Three.js",
+    false
+  ],
+  [
+    254,
+    "Three.js BoxHelper for Dynamically Scaling Objects",
+    "This article explains how to accurately visualize the bounding box of a Three.js object as its scale changes dynamically in real-time. You will learn how to initialize BoxHelper and keep it perfectly synchronized with a morphing or scaling 3D mesh within",
+    false
+  ],
+  [
+    253,
+    "Three.js PolarGridHelper vs GridHelper Guide",
+    "In Three.js, visualizing coordinates and spatial relationships is crucial for building and debugging 3D scenes. While the standard GridHelper creates a flat, rectangular coordinate system based on Cartesian coordinates, the PolarGridHelper offers a circu",
+    false
+  ],
+  [
+    252,
+    "Create a Grid Floor in Three.js with GridHelper",
+    "This article provides a straightforward, step-by-step guide on how to construct a grid reference floor in a Three.js 3D scene using the built-in GridHelper class. You will learn how to initialize the helper, customize its size and colors, and position it",
+    false
+  ],
+  [
+    251,
+    "Debugging Vectors with Three.js ArrowHelper",
+    "Visually debugging direction vectors and surface normals is crucial when developing 3D applications in Three.js. This article explains how to utilize the built-in ArrowHelper class to visualize these mathematical vectors directly in your 3D scene, making",
+    false
+  ],
+  [
+    250,
+    "Custom Three.js ShaderPass to Invert Screen Colors",
+    "In Three.js, post-processing allows you to apply full-screen visual effects to your rendered scene by manipulating the final output pixels. This article provides a step-by-step guide on how to write a custom fragment shader for a ShaderPass to invert the",
+    false
+  ],
+  [
+    249,
+    "Selective Post-Processing in Three.js Using Mask Pass",
+    "Applying post-processing effects to specific objects in a Three.js scene—rather than the entire viewport—is a common requirement for creating advanced visual highlights, glowing elements, or localized shaders. This article explains how to achieve sel",
+    false
+  ],
+  [
+    248,
+    "Fix Color Banding in Three.js Post-Processing",
+    "Color banding is a common visual artifact in Three.js web applications, characterized by visible steps or \"stripes\" in smooth color gradients, especially when utilizing post-processing pipelines. This article explains how to eliminate color banding by co",
+    false
+  ],
+  [
+    247,
+    "What is Three.js RenderPass and Why Use It First?",
+    "In Three.js post-processing, the EffectComposer manages a chain of visual effects to enhance a 3D scene. This article explains the fundamental role of the RenderPass within this pipeline, detailing how it captures your initial 3D scene and why it must al",
+    false
+  ],
+  [
+    246,
+    "How to Use LUTPass for Three.js Color Grading",
+    "Achieving a cinematic look in 3D web graphics requires effective post-processing, and lookup tables (LUTs) are the industry standard for professional color grading. This article provides a step-by-step guide on how to integrate and use the LUTPass in Thr",
+    false
+  ],
+  [
+    245,
+    "Using Three.js GlitchPass for Digital Artifacting",
+    "This article explores how the GlitchPass component in Three.js enables developers to procedurally generate digital artifacting, chromatic aberration, and screen tearing. It examines the post-processing pipeline, the underlying shader mechanics that disto",
+    false
+  ],
+  [
+    244,
+    "Three.js CRT Effect with DotScreen and RGB Shift",
+    "This article explains how to recreate a retro CRT monitor aesthetic in a 3D scene using Three.js post-processing. By combining the EffectComposer, DotScreenPass to simulate phosphor screen pixels, and a custom ShaderPass with RGBShiftShader to create chr",
+    false
+  ],
+  [
+    243,
+    "Three.js HalftonePass Retro Comic Book Effect Guide",
+    "This article explores the HalftonePass in Three.js, explaining what it is and how it replicates the classic retro comic-book CMYK printing aesthetic. You will learn the underlying mechanics of halftone rendering, how to implement this post-processing pas",
+    false
+  ],
+  [
+    242,
+    "Three.js BokehPass Tutorial: Cinematic Depth of Field",
+    "Achieving a cinematic depth-of-field (DoF) effect in Three.js can dramatically elevate the realism of your 3D scenes. This article provides a straightforward guide on how to configure and fine-tune the BokehPass post-processing effect in Three.js, coveri",
+    false
+  ],
+  [
+    241,
+    "How Three.js SSAOPass Calculates Contact Shadows",
+    "Screen-space ambient occlusion (SSAO) is a post-processing technique used in 3D computer graphics to calculate real-time contact shadows and soft ambient lighting. In Three.js, the SSAOPass simulates this effect by analyzing the depth and normal buffers",
+    false
+  ],
+  [
+    240,
+    "Three.js HUD Tutorial: renderOrder and depthTest",
+    "Creating a Heads-Up Display (HUD) in Three.js requires rendering 2D or 3D overlay elements on top of a 3D scene without them clipping into world geometry. This article explains how to utilize the renderOrder property alongside depthTest to construct an i",
+    false
+  ],
+  [
+    239,
+    "Render Specific Objects in Three.js Using Camera Layers",
+    "This article explains how to selectively render specific 3D objects in Three.js by manipulating the camera's layers bitmask. You will learn how to assign objects to distinct layers and configure the camera using methods like enable(), disable(), and set(",
+    false
+  ],
+  [
+    238,
+    "What is Three.js frustumCulled and when to disable it",
+    "In Three.js, performance optimization is key to maintaining smooth frame rates, and the frustumCulled property plays a vital role in this process. This article explains what frustumCulled is, how it works to improve rendering performance, and the specifi",
+    false
+  ],
+  [
+    237,
+    "Three.js Tracking Shot: Parent Camera to Moving Mesh",
+    "Creating a dynamic tracking shot in Three.js is highly efficient when you leverage the 3D scene graph by parenting a PerspectiveCamera directly to a moving mesh. This article explains how to establish this parent-child relationship so the camera automati",
+    false
+  ],
+  [
+    236,
+    "Optimize Three.js Depth Precision Dynamically",
+    "In 3D graphics, Z-fighting and depth precision artifacts often occur when a camera's near and far clipping planes are set too far apart. This article explains how to dynamically calculate and adjust a Three.js camera's near and far planes based on the bo",
+    false
+  ],
+  [
+    235,
+    "Three.js OrthographicCamera Zoom Property Explained",
+    "This article explains the zoom property of the OrthographicCamera in Three.js, detailing how it controls the scale of your 3D scene and how to implement it correctly in your code. Unlike a perspective camera which mimics real-world depth, an orthographic",
+    false
+  ],
+  [
+    234,
+    "Convert 2D NDC to 3D Coordinates in Three.js",
+    "Converting 2D normalized device coordinates (NDC) back into a 3D space is a crucial technique in 3D web development, commonly used for mouse interaction, object picking, and positioning elements in a 3D scene based on screen inputs. This article provides",
+    false
+  ],
+  [
+    233,
+    "Convert 3D Coordinates to 2D Screen Space in Three.js",
+    "Converting a 3D object's position into 2D screen-space coordinates is essential for positioning HTML overlays, UI tooltips, or labels over WebGL elements. This guide explains how to use the Three.js Vector3.project() method to project 3D coordinates into",
+    false
+  ],
+  [
+    232,
+    "How to Create a Three.js Mini-Map Using Viewports",
+    "Rendering a picture-in-picture (PiP) mini-map in Three.js is a powerful way to provide users with spatial orientation in 3D environments. This article explains how to configure multiple viewports using a single WebGLRenderer and two separate cameras—on",
+    false
+  ],
+  [
+    231,
+    "How to Use Three.js setScissor and setScissorTest",
+    "In Three.js, rendering can be restricted to a specific rectangular region of the canvas using the setScissor and setScissorTest methods of the WebGLRenderer. This article provides a straightforward guide on how to enable scissor testing, define a custom",
+    false
+  ],
+  [
+    230,
+    "Understanding Three.js failIfMajorPerformanceCaveat",
+    "This article explains the purpose and functionality of the failIfMajorPerformanceCaveat context attribute when initializing a Three.js WebGLRenderer. You will learn how this setting prevents your 3D applications from running on slow, software-rendered gr",
+    false
+  ],
+  [
+    229,
+    "Get Raw WebGL Context from Three.js WebGLRenderer",
+    "This article explains how to directly access the underlying raw WebGL rendering context from a Three.js WebGLRenderer instance. We will cover the specific method used to retrieve this context, identify whether it returns a WebGL 1 or WebGL 2 rendering co",
+    false
+  ],
+  [
+    228,
+    "How to Clear Only the Depth Buffer in Three.js",
+    "In Three.js, rendering layered scenes, HUDs, or complex visual effects often requires clearing the depth buffer while preserving the color buffer. This article provides a quick and direct guide on how to configure your WebGLRenderer and use the clearDept",
+    false
+  ],
+  [
+    227,
+    "Three.js WebGLRenderer autoClear Explained",
+    "In Three.js, the WebGLRenderer features an autoClear property that dictates whether the renderer should automatically wipe the canvas before drawing a new frame. This article explains what the autoClear property does, how it impacts rendering behavior, a",
+    false
+  ],
+  [
+    226,
+    "How to Use Three.js compileAsync Before Render Loop",
+    "When rendering 3D scenes in WebGL, shader compilation often causes a noticeable pause or \"stutter\" the first time a new material or object enters the camera's view. This article demonstrates how to eliminate this lag by utilizing the asynchronous WebGLRe",
+    false
+  ],
+  [
+    225,
+    "Extend Three.js EventDispatcher for Custom Events",
+    "This article demonstrates how to extend the Three.js EventDispatcher class to implement custom event emission and handling within your own 3D applications. You will learn how to create a custom class that inherits from EventDispatcher, dispatch custom ev",
+    false
+  ],
+  [
+    224,
+    "Query GPU Limits with Three.js WebGLCapabilities",
+    "When developing high-performance 3D graphics with Three.js, understanding the user's hardware limitations is crucial for optimization and preventing crashes. This article explains how to use the Three.js WebGLCapabilities object to query critical GPU lim",
+    false
+  ],
+  [
+    223,
+    "How to Use Three.js Shading Language TSL for WebGPU",
+    "This article provides a practical guide on utilizing the Three.js Shading Language (TSL) to build node-based materials tailored for WebGPU. You will learn the core concepts of TSL, how it replaces traditional GLSL in the WebGPU workflow, and how to const",
+    false
+  ],
+  [
+    222,
+    "Three.js WebGPURenderer: Transitioning to WebGPU",
+    "This article explores WebGPURenderer, a crucial component in Three.js designed to bridge the gap between legacy WebGL and the modern WebGPU API. Readers will learn what WebGPURenderer is, why WebGPU represents a massive leap forward in browser graphics p",
+    false
+  ],
+  [
+    221,
+    "Handle WebGL Context Loss and Restore in Three.js",
+    "Operating systems or graphics drivers can occasionally reset the GPU, causing a WebGL context loss that crashes your Three.js application. This article explains why WebGL context loss occurs in Three.js and provides a step-by-step guide on how to detect",
+    false
+  ],
+  [
+    220,
+    "Switch from Indexed to Non-Indexed in Three.js",
+    "This article explains how to dynamically convert an indexed BufferGeometry to a non-indexed one in Three.js by disposing of and removing its index buffer. You will learn how to restructure the vertex attributes in-place, release the GPU memory associated",
+    false
+  ],
+  [
+    219,
+    "Create Parametric Surfaces with Three.js",
+    "This article provides a step-by-step guide on how to generate procedurally defined 3D parametric surfaces in Three.js using ParametricGeometry. You will learn how to write a parametric mathematical function, import the necessary geometry module, instanti",
+    false
+  ],
+  [
+    218,
+    "Difference Between LineLoop and Line in Three.js",
+    "In Three.js, rendering linear geometry is primarily achieved using the Line, LineLoop, and LineSegments classes. While both Line and LineLoop utilize a sequence of vertices to draw paths, they differ fundamentally in how they handle the final connection",
+    false
+  ],
+  [
+    217,
+    "How to Draw a Line Strip in Three.js",
+    "In Three.js, drawing a continuous line strip across multiple coordinates is a fundamental task for visualizing paths, trajectories, or wireframe outlines. This guide provides a straightforward, step-by-step tutorial on how to define points using 3D vecto",
+    false
+  ],
+  [
+    216,
+    "Three.js LineSegments: Draw Disconnected Lines",
+    "In Three.js, drawing separate, disconnected lines requires using the LineSegments class instead of the standard Line or LineLoop classes. This article explains how to define pairs of vertices within a BufferGeometry and render them as individual, non-con",
+    false
+  ],
+  [
+    215,
+    "Understanding Morph Normals in Three.js Lighting",
+    "This article explains what morph normals are and why they are essential for rendering realistic lighting on morph target animations in Three.js. You will learn how vertex normals change during shape deformation and why updating these normals is critical",
+    false
+  ],
+  [
+    214,
+    "How to Use Three.js BufferAttribute updateRange",
+    "In Three.js, uploading an entire geometry buffer to the GPU can cause performance bottlenecks, especially when dealing with large datasets or dynamic meshes. This article explains how to use the updateRange property of a BufferAttribute to modify and upl",
+    false
+  ],
+  [
+    213,
+    "Calculate Tangents for BufferGeometry in Three.js",
+    "This article explains how to manually calculate and assign tangent vectors to a Three.js BufferGeometry to enable proper normal mapping. You will learn how to use the built-in Three.js utility library to compute tangents automatically using the industry-",
+    false
+  ],
+  [
+    212,
+    "InstancedBufferGeometry vs InstancedMesh in Three.js",
+    "This article explains the differences between InstancedBufferGeometry and InstancedMesh in Three.js, helping you understand when and how to use each approach. While both techniques are designed to optimize performance by rendering thousands of similar ob",
+    false
+  ],
+  [
+    211,
+    "How to Use Three.js InterleavedBuffer",
+    "This article explains how to define and use custom interleaved data buffers in Three.js using InterleavedBuffer and InterleavedBufferAttribute. You will learn how to combine multiple vertex attributes—such as positions, colors, and UV coordinates—int",
+    false
+  ],
+  [
+    210,
+    "Create Invisible Occlusion Volumes in Three.js",
+    "This article explains how to create an invisible bounding volume in Three.js that hides (occludes) other 3D objects behind it. By utilizing a material with its colorWrite property disabled, you can render an invisible mesh that still writes to the depth",
+    false
+  ],
+  [
+    209,
+    "ShaderMaterial Defines for GLSL Macros in Three.js",
+    "This article explains how to use the defines object in Three.js ShaderMaterial to control GLSL preprocessor macros. You will learn how to inject defines into your shaders, write conditional GLSL code based on these defines, and update them dynamically at",
+    false
+  ],
+  [
+    208,
+    "MeshDepthMaterial vs MeshDistanceMaterial in Three.js",
+    "This article explores the differences between MeshDepthMaterial and MeshDistanceMaterial in Three.js, focusing on their distinct roles in shadow mapping. You will learn how these materials calculate depth, which light types utilize them, and how to imple",
+    false
+  ],
+  [
+    207,
+    "Control Reflection Intensity with envMapIntensity in Three.js",
+    "In Three.js, achieving realistic 3D renders often depends on how materials interact with their surrounding environment. This article explains how to use the envMapIntensity property to control the brightness and intensity of ambient reflections on a mate",
+    false
+  ],
+  [
+    206,
+    "Simulate Soap Bubbles with Three.js Iridescence",
+    "This article explains how to use the iridescence properties in Three.js to simulate thin-film interference, the optical phenomenon responsible for the shifting rainbow colors seen on soap bubbles, oil slicks, and camera lenses. You will learn about the p",
+    false
+  ],
+  [
+    205,
+    "Create Velvet and Fabric Materials with Three.js Sheen",
+    "This article explains how to use the sheen properties in Three.js to create realistic fabric and velvet materials. You will learn which material class to use, how to configure key properties like sheen color and roughness, and how to apply these settings",
+    false
+  ],
+  [
+    204,
+    "Three.js Clearcoat Property for Car Paint",
+    "This article explains the clearcoat property in Three.js and how it is used to simulate realistic car paint finishes. We will explore how this property mimics a shiny, reflective outer layer over a base material, its key parameters, and how to implement",
+    false
+  ],
+  [
+    203,
+    "Realistic Glass in Three.js with MeshPhysicalMaterial",
+    "This article explains how to create highly realistic glass materials in Three.js using the advanced features of MeshPhysicalMaterial. You will learn how to configure key properties such as transmission, thickness, index of refraction (IOR), and roughness",
+    false
+  ],
+  [
+    202,
+    "How Three.js Uses ShaderChunks for Shaders",
+    "In Three.js, shaders are essential for rendering 3D graphics, but writing them from scratch for every material is highly repetitive. This article explains what ShaderChunks are—reusable snippets of GLSL (OpenGL Shading Language) code—and details how",
+    false
+  ],
+  [
+    201,
+    "Inject Custom GLSL into Three.js Materials",
+    "This article provides a practical guide on how to use the onBeforeCompile method in Three.js to inject custom GLSL code into built-in materials. By leveraging this method, you can modify existing vertex and fragment shaders—such as those in MeshStandar",
+    false
+  ],
+  [
+    200,
+    "Three.js Mobile Performance: Limit Device Pixel Ratio",
+    "Limiting the device pixel ratio (DPR) in Three.js is one of the most effective techniques for boosting rendering framerates on mobile devices. Modern smartphones feature high-density displays (such as Retina screens) with pixel ratios of 3x or even 4x, w",
+    false
+  ],
+  [
+    199,
+    "Export Three.js Geometries to STL for 3D Printing",
+    "This article provides a practical guide on using the Three.js STLExporter to convert browser-based 3D geometries into the STL (Stereolithography) format, which is the standard file format used for 3D printing. You will learn how to import the exporter, c",
+    false
+  ],
+  [
+    198,
+    "Export Three.js Scene to GLTF Using GLTFExporter",
+    "This article explains how to use the GLTFExporter in Three.js to serialize an entire 3D scene and export it as a downloadable GLTF or GLB file. You will learn what the GLTFExporter is, how to import it into your project, and the step-by-step code require",
+    false
+  ],
+  [
+    197,
+    "WebXR Hit Testing in Three.js AR Tutorial",
+    "This article provides a step-by-step guide on how to implement WebXR hit testing in Three.js to place 3D objects onto real-world surfaces. You will learn how to set up an AR session, request hit-test features, detect physical environments using a device",
+    false
+  ],
+  [
+    196,
+    "Render VR Controllers in Three.js with XRControllerModelFactory",
+    "This article provides a step-by-step guide on how to render realistic, hardware-specific VR hand controllers in a Three.js WebXR scene using the XRControllerModelFactory. You will learn how to import the factory, retrieve controller grip spaces from the",
+    false
+  ],
+  [
+    195,
+    "Configure Three.js VRButton for WebXR",
+    "This article provides a straightforward, step-by-step guide on how to configure and use the VRButton utility in Three.js to initiate a WebXR session. You will learn how to import the module, enable XR on the renderer, append the button to your webpage, a",
+    false
+  ],
+  [
+    194,
+    "Implement SMAAPass Anti-Aliasing in Three.js",
+    "When utilizing the EffectComposer for post-processing in Three.js, the browser's default hardware anti-aliasing (MSAA) is automatically disabled, resulting in jagged edges on 3D meshes. To resolve this visual degradation without sacrificing performance,",
+    false
+  ],
+  [
+    193,
+    "How to Apply Bloom to Specific Materials in Three.js",
+    "In Three.js, the UnrealBloomPass normally applies a glowing effect to the entire canvas based on color intensity. To restrict this glow to specific materials, you must implement a technique called selective bloom. This process involves using camera layer",
+    false
+  ],
+  [
+    192,
+    "Three.js OutlinePass: How to Create Selection Highlights",
+    "In Three.js, creating visual feedback for selected objects is a crucial requirement for interactive 3D applications like editors, games, and product configurators. This article explains the purpose of the OutlinePass in the Three.js post-processing pipel",
+    false
+  ],
+  [
+    191,
+    "How to Use Three.js WebGLRenderTarget",
+    "In Three.js, the WebGLRenderTarget class allows you to render a 3D scene to an off-screen frame buffer instead of directly to the screen. This technique, commonly known as render-to-texture, is essential for creating advanced visual effects like dynamic",
+    false
+  ],
+  [
+    190,
+    "Integrate DRACOLoader with GLTFLoader in Three.js",
+    "This article provides a practical guide on integrating DRACOLoader with GLTFLoader in Three.js to load and render highly compressed 3D assets. By combining these two loaders, you can significantly reduce the file size of your 3D models, leading to faster",
+    false
+  ],
+  [
+    189,
+    "How to Use Three.js TextureLoader Callbacks",
+    "Loading textures asynchronously in Three.js can cause rendering delays or visual glitches if your 3D objects are rendered before their textures have fully downloaded. This article explains how to utilize the callback functions of the Three.js TextureLoad",
+    false
+  ],
+  [
+    188,
+    "Track Three.js Model Loading Progress with XHR",
+    "This article explains how to monitor the download progress of large 3D models in Three.js using the XMLHttpRequest (XHR) progress event. You will learn how to implement the onProgress callback function within Three.js loaders to calculate the loading per",
+    false
+  ],
+  [
+    187,
+    "Using EXRLoader for HDR Textures in Three.js",
+    "In Three.js, rendering realistic lighting and environments often requires High Dynamic Range (HDR) imagery. This article explains the role of the EXRLoader utility, how it processes OpenEXR (.exr) files to preserve rich color and exposure data, and how t",
+    false
+  ],
+  [
+    186,
+    "Three.js Custom Loading Screen with DefaultLoadingManager",
+    "This article explains how to implement a custom, dynamic loading screen in a Three.js application using the global THREE.DefaultLoadingManager. You will learn how to set up the HTML/CSS loader interface and link it to Three.js load events so that a progr",
+    false
+  ],
+  [
+    185,
+    "Convert SVG to 3D Paths with Three.js SVGLoader",
+    "This article explains how Three.js utilizes the SVGLoader utility to translate two-dimensional XML-based SVG data into three-dimensional geometry. We will explore the step-by-step pipeline of parsing vector paths, converting them into 2D shapes, and fina",
+    false
+  ],
+  [
+    184,
+    "How to Use OBJLoader and MTLLoader in Three.js",
+    "This article explains how to load and render legacy 3D models in Three.js using OBJLoader and MTLLoader. You will learn how to import the necessary modules, load material files (.mtl) first, associate those materials with the geometry file (.obj), and ad",
+    false
+  ],
+  [
+    183,
+    "Embed DOM Elements in Three.js with CSS3DRenderer",
+    "Integrating standard HTML elements like videos, forms, and interactive buttons into a 3D WebGL scene can be challenging because standard WebGL renderers draw on a flat canvas. This article explains how to use Three.js's CSS3DRenderer to transform standar",
+    false
+  ],
+  [
+    182,
+    "Overlay HTML Labels on Three.js 3D Objects",
+    "This article explains how to use the CSS2DRenderer in Three.js to overlay standard HTML elements as labels onto 3D objects. You will learn what the CSS2DRenderer is, why it is a powerful tool for web developers, and the step-by-step implementation proces",
+    false
+  ],
+  [
+    181,
+    "Render 3D Typography with Three.js FontLoader",
+    "Rendering three-dimensional text in a web browser is a powerful way to enhance interactive experiences, and Three.js makes this possible through its FontLoader and TextGeometry modules. This article provides a step-by-step guide on how to import fonts, g",
+    false
+  ],
+  [
+    180,
+    "How to Use PointerLockControls in Three.js",
+    "This article explains how to implement the PointerLockControls class in Three.js to capture the user's mouse cursor, enabling a classic first-person shooter (FPS) camera control style. We will cover importing the controls, initializing them with a camera",
+    false
+  ],
+  [
+    179,
+    "Filter Three.js Raycaster Intersections with Layers",
+    "In Three.js, the Raycaster is commonly used for mouse picking, collision detection, and user interaction. By default, a raycaster tests for intersections with all specified objects in a scene, which can be computationally expensive and structurally ineff",
+    false
+  ],
+  [
+    178,
+    "Three.js Double Click Raycaster Intersection Tutorial",
+    "This article explains how to detect double-click events on 3D objects within a Three.js scene using a Raycaster. You will learn how to capture the mouse coordinates during a double-click event, convert those coordinates into normalized device coordinates",
+    false
+  ],
+  [
+    177,
+    "Load External Audio in Three.js Using AudioLoader",
+    "This article provides a step-by-step guide on how to correctly load and play external audio files in a Three.js scene using the AudioLoader class. You will learn how to set up an audio listener, instantiate the loader, configure spatial or global audio,",
+    false
+  ],
+  [
+    176,
+    "Real-Time Audio Frequency Analysis in Three.js",
+    "This article provides a step-by-step guide on how to analyze audio frequencies in real-time using the AudioAnalyser class in Three.js. You will learn how to set up an audio listener, load an audio source, initialize the analyser, and retrieve frequency d",
+    false
+  ],
+  [
+    175,
+    "Role of AudioListener in Three.js Spatial Audio",
+    "In Three.js, creating an immersive 3D audio experience relies heavily on the AudioListener component. This article explains the fundamental role of the AudioListener in spatial audio, how it acts as the virtual ears of the user, how to set it up within a",
+    false
+  ],
+  [
+    174,
+    "How to Use Three.js PositionalAudio for 3D Sound",
+    "Creating immersive web experiences often requires spatial audio that changes based on the user's camera position and orientation. This article provides a quick, step-by-step guide on how to set up an AudioListener, create a PositionalAudio object, load a",
+    false
+  ],
+  [
+    173,
+    "Integrate FirstPersonControls in Three.js",
+    "This guide explains how to integrate FirstPersonControls into a Three.js project to recreate a classic first-person video game camera. You will learn how to import the controller, initialize it with your camera and renderer, configure its movement and lo",
+    false
+  ],
+  [
+    172,
+    "Three.js TransformControls for 3D Editors",
+    "This article explains the purpose and utility of TransformControls in Three.js when developing interactive, in-browser 3D editors. You will learn how this essential class enables users to manipulate 3D objects directly in the viewport through intuitive v",
+    false
+  ],
+  [
+    171,
+    "Three.js DragControls Tutorial: Move Objects with Mouse",
+    "This article provides a step-by-step guide on how to implement the DragControls class in Three.js to select and translate 3D objects within a scene using a mouse or touch inputs. You will learn how to import the controller, initialize it with an array of",
+    false
+  ],
+  [
+    170,
+    "Toggle Lights in Three.js Without Removing Them",
+    "Dynamically controlling illumination is essential for creating interactive 3D environments and optimizing performance in WebGL applications. This article explains how to toggle the visibility of specific lights in a Three.js scene without removing them f",
+    false
+  ],
+  [
+    169,
+    "Configure DirectionalLight Shadow Camera in Three.js",
+    "Configuring the shadow camera bounds for a DirectionalLight in Three.js is essential for achieving sharp, high-quality shadows without sacrificing performance. Because directional lights project shadows using an orthographic projection, you must manually",
+    false
+  ],
+  [
+    168,
+    "How to Use Three.js Light Probes for Irradiance",
+    "This article explains how the light probe system in Three.js captures and applies diffuse indirect lighting (irradiance) to 3D materials. You will learn how Spherical Harmonics (SH) are used to store light data, how to generate light probes from environm",
+    false
+  ],
+  [
+    167,
+    "Create Three.js Lens Flare with Directional Light",
+    "Adding realistic lens flare effects to a directional light in Three.js enhances the visual depth and realism of your 3D scenes. This guide provides a straightforward, step-by-step tutorial on how to import the necessary Three.js addons, load flare textur",
+    false
+  ],
+  [
+    166,
+    "How to Use Three.js CameraHelper to Debug Frustum",
+    "In Three.js, visualizing the viewing frustum of a perspective camera is essential for debugging clipping issues, positioning cameras accurately, and optimizing culling. This article provides a quick guide on how to implement the CameraHelper class to ren",
+    false
+  ],
+  [
+    165,
+    "How to Use Three.js StereoCamera for Anaglyph 3D",
+    "This article provides a comprehensive guide on how the StereoCamera works in Three.js and how it can be implemented to create immersive, red-cyan anaglyph 3D effects. You will learn the underlying principles of stereoscopic vision in web graphics and how",
+    false
+  ],
+  [
+    164,
+    "Configure Three.js ArrayCamera for Multiple Views",
+    "This article explains how to configure and use the THREE.ArrayCamera in Three.js to render multiple camera angles onto a single canvas. You will learn how to define sub-cameras, assign custom viewports for each, and render a multi-view scene (such as a s",
+    false
+  ],
+  [
+    163,
+    "VSMShadowMap vs PCFSoftShadowMap in Three.js",
+    "Choosing the right shadow map type in Three.js is crucial for balancing visual realism and performance in WebGL applications. This article compares VSMShadowMap (Variance Shadow Maps) and PCFSoftShadowMap (Percentage Closer Filtering Soft Shadow Maps), a",
+    false
+  ],
+  [
+    162,
+    "Three.js Shadow Bias for Directional Lights",
+    "In Three.js, achieving realistic shadows with directional lights often requires fine-tuning the shadow.bias property. This article explains what shadow.bias is, how it resolves common rendering artifacts like \"shadow acne\" and \"peter panning,\" and how to",
+    false
+  ],
+  [
+    161,
+    "How to Use SpotLightHelper in Three.js",
+    "In Three.js, visualizing the direction and cone angle of a spotlight is crucial for precise scene lighting. This guide provides a straightforward walkthrough on how to implement and update the SpotLightHelper utility, allowing you to easily debug and pos",
+    false
+  ],
+  [
+    160,
+    "How to Parse JSON to Three.js AnimationClip",
+    "This article explains how to convert raw JSON animation data into a playable AnimationClip in Three.js. You will learn the required JSON structure, how to use the built-in parsing method, and how to play the resulting animation on a 3D object using the A",
+    false
+  ],
+  [
+    159,
+    "Adjust Three.js Animation Timescale Dynamically",
+    "This article explains how to dynamically adjust the playback speed of an ongoing animation in Three.js using the AnimationAction.timeScale property. You will learn how to access the active animation action, modify its speed in real-time, and smoothly tra",
+    false
+  ],
+  [
+    158,
+    "Loop Three.js Animation a Specific Number of Times",
+    "Controlling the repetition of animations in Three.js is crucial for creating precise interactive 3D experiences. This guide explains how to configure the AnimationMixer and AnimationAction to loop a specific animation a set number of times rather than pl",
+    false
+  ],
+  [
+    157,
+    "Update Morph Target Weights in Three.js Manually",
+    "This article explains how to manually update morph target weights in Three.js to achieve real-time, procedural facial animations. You will learn how to locate morph targets within your 3D model, access their influence arrays, and programmatically adjust",
+    false
+  ],
+  [
+    156,
+    "Using Three.js SkeletonHelper to Debug Character Rigs",
+    "In Three.js, visualizing the underlying bone structure of a 3D character model is crucial for successful WebGL animation. This article explains what the SkeletonHelper class is, how it assists in debugging character rigs, and how to implement it in your",
+    false
+  ],
+  [
+    155,
+    "Control SkinnedMesh Vertices with Bones in Three.js",
+    "In Three.js, skeletal animation is the standard method for animating organic models like characters or flexible objects. This article provides a direct, step-by-step guide on how to utilize Bone objects to control the vertices of a SkinnedMesh. You will",
+    false
+  ],
+  [
+    154,
+    "Three.js SkinnedMesh vs Mesh: What is the Difference?",
+    "In Three.js, rendering and animating 3D objects efficiently requires understanding the distinction between different geometry containers. This article provides a clear comparison between a standard Mesh and a SkinnedMesh, explaining their unique architec",
+    false
+  ],
+  [
+    153,
+    "How to Crossfade Animations in Three.js",
+    "Transitioning smoothly between 3D character animations, like moving from a walk to a run, is essential for realistic web-based games and interactive experiences. This article explains how to seamlessly crossfade between two different character animations",
+    false
+  ],
+  [
+    152,
+    "How to Pause and Resume Three.js Animations",
+    "This article explains what the AnimationAction class is in Three.js and provides a clear, step-by-step guide on how to use it to pause and resume animations. You will learn how to access an animation action through the AnimationMixer and control its stat",
+    false
+  ],
+  [
+    151,
+    "Create Three.js AnimationClip with KeyframeTracks",
+    "This article explains how to structure a Three.js AnimationClip using multiple KeyframeTracks. You will learn how to define individual tracks for properties like position, rotation, and scale, combine them into a single cohesive animation clip, and play",
+    false
+  ],
+  [
+    150,
+    "Set Equirectangular Background in Three.js",
+    "This article explains how to apply a 360-degree equirectangular texture directly to a Three.js scene background. By utilizing the built-in mapping properties of Three.js, you can easily create an immersive panoramic environment without the need for large",
+    false
+  ],
+  [
+    149,
+    "Setting Three.js Scene Background to Solid Color",
+    "Setting the background property of a Three.js scene to a solid THREE.Color object changes the default blank canvas to a uniform, flat color. This article explains what happens under the hood when you apply this property, how to implement it in your code,",
+    false
+  ],
+  [
+    148,
+    "Linear Fog vs Exponential Fog in Three.js",
+    "This article explains the core differences between linear fog (THREE.Fog) and exponential fog (THREE.FogExp2) in Three.js. You will learn how each fog type calculates depth, how their configuration parameters differ, and how to choose the right atmospher",
+    false
+  ],
+  [
+    147,
+    "How to Implement Three.js FogExp2 for Realistic Fog",
+    "In Three.js, creating environmental depth and realism often relies on fog effects. This article provides a quick, direct guide on how to implement FogExp2 to create realistic exponential distance fog in your 3D scenes. You will learn the difference betwe",
+    false
+  ],
+  [
+    146,
+    "Three.js Anisotropy: Improve Texture Clarity at Angles",
+    "In 3D web graphics, textures applied to surfaces can quickly become blurry and distorted when viewed from steep, grazing angles. This article explains what the anisotropy value is in Three.js, how anisotropic filtering works to maintain texture sharpness",
+    false
+  ],
+  [
+    145,
+    "How to Animate Scrolling Backgrounds in Three.js",
+    "Animating a scrolling background in Three.js is a powerful technique for creating dynamic environments, such as moving skies, infinite roads, or flowing water effects. This article provides a straightforward guide on how to manipulate texture offsets wit",
+    false
+  ],
+  [
+    144,
+    "Three.js CompressedTexture for WebGL Performance",
+    "This article explores the performance advantages of using CompressedTexture in Three.js WebGL applications. Readers will learn how GPU-compressed texture formats differ from standard image formats like PNG or JPG, how they drastically reduce video RAM (V",
+    false
+  ],
+  [
+    143,
+    "How to Use Three.js DataTexture for Procedural Textures",
+    "This article explains how to generate procedural textures dynamically in JavaScript using the DataTexture class in Three.js. You will learn how to initialize raw pixel buffers, populate them with mathematical patterns, and apply the resulting procedural",
+    false
+  ],
+  [
+    142,
+    "Create a Three.js Skybox Using CubeTexture",
+    "This article explains how to use a CubeTexture in Three.js to create an immersive 3D background known as a skybox. You will learn what a CubeTexture is, the specific order required for loading its six face images, and the exact code needed to implement a",
+    false
+  ],
+  [
+    141,
+    "Load Spherical Environment Map as Three.js Background",
+    "This guide explains how to load a spherical (equirectangular) texture and apply it as a 360-degree background in a Three.js scene. You will learn how to use the TextureLoader, configure the texture mapping coordinates, and assign the loaded texture to th",
+    false
+  ],
+  [
+    140,
+    "Apply Depth Texture with Three.js MeshDepthMaterial",
+    "This article explains how to capture and apply a depth texture to a scene in Three.js using MeshDepthMaterial. You will learn how to use this material to visualize distance from the camera, set up a render target with a depth texture, and apply that text",
+    false
+  ],
+  [
+    139,
+    "RawShaderMaterial vs ShaderMaterial in Three.js",
+    "In Three.js, creating custom WebGL shaders is typically achieved using either ShaderMaterial or RawShaderMaterial. This article explores the definitions of both materials, highlights their key differences—specifically regarding built-in uniforms, attri",
+    false
+  ],
+  [
+    138,
+    "Three.js Local Clipping Planes on Specific Material",
+    "In Three.js, clipping planes allow you to cut away portions of 3D objects to reveal their inner structures. While global clipping affects every object in a scene, local clipping applies selectively to specific materials. This article provides a direct, s",
+    false
+  ],
+  [
+    137,
+    "Three.js Cel Shading with MeshToonMaterial",
+    "In Three.js, achieving a stylized, hand-drawn, or comic book aesthetic relies heavily on MeshToonMaterial. This article explores how MeshToonMaterial works, how it implements cel-shading through light banding, and how developers can customize its gradien",
+    false
+  ],
+  [
+    136,
+    "Three.js MeshMatcapMaterial Fake Lighting Guide",
+    "In Three.js, rendering realistic 3D objects usually requires complex light calculations that can degrade application performance. This article explains how MeshMatcapMaterial bypasses these hardware-heavy calculations by using a pre-rendered 2D texture t",
+    false
+  ],
+  [
+    135,
+    "Use alphaTest to Discard Transparent Pixels in Three.js",
+    "In Three.js, rendering transparent textures can sometimes lead to unexpected visual artifacts, such as pixels sorting incorrectly or casting solid, boxy shadows. This article explains how to use the alphaTest property on Three.js materials to discard pix",
+    false
+  ],
+  [
+    134,
+    "Three.js AdditiveBlending vs NormalBlending",
+    "In Three.js, blending modes control how the pixels of a newly rendered material combine with the pixels already present in the background. This article explains the fundamental differences between NormalBlending and AdditiveBlending, their mathematical b",
+    false
+  ],
+  [
+    133,
+    "Create 2D Billboards in Three.js with SpriteMaterial",
+    "In Three.js, creating 2D elements that constantly face the camera—commonly known as billboards—is highly efficient using the Sprite and SpriteMaterial classes. This article provides a quick, step-by-step guide on how to set up a SpriteMaterial, apply",
+    false
+  ],
+  [
+    132,
+    "How to Draw Lines in Three.js with LineBasicMaterial",
+    "This article explores the fundamentals of LineBasicMaterial in Three.js, a popular JavaScript library used to create 3D graphics in the browser. You will learn what this material is, its key properties, and how Three.js uses vertices and geometries to co",
+    false
+  ],
+  [
+    131,
+    "Three.js Particles: BufferGeometry and PointsMaterial",
+    "Rendering high-performance particle systems in Three.js is achieved by combining BufferGeometry and PointsMaterial within a Points mesh. This article provides a step-by-step guide on how to define particle positions, configure their visual appearance, an",
+    false
+  ],
+  [
+    130,
+    "Create a Convex Hull in Three.js with ConvexGeometry",
+    "This article provides a step-by-step guide on how to use ConvexGeometry in Three.js to generate a 3D convex hull around a set of random points. You will learn how to import the necessary utility module, define your coordinates, generate the geometry, and",
+    false
+  ],
+  [
+    129,
+    "Create a Flat Surface in Three.js Using PlaneGeometry",
+    "In Three.js, creating a flat surface or 2D plane is a fundamental task often used for grounds, walls, or backgrounds. This guide provides a straightforward, step-by-step walkthrough on how to use PlaneGeometry combined with a material and a mesh to rende",
+    false
+  ],
+  [
+    128,
+    "Revolve 2D Splines with Three.js LatheGeometry",
+    "In Three.js, creating symmetrical 3D rotational shapes like vases, glasses, bottles, or columns is made highly efficient using LatheGeometry. This article explains the core purpose of LatheGeometry, details the mathematical process of how it revolves a 2",
+    false
+  ],
+  [
+    127,
+    "Change CylinderGeometry Dynamically in Three.js",
+    "This article explains how to dynamically update the radius and height segments of a CylinderGeometry in Three.js after it has been rendered. Because Three.js geometries are uploaded to the GPU as static buffers, changing structural properties like segmen",
+    false
+  ],
+  [
+    126,
+    "Three.js TubeGeometry: Create 3D Paths from Custom Curves",
+    "In Three.js, rendering a 3D volumetric path along a specific trajectory is achieved using TubeGeometry. This article provides a quick, practical guide on how to define a custom 3D curve using points or mathematical formulas, generate a tube geometry alon",
+    false
+  ],
+  [
+    125,
+    "Three.js WireframeGeometry for Mesh Overlays",
+    "This article explains the function of WireframeGeometry in Three.js, focusing on how it is used to overlay a clean wireframe outline onto a solid 3D mesh. You will learn how this class operates, why it is preferred for visualizing mesh topology, and how",
+    false
+  ],
+  [
+    124,
+    "Render Mesh Outlines with Three.js EdgesGeometry",
+    "Rendering visual outlines of a 3D mesh is a common technique used to highlight object boundaries, create wireframe overlays, or achieve a stylized, blueprint-like aesthetic in web graphics. In Three.js, this is most efficiently achieved using EdgesGeomet",
+    false
+  ],
+  [
+    123,
+    "Draw Dynamic 2D Shapes with Three.js ShapeGeometry",
+    "Drawing dynamic 2D shapes in Three.js is an efficient way to create custom flat geometry that can be updated programmatically. By utilizing the THREE.Shape class to define vector paths and passing them into THREE.ShapeGeometry, developers can generate co",
+    false
+  ],
+  [
+    122,
+    "Three.js TorusKnotGeometry Mathematical Customization",
+    "This article provides a comprehensive overview of TorusKnotGeometry in Three.js, explaining what it is and how you can mathematically customize its shape. By understanding the underlying parameters—specifically the relationship between its winding numb",
+    false
+  ],
+  [
+    121,
+    "Create Complex 3D Shapes with Three.js ExtrudeGeometry",
+    "This article provides a step-by-step guide on how to create complex 3D shapes in Three.js using the ExtrudeGeometry class. You will learn how to define a detailed 2D path using THREE.Shape, configure extrusion options such as depth, bevels, and steps, an",
+    false
+  ],
+  [
+    120,
+    "How to Change Mesh Render Order in Three.js",
+    "In Three.js, controlling the sequence in which 3D objects are drawn to the screen is crucial for resolving depth conflicts, managing transparency, and creating custom visual overlays. This article explains how to use the renderOrder property, manipulate",
+    false
+  ],
+  [
+    119,
+    "Three.js Visible Property vs Removing an Object",
+    "In Three.js, managing whether an object is displayed in your 3D scene is crucial for both performance and user experience. This article explains the fundamental differences between hiding an object using its visible property and completely removing it fr",
+    false
+  ],
+  [
+    118,
+    "How to Use userData in Three.js Object3D",
+    "In Three.js, attaching custom metadata to 3D objects is a common requirement for managing game logic, interactivity, and application state. This article provides a quick, direct guide on how to use the built-in userData property of any Object3D to store,",
+    false
+  ],
+  [
+    117,
+    "How to Get World Coordinates of Child Object in Three.js",
+    "In Three.js, nested 3D objects inherit the transformations of their parents, meaning their .position property only reflects their coordinates relative to their parent. This article explains how to accurately convert a child object's local coordinates int",
+    false
+  ],
+  [
+    116,
+    "Three.js updateMatrixWorld: When to Call It Manually",
+    "In Three.js, updateMatrixWorld is a crucial method used to calculate the global position, rotation, and scale of a 3D object relative to the 3D world. While Three.js typically handles this transformation automatically during the rendering loop, there are",
+    false
+  ],
+  [
+    115,
+    "How to Remove Objects from a Three.js Scene",
+    "In Three.js, removing an object from the scene graph during runtime requires more than just calling the .remove() method. To prevent memory leaks and ensure optimal performance, you must also properly dispose of the object's geometry, materials, and text",
+    false
+  ],
+  [
+    114,
+    "Three.js getObjectByName: How to Find a Specific Mesh",
+    "Finding specific 3D objects within a complex Three.js scene can be challenging. This article provides a quick guide on how to assign a unique name to a mesh and retrieve it efficiently using the getObjectByName method, complete with a practical code exam",
+    false
+  ],
+  [
+    113,
+    "Traverse Three.js Scene Graph to Find Objects",
+    "In Three.js, managing and locating specific 3D objects within a complex hierarchy can be challenging. This article explains how to efficiently traverse the entire Three.js scene graph using the built-in traverse method, allowing you to search, filter, an",
+    false
+  ],
+  [
+    112,
+    "How Group Scale and Rotation Affects Children in Three.js",
+    "In Three.js, grouping objects using THREE.Group or THREE.Object3D allows you to manipulate multiple meshes as a single unit. When you scale or rotate a parent Group, these transformations are automatically propagated to all child objects through hierarch",
+    false
+  ],
+  [
+    111,
+    "How to Use Three.js Group to Organize Meshes",
+    "In Three.js, managing complex 3D scenes with numerous individual objects can quickly become difficult to maintain. This article explains how to use the THREE.Group class to bundle multiple meshes together, allowing you to manipulate them as a single enti",
+    false
+  ],
+  [
+    110,
+    "Translate Object on Local Axis in Three.js",
+    "Moving objects in 3D space is a fundamental task in Three.js, but default position updates occur relative to the world coordinate system. This article provides a straightforward guide on how to translate a 3D object along its own local axis, accounting f",
+    false
+  ],
+  [
+    109,
+    "Difference Between Clone and Copy in Three.js Vector3",
+    "When working with 3D graphics in Three.js, managing memory and performance is crucial. This article explains the fundamental differences between the .clone() and .copy() methods when duplicating Vector3 instances, helping you write more efficient WebGL c",
+    false
+  ],
+  [
+    108,
+    "How to Convert Degrees to Radians in Three.js",
+    "In Three.js, 3D rotations are calculated using radians rather than degrees, which can be unintuitive for developers accustomed to standard 360-degree measurements. This article explains how the Three.js MathUtils module simplifies this process by providi",
+    false
+  ],
+  [
+    107,
+    "Three.js Clipping Planes: Constructing a Plane Object",
+    "This article provides a practical guide on how to construct and implement the THREE.Plane mathematical object for geometry clipping in Three.js. You will learn how to define a clipping plane using normal vectors and constants, apply it to 3D materials, a",
+    false
+  ],
+  [
+    106,
+    "Three.js Frustum Camera Visibility Guide",
+    "In web-based 3D graphics, rendering performance depends heavily on only drawing what is visible to the user. This article explains the function of the Frustum class in Three.js, detailing how it represents the camera's viewing volume and how it is used t",
+    false
+  ],
+  [
+    105,
+    "Three.js Color Space Conversion Guide",
+    "Managing color spaces correctly is crucial for achieving realistic rendering in 3D web applications. This article provides a straightforward guide on how to perform color space conversions using the built-in Color class in Three.js, ensuring your colors",
+    false
+  ],
+  [
+    104,
+    "Three.js Spherical Class for Orbital Coordinates",
+    "This article explains how the Spherical class in Three.js is used to calculate orbital coordinates for 3D objects. You will learn the mathematical concept behind spherical coordinates, why they are highly efficient for simulating orbital paths like plane",
+    false
+  ],
+  [
+    103,
+    "Three.js AABB Collision Detection with Box3",
+    "This article explains how to implement Axis-Aligned Bounding Box (AABB) collision detection in Three.js using the built-in Box3 class. You will learn how to create bounding boxes for 3D meshes, update them dynamically as objects move, and check for inter",
+    false
+  ],
+  [
+    102,
+    "Role of Matrix3 for Normals in Three.js",
+    "In Three.js, the Matrix3 class is primarily used to handle the transformation of normal vectors, ensuring they remain perpendicular to a 3D model's surface during rendering. While 3D positions are transformed using a 4x4 matrix (Matrix4), normal vectors",
+    false
+  ],
+  [
+    101,
+    "How to Use Matrix4 for Complex Transformations in Three.js",
+    "In Three.js, while basic translations, rotations, and scaling can be achieved using standard object properties, complex and nested transformations are best handled using the Matrix4 class. This article provides a clear, step-by-step guide on how to insta",
+    false
+  ],
+  [
+    100,
+    "Three.js Enterprise Codebase Best Practices",
+    "Structuring a large-scale enterprise application with Three.js requires a disciplined architecture to ensure maintainability, scalability, and high performance. This article outlines the industry-standard best practices for organizing your 3D codebase, f",
+    false
+  ],
+  [
+    99,
+    "Monitor Three.js Performance with stats.js",
+    "Maintaining a smooth 60 frames per second (FPS) is crucial for WebGL applications. This article provides a direct, step-by-step guide on how to integrate the popular utility library stats.js into your Three.js project. You will learn how to initialize th",
+    false
+  ],
+  [
+    98,
+    "Custom Shader Passes in Three.js EffectComposer",
+    "This article provides a step-by-step guide on how to create and register custom post-processing shader passes using the EffectComposer in Three.js. You will learn how to define custom vertex and fragment shaders, structure the shader object, instantiate",
+    false
+  ],
+  [
+    97,
+    "Three.js renderOrder for Transparent Overlapping Objects",
+    "In WebGL and Three.js, rendering overlapping transparent objects often leads to visual artifacts, such as background objects incorrectly clipping or disappearing behind foreground ones. This article explains the functional significance of the renderOrder",
+    false
+  ],
+  [
+    96,
+    "Pass Uniforms and Varyings to Three.js GLSL Shaders",
+    "Using custom shaders in Three.js requires an efficient and secure way to send data from CPU-side JavaScript to GPU-side GLSL. This article explains how to securely pass custom uniforms (global variables) and varying variables (which interpolate data from",
+    false
+  ],
+  [
+    95,
+    "WebXR in Three.js: How to Enable VR and AR",
+    "This article provides an overview of WebXR and explains how to implement immersive Virtual Reality (VR) and Augmented Reality (AR) features in a web application using the Three.js library. You will learn the core concepts of the WebXR Device API and get",
+    false
+  ],
+  [
+    94,
+    "How to Add Gravity to Three.js with Cannon.js",
+    "Integrating a physics engine like Cannon.js with Three.js allows you to bring realistic gravity, collisions, and rigid body dynamics to your 3D web applications. While Three.js handles the visual rendering of 3D objects, Cannon.js runs the mathematical p",
+    false
+  ],
+  [
+    93,
+    "How Frustum Culling Works in Three.js",
+    "In Three.js, automatic frustum culling is a crucial performance optimization technique that prevents the GPU from wasting resources on objects outside the camera's field of view. By calculating whether a 3D object's bounding volume intersects with the ca",
+    false
+  ],
+  [
+    92,
+    "Three.js InstancedMesh: How to Reduce Draw Calls",
+    "Rendering thousands of 3D objects in Three.js without dropping frames can be challenging due to CPU-to-GPU overhead known as draw calls. This article explains what an InstancedMesh is, how it solves performance bottlenecks by merging multiple identical o",
+    false
+  ],
+  [
+    91,
+    "How to Prevent Memory Leaks in Three.js",
+    "In Three.js, failing to properly clean up unused assets can quickly lead to severe memory leaks, browser slowdowns, and application crashes. Because JavaScript's automatic garbage collection cannot release memory allocated on the GPU, WebGL resources mus",
+    false
+  ],
+  [
+    90,
+    "Smooth Vector Interpolation with Three.js Lerp",
+    "This article explains how to smoothly interpolate between two 3D vectors in Three.js using the built-in linear interpolation (lerp) methods. You will learn the difference between Vector3.lerp() and Vector3.lerpVectors(), understand the mathematical conce",
+    false
+  ],
+  [
+    89,
+    "Calculate Distance Between Two Three.js Objects",
+    "This article explains how to accurately calculate the 3D distance between two independent Object3D instances in Three.js. You will learn how to retrieve their global world coordinates—even if they are nested inside different parent groups—and use the",
+    false
+  ],
+  [
+    88,
+    "Convert Screen Coordinates to 3D in Three.js",
+    "Translating 2D screen coordinates from a mouse click into 3D world coordinates is a fundamental task in interactive 3D web development. This article provides a step-by-step guide on how to use the Three.js Raycaster to project a 2D mouse position into a",
+    false
+  ],
+  [
+    87,
+    "Three.js Raycaster Tutorial for Mouse Picking",
+    "In Three.js, creating interactive 3D applications requires a way to detect which objects a user is pointing at or clicking on. This article explains the fundamental concepts of the Raycaster class, explores how it enables mouse picking, and provides a st",
+    false
+  ],
+  [
+    86,
+    "Three.js Morph Targets for Facial Animations",
+    "This article provides a practical guide on how to implement and control morph targets in Three.js to create realistic facial expression animations. You will learn how to load a 3D model with pre-authored morph targets, access and manipulate these targets",
+    false
+  ],
+  [
+    85,
+    "Three.js Clock for Frame-Rate Independent Movement",
+    "In 3D web graphics, animations must run at a consistent speed regardless of the user's device performance or screen refresh rate. This article provides a straightforward guide on using the Three.js Clock utility to calculate delta time, ensuring your 3D",
+    false
+  ],
+  [
+    84,
+    "Three.js Local vs World Space Coordinates",
+    "This article explains the core differences between local space and world space coordinate transformations in Three.js. You will learn how these two coordinate systems function, how parent-child relationships affect 3D object transformations, and how to p",
+    false
+  ],
+  [
+    83,
+    "Three.js Rotation: Euler Angles vs Quaternions",
+    "Rotating 3D objects in Three.js can be achieved using two primary mathematical representations: Euler angles and Quaternions. While Euler angles are intuitive and easy to understand for simple rotations, they suffer from mathematical limitations like gim",
+    false
+  ],
+  [
+    82,
+    "Three.js Vector3 Guide and Common Math Operations",
+    "This article explores the Vector3 class in Three.js, explaining its role as a fundamental building block for representing 3D points and directions. We will examine what a Vector3 object is and detail the common, native mathematical operations you can per",
+    false
+  ],
+  [
+    81,
+    "Initialize Three.js AnimationMixer for Character Animation",
+    "This article provides a step-by-step guide on how to properly initialize and use the AnimationMixer in Three.js to play complex character animations. You will learn how to bind the mixer to a 3D model, load animation clips, trigger playback using animati",
+    false
+  ],
+  [
+    80,
+    "FBXLoader vs GLTFLoader in Three.js",
+    "In Three.js, importing 3D models efficiently is crucial for building high-performance web-based graphics. This article explores the purpose of the FBXLoader, compares its workflow directly with the industry-standard GLTFLoader, and provides clear guidanc",
+    false
+  ],
+  [
+    79,
+    "Export Three.js Scene to GLTF",
+    "Exporting a dynamically generated scene from Three.js to a GLTF or GLB file allows developers to save user-generated 3D models, capture current scene states, or transfer assets directly to other 3D software. This article provides a straightforward, step-",
+    false
+  ],
+  [
+    78,
+    "Center and Scale Loaded 3D Models in Three.js",
+    "When loading 3D models into a Three.js scene, they often arrive with unpredictable scales, off-center pivot points, or positions far from the scene's origin. This article explains how to accurately calculate the physical dimensions of any loaded 3D model",
+    false
+  ],
+  [
+    77,
+    "Three.js LoadingManager: Track Asset Loading Progress",
+    "In web-based 3D applications, loading heavy assets like 3D models, textures, and audio files can heavily impact user experience. This article explores the Three.js LoadingManager, explaining how it serves as a central hub to globally track the loading pr",
+    false
+  ],
+  [
+    76,
+    "Play Skeletal Animations from GLTF in Three.js",
+    "Working with 3D models in Three.js often involves animating characters using skeletal rigs. This article provides a direct, step-by-step guide on how to load a GLTF or GLB file, extract its embedded skeletal animations, and play them seamlessly using the",
+    false
+  ],
+  [
+    75,
+    "How to Handle Three.js Asset Loading Errors",
+    "When building 3D applications with Three.js, failed asset loads can break the user experience or leave users staring at a blank canvas. This article explains how to intercept loading errors using Three.js loaders and the LoadingManager, and outlines prac",
+    false
+  ],
+  [
+    74,
+    "How to Modify GLTF Materials in Three.js",
+    "Loading GLTF models is a standard practice in Three.js, but changing their appearance dynamically requires accessing and modifying their specific materials. This article provides a straightforward guide on how to traverse a loaded GLTF scene, locate targ",
+    false
+  ],
+  [
+    73,
+    "How to Use Draco Compression in Three.js",
+    "Loading large 3D meshes in web applications often results in high bandwidth consumption and sluggish page response times. This article provides a direct, step-by-step guide on how to integrate Google’s Draco compression into a Three.js project to drast",
+    false
+  ],
+  [
+    72,
+    "Advantages of glTF over OBJ in Three.js",
+    "When developing 3D web applications with Three.js, choosing the right 3D file format is critical for performance, delivery speed, and visual fidelity. This article compares the glTF and OBJ formats, highlighting why glTF has become the industry standard",
+    false
+  ],
+  [
+    71,
+    "Load GLTF Models Asynchronously in Three.js",
+    "This article provides a step-by-step guide on how to asynchronously load external 3D models into a Three.js scene using the GLTFLoader. You will learn how to set up the loader, handle asynchronous loading using callbacks, and implement modern async/await",
+    false
+  ],
+  [
+    70,
+    "Three.js Color Space and Gamma Correction Guide",
+    "This article provides a clear overview of gamma correction and explains how modern Three.js handles output color spaces. You will learn the fundamental physics behind linear and non-linear color perception, why gamma correction is necessary for realistic",
+    false
+  ],
+  [
+    69,
+    "How to Render Three.js with a Transparent Background",
+    "Rendering a Three.js scene with a transparent background allows you to overlay 3D graphics seamlessly on top of standard HTML elements, such as text, images, or CSS gradients. This guide provides a straightforward, step-by-step walkthrough on how to conf",
+    false
+  ],
+  [
+    68,
+    "How to Enable Anti-Aliasing in Three.js WebGLRenderer",
+    "In 3D web graphics, jagged edges can significantly degrade the visual quality of a scene. This article explains the concept of anti-aliasing, its importance in rendering smooth 3D graphics, and provides a straightforward guide on how to natively enable i",
+    false
+  ],
+  [
+    67,
+    "How to Apply Selective Bloom in Three.js",
+    "This article explains how to isolate and apply a glowing bloom effect to specific emissive objects in a Three.js scene without affecting the entire environment. You will learn how to configure layers, set up post-processing composers, and use a shader ma",
+    false
+  ],
+  [
+    66,
+    "Three.js Post-Processing and EffectComposer Guide",
+    "This article explains the fundamentals of post-processing in Three.js, a technique used to apply visual effects to a 3D scene after it has been rendered. You will learn what post-processing is and receive a step-by-step guide on how to construct and conf",
+    false
+  ],
+  [
+    65,
+    "Optimize Multiple Dynamic Lights in Three.js",
+    "Rendering multiple dynamic lights in Three.js can drastically reduce frame rates due to increased draw calls, complex shader calculations, and shadow map overhead. This article outlines key strategies to optimize your render performance when your 3D scen",
+    false
+  ],
+  [
+    64,
+    "Prevent Three.js Shadow Acne with Shadow Bias",
+    "Shadow acne is a common visual artifact in 3D graphics that appears as strange, striped patterns of dark lines across illuminated surfaces. This article explains what causes shadow acne in Three.js and provides a clear, actionable guide on how to elimina",
+    false
+  ],
+  [
+    62,
+    "PCFShadowMap vs PCFSoftShadowMap in Three.js",
+    "This article compares PCFShadowMap and PCFSoftShadowMap in Three.js, highlighting their visual characteristics and performance impacts. You will learn how these two shadow map types differ in rendering shadow edges, how they affect frame rates, and how t",
+    false
+  ],
+  [
+    61,
+    "How to Cast and Receive Shadows in Three.js",
+    "In Three.js, managing shadows is essential for creating realistic 3D scenes. This article provides a concise guide on how to explicitly configure individual 3D objects to either cast or receive shadows, covering renderer setup, light configuration, and s",
+    false
+  ],
+  [
+    60,
+    "Simulating Real-World Light Decay in Three.js",
+    "This article explores how Three.js utilizes light attenuation to mimic real-world physics, focusing on how light intensity diminishes over distance. We will examine the mathematical principles behind the inverse-square law, how Three.js implements these",
+    false
+  ],
+  [
+    59,
+    "Why Use PointLightHelper in Three.js",
+    "Visual debugging tools like PointLightHelper in Three.js are essential assets for 3D web developers. This article explains the core purpose of these visual helpers, how they simplify the development process, and why visualizing invisible scene elements l",
+    false
+  ],
+  [
+    58,
+    "Using RectAreaLight in Three.js for Realistic Lighting",
+    "This article explains how to implement and configure the RectAreaLight in Three.js to create realistic studio and window lighting effects. You will learn the essential setup steps, including the initialization of required libraries, code implementation,",
+    false
+  ],
+  [
+    57,
+    "Optimizing Three.js Shadow Map Properties",
+    "This article provides a practical guide on optimizing Three.js shadows by configuring crucial shadow map properties like mapSize, camera frustum boundaries, and bias. Learning how to adjust these settings allows you to strike the perfect balance between",
+    false
+  ],
+  [
+    56,
+    "Enable Shadow Mapping Globally in Three.js",
+    "This article provides a quick, step-by-step guide on how to globally enable and configure shadow mapping within the Three.js WebGLRenderer. You will learn how to activate the shadow map setting on the renderer, choose a shadow map type for better visual",
+    false
+  ],
+  [
+    55,
+    "Three.js Light Guide: Intensity, Color, and Decay",
+    "Controlling lighting is crucial for creating realistic 3D scenes in Three.js. This article provides a straightforward guide on how to manipulate the intensity, color, and decay properties of light sources in Three.js, helping you achieve the perfect atmo",
+    false
+  ],
+  [
+    54,
+    "Three.js HemisphereLight Guide for Outdoor Scenes",
+    "This article explains the fundamentals of the HemisphereLight in Three.js, detailing how it simulates natural sky and ground ambient lighting. You will learn its core parameters, how it differs from other light sources, and best practices for implementin",
+    false
+  ],
+  [
+    53,
+    "Configure Realistic SpotLight Shadows in Three.js",
+    "Setting up realistic shadows with a SpotLight in Three.js requires configuring the renderer, the light itself, the shadow camera, and the objects in the scene. This guide provides a step-by-step walkthrough to enable shadow maps, adjust spotlight propert",
+    false
+  ],
+  [
+    52,
+    "PointLight vs DirectionalLight in Three.js",
+    "In Three.js, understanding how different light sources emit rays is crucial for creating realistic 3D scenes. This article explains the fundamental differences between PointLight and DirectionalLight, focusing on how they project light rays, how distance",
+    false
+  ],
+  [
+    51,
+    "How AmbientLight Works in Three.js",
+    "In Three.js, lighting is essential for defining the depth, color, and realism of a 3D scene. This article explains how the AmbientLight class uniformly illuminates all objects in a scene, detailing its mathematical behavior, its interaction with differen",
+    false
+  ],
+  [
+    50,
+    "Use HTML Video Stream as Three.js Texture",
+    "Rendering live video onto 3D geometry is a powerful way to create immersive, interactive WebGL experiences. This article provides a direct, step-by-step guide on how to capture an active HTML <video> element—whether from a local file, stream, or webcam",
+    false
+  ],
+  [
+    49,
+    "What Are Mipmaps and How Three.js Generates Them",
+    "This article explains the concept of mipmaps in 3D computer graphics and details how the Three.js library automatically generates and applies them to textures. You will learn what mipmaps are, why they are crucial for performance and visual quality, and",
+    false
+  ],
+  [
+    48,
+    "Use HTML Canvas as Dynamic Texture in Three.js",
+    "This article explains how to use an HTML <canvas> element as a dynamic, updatable texture within a Three.js 3D scene. You will learn how to initialize the canvas, project it onto a 3D object using THREE.CanvasTexture, and continuously update the texture",
+    false
+  ],
+  [
+    47,
+    "How to Use Alpha Maps in Three.js",
+    "In 3D web graphics, controlling which parts of a material are visible is crucial for creating realistic effects like foliage, chain-link fences, or complex decals. This article explains what an alpha map is, how it functions as a grayscale texture to con",
+    false
+  ],
+  [
+    46,
+    "Three.js Texture Magnification Filters Guide",
+    "This article explains how to alter texture magnification filters in Three.js to control how low-resolution textures are rendered. You will learn how to modify the magFilter property of a texture to switch between smooth bilinear interpolation and crisp n",
+    false
+  ],
+  [
+    45,
+    "How to Load an HDRI Environment Map in Three.js",
+    "Using an HDR (High Dynamic Range) environment map is one of the most effective ways to achieve realistic, image-based lighting and reflections in Three.js. This guide provides a direct, step-by-step walkthrough on how to load a .hdr file using the RGBELo",
+    false
+  ],
+  [
+    44,
+    "Bump Map vs Displacement Map in Three.js",
+    "This article explains the specific visual and structural differences between bump maps and displacement maps in Three.js. While both textures are used to add depth and detail to 3D surfaces, they do so using entirely different rendering techniques. Under",
+    false
+  ],
+  [
+    43,
+    "How to Repeat and Wrap Textures in Three.js",
+    "In Three.js, controlling how a texture maps onto a 3D surface is essential for creating realistic materials. This article provides a quick, direct guide on how to configure texture repeating and wrapping behaviors using the wrapS, wrapT, and repeat prope",
+    false
+  ],
+  [
+    42,
+    "Three.js Normal Maps: Simulate Surface Detail in 3D",
+    "This article explains what a normal map is and how it simulates complex surface details in 3D graphics without adding extra geometry. You will learn how normal maps manipulate light calculations and discover the step-by-step process of implementing them",
+    false
+  ],
+  [
+    41,
+    "Load Image Texture using Three.js TextureLoader",
+    "This article provides a straightforward guide on how to load external image files and apply them as textures to 3D objects in Three.js using the TextureLoader class. You will learn how to instantiate the loader, load an image asynchronously, apply it to",
+    false
+  ],
+  [
+    40,
+    "Share Three.js Materials Across Multiple Meshes",
+    "In Three.js, creating a new material for every individual mesh can quickly exhaust GPU memory and degrade rendering performance. This article explains how to optimize your WebGL applications by sharing a single material instance across multiple meshes, t",
+    false
+  ],
+  [
+    39,
+    "Three.js Material Blending Property Explained",
+    "This article explains the purpose and functionality of the blending property in Three.js materials. You will learn how this property controls how overlapping colors and transparent objects mix together on the screen, the different blending modes availabl",
+    false
+  ],
+  [
+    38,
+    "Change Three.js Material Emissive Color Dynamically",
+    "This article explains how to dynamically change the emissive color of a material at runtime in Three.js. You will learn how to access the emissive property of compatible materials, update its color values using different methods, and apply these changes",
+    false
+  ],
+  [
+    37,
+    "How depthTest Affects Overlapping Three.js Materials",
+    "In Three.js, managing how overlapping 3D objects render on top of one another is crucial for visual accuracy. This article explains the depthTest property in Three.js materials, how it controls whether an object's pixels are tested against the depth buff",
+    false
+  ],
+  [
+    36,
+    "How to Render Double-Sided Planes in Three.js",
+    "By default, Three.js optimizes rendering performance by only drawing the front-facing side of 3D objects, a technique known as back-face culling. This article explains how to bypass this default behavior for flat planes by configuring the side property o",
+    false
+  ],
+  [
+    35,
+    "Three.js ShaderMaterial and Custom GLSL Guide",
+    "This article provides a comprehensive overview of ShaderMaterial in Three.js, explaining how it bridges JavaScript and the GPU to render custom graphics. You will learn what a ShaderMaterial is, how it utilizes vertex and fragment shaders written in GLSL",
+    false
+  ],
+  [
+    34,
+    "Three.js Material Transparency and Opacity Guide",
+    "Achieving realistic transparency in Three.js requires more than just adjusting a single opacity value. This article provides a straightforward guide on how to correctly configure transparency and opacity on Three.js materials, covering the essential prop",
+    false
+  ],
+  [
+    33,
+    "What Makes Three.js MeshPhysicalMaterial Realistic",
+    "In Three.js, achieving photorealism requires materials that accurately mimic how light interacts with real-world surfaces. While MeshStandardMaterial provides a solid foundation using physically-based rendering (PBR), MeshPhysicalMaterial extends it with",
+    false
+  ],
+  [
+    32,
+    "Apply Wireframe to Material in Three.js",
+    "Applying a wireframe effect to an existing material in Three.js is a straightforward process that helps visualize the underlying geometry of a 3D model. This guide demonstrates how to quickly enable the wireframe property on any standard Three.js materia",
+    false
+  ],
+  [
+    31,
+    "MeshBasicMaterial vs MeshStandardMaterial in Three.js",
+    "When building 3D scenes in Three.js, choosing the right material is crucial for both visual quality and performance. This article compares MeshBasicMaterial and MeshStandardMaterial, highlighting their core visual differences, how they interact with ligh",
+    false
+  ],
+  [
+    30,
+    "Extract Bounding Box or Sphere of Three.js Geometry",
+    "Calculating the spatial boundaries of 3D models is essential for implementing collision detection, centering objects, and framing cameras. This guide demonstrates how to extract both the bounding box (THREE.Box3) and bounding sphere (THREE.Sphere) for si",
+    false
+  ],
+  [
+    29,
+    "How to Render Thousands of Geometries in Three.js",
+    "Rendering thousands of individual 3D objects in Three.js can quickly bottleneck your application's performance due to excessive draw calls. This article explains how to use THREE.InstancedMesh, the most efficient tool in Three.js for rendering thousands",
+    false
+  ],
+  [
+    28,
+    "Create Detailed Spheres in Three.js SphereGeometry",
+    "Creating highly detailed spherical objects in Three.js requires a solid understanding of the SphereGeometry constructor parameters, specifically its segment counts. This article provides a straightforward guide on how to configure these parameters to ach",
+    false
+  ],
+  [
+    27,
+    "How to Map UV Coordinates in Three.js",
+    "This article explains the fundamental concept of UV coordinates in 3D graphics and demonstrates how they are applied to geometries in Three.js. You will learn what the U and V axes represent, how Three.js processes these coordinates through vertex attrib",
+    false
+  ],
+  [
+    26,
+    "How to Update BufferGeometry Vertices in Three.js",
+    "Updating the vertex positions of an active BufferGeometry in Three.js is a crucial technique for creating dynamic animations, terrain deformations, or interactive 3D effects. This article provides a straightforward guide on how to access a geometry's pos",
+    false
+  ],
+  [
+    25,
+    "Merge Multiple Geometries in Three.js",
+    "In Three.js, rendering hundreds of individual 3D objects can severely degrade performance due to excessive draw calls. This article explains how to optimize your WebGL scenes by efficiently merging multiple static geometries into a single geometry using",
+    false
+  ],
+  [
+    24,
+    "Why Compute Vertex Normals in Three.js Custom Geometry",
+    "In Three.js, computing vertex normals for custom geometries is essential for achieving realistic lighting, shading, and reflections. This article explains how vertex normals dictate how light interacts with 3D surfaces and why calculating them is a cruci",
+    false
+  ],
+  [
+    23,
+    "Custom Vertices and Faces in Three.js BufferGeometry",
+    "This article provides a practical guide on how to create custom 3D shapes in Three.js using the BufferGeometry class. You will learn how to define custom vertex coordinates, group them into triangular faces using indices, and apply these attributes to re",
+    false
+  ],
+  [
+    22,
+    "How to Create a Cube in Three.js Using BoxGeometry",
+    "Creating a 3D cube is the fundamental starting point for learning Three.js. This guide provides a direct, step-by-step walkthrough of how to instantiate a basic 3D cube using the built-in BoxGeometry class, pair it with a material, combine them into a me",
+    false
+  ],
+  [
+    21,
+    "Geometry vs BufferGeometry in Three.js",
+    "In Three.js, the way 3D shapes are represented and rendered has evolved significantly, transitioning from the user-friendly but inefficient Geometry class to the high-performance BufferGeometry class. This article explores the core differences between th",
+    false
+  ],
+  [
+    20,
+    "Animate Three.js Camera Along a Path",
+    "This article explains how to smoothly animate a camera's position along a predefined 3D path in Three.js. You will learn how to define a curve using mathematical splines, update the camera's position along this path inside the render loop, and orient the",
+    false
+  ],
+  [
+    19,
+    "Three.js CubeCamera Reflections Guide",
+    "In Three.js, creating realistic environment reflections on 3D objects requires specialized tools, and the CubeCamera is the primary object used to achieve this effect. This article explains what a CubeCamera is, how it works to capture dynamic 360-degree",
+    false
+  ],
+  [
+    18,
+    "Update Three.js Camera Projection Matrix Dynamically",
+    "When working with Three.js, modifying camera properties like aspect ratio, field of view (FOV), near plane, or far plane at runtime will not automatically update the rendered scene. To apply these changes, you must manually trigger an update to the camer",
+    false
+  ],
+  [
+    17,
+    "How to Create Split Screen Cameras in Three.js",
+    "Rendering multiple cameras simultaneously in Three.js is a powerful technique for creating multiplayer split-screen games, minimaps, or multi-angle CAD viewers. This article provides a straightforward, step-by-step guide on how to configure your renderer",
+    false
+  ],
+  [
+    16,
+    "How to Make Three.js Camera Look at a Vector3",
+    "In Three.js, keeping a camera pointed at a specific 3D coordinate is crucial for tracking moving objects, creating dynamic cutscenes, or focusing the user's attention on a point of interest. This article provides a straightforward guide on how to use the",
+    false
+  ],
+  [
+    15,
+    "How to Use OrbitControls in Three.js",
+    "Integrating interactive camera controls is essential for exploring 3D scenes. This guide provides a straightforward, step-by-step approach to implementing OrbitControls in Three.js, allowing users to effortlessly rotate, zoom, and pan the camera around a",
+    false
+  ],
+  [
+    14,
+    "Three.js Camera Near and Far Clipping Planes Explained",
+    "In Three.js, rendering 3D scenes efficiently requires defining the boundaries of what the camera can physically see. This article explores the crucial roles of the near and far clipping planes in a Three.js camera setup, detailing how they define the cam",
+    false
+  ],
+  [
+    13,
+    "How to Change Camera FOV in Three.js",
+    "Changing the field of view (FOV) of a perspective camera in Three.js is a straightforward process that involves modifying the camera's fov property. This article provides a quick, step-by-step guide on how to update this value dynamically in your JavaScr",
+    false
+  ],
+  [
+    12,
+    "Orthographic vs Perspective Camera in Three.js",
+    "In Three.js, rendering a 3D scene onto a 2D screen requires a camera, with PerspectiveCamera and OrthographicCamera being the two primary options. This article explains the fundamental differences between these camera types, how their mathematical projec",
+    false
+  ],
+  [
+    11,
+    "Configure Three.js PerspectiveCamera for Realistic Views",
+    "This article explains how to configure the PerspectiveCamera in Three.js to achieve realistic 3D rendering. You will learn how to set the ideal field of view, manage clipping planes to avoid visual artifacts, position the camera to mimic real-world human",
+    false
+  ],
+  [
+    10,
+    "How to Add an Object to a Three.js Scene",
+    "To display any 3D object in a Three.js application, you must insert it into the active scene graph. This article explains the fundamental steps required to create a 3D object (a mesh) and add it to your scene using the scene.add() method, ensuring it is",
+    false
+  ],
+  [
+    9,
+    "Three.js Coordinate System Explained",
+    "This article provides a clear overview of the standard 3D coordinate system used by Three.js. You will learn about the orientation of the X, Y, and Z axes, how the right-handed coordinate system works, and how this affects the placement and rotation of o",
+    false
+  ],
+  [
+    8,
+    "Three.js Window Resize: How to Update Canvas",
+    "In Three.js, responsive design is crucial for maintaining a seamless user experience across different devices and screen sizes. This article provides a straightforward guide on how to handle window resize events to dynamically update your Three.js canvas",
+    false
+  ],
+  [
+    7,
+    "Difference Between WebGL and Three.js",
+    "This article explains the fundamental differences between WebGL and Three.js, two key technologies used for rendering 3D graphics in web browsers. While they are closely related, they operate at different levels of development. We will explore how WebGL",
+    false
+  ],
+  [
+    6,
+    "How to Set Background Color in Three.js",
+    "This article provides a quick and straightforward guide on how to set the background color of a scene in Three.js. You will learn the three most common and effective methods to change the background color: using the scene's background property, configuri",
+    false
+  ],
+  [
+    5,
+    "Core Components Needed to Render in Three.js",
+    "To render 3D graphics on a web browser using Three.js, developers must set up a specific pipeline of foundational elements. This article breaks down the three core components required to display any 3D object in a Three.js environment—the Scene, the Ca",
+    false
+  ],
+  [
+    4,
+    "Understanding the Three.js Animation Loop",
+    "This article explains how the animation loop functions within a Three.js application. You will learn about the role of the browser's native requestAnimationFrame API, how the loop updates 3D objects, and how to achieve consistent, frame-rate-independent",
+    false
+  ],
+  [
+    3,
+    "What is the Role of WebGLRenderer in Three.js?",
+    "In Three.js, the WebGLRenderer is the component responsible for displaying your 3D scenes on a web browser. This article explains the essential role of the WebGLRenderer, how it bridges the gap between 3D data and your screen, and the key configurations",
+    false
+  ],
+  [
+    2,
+    "How to Initialize a Basic Scene in Three.js",
+    "This guide provides a straightforward tutorial on how to initialize a basic 3D scene using Three.js. You will learn about the three essential components required for any Three.js application—the scene, the camera, and the renderer—and how to combine",
+    false
+  ],
+  [
+    1,
+    "What is the Primary Purpose of Three.js?",
+    "This article provides a comprehensive overview of Three.js, a popular open-source JavaScript library used in web development. It explores how the library simplifies the creation of complex 3D graphics directly within the browser by abstracting the comple",
+    false
+  ]
+]

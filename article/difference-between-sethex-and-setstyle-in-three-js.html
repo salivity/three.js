@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Difference Between setHex and setStyle in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the THREE.Color class provides several methods to update the color of a material. This article explains the key differences between material.color.setHex() and material.color.setStyle(), highlighting their distinct input formats, performance">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/difference-between-sethex-and-setstyle-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Difference Between setHex and setStyle in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/difference-between-sethex-and-setstyle-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the THREE.Color class provides several methods to update the color of a material. This article explains the key differences between material.color.setHex() and material.color.setStyle(), highlighting their distinct input formats, performance" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="difference-between-sethex-and-setstyle-in-three.js">Difference
+Between setHex and setStyle in Three.js</h1>
+<p>In Three.js, the <code>THREE.Color</code> class provides several
+methods to update the color of a material. This article explains the key
+differences between <code>material.color.setHex()</code> and
+<code>material.color.setStyle()</code>, highlighting their distinct
+input formats, performance characteristics, and ideal use cases to help
+you choose the right method for your 3D application.</p>
+<h2 id="understanding-the-two-methods">Understanding the Two
+Methods</h2>
+<p>While both methods ultimately update the RGB values of a Three.js
+material, they differ entirely in the type of arguments they accept and
+how they process those values.</p>
+<h3 id="material.color.sethex">1. material.color.setHex()</h3>
+<p>The <code>setHex()</code> method updates the material’s color using a
+<strong>hexadecimal number (integer)</strong>.</p>
+<ul>
+<li><p><strong>Input Format:</strong> It expects a number in the
+<code>0xRRGGBB</code> format.</p></li>
+<li><p><strong>Syntax Example:</strong></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setHex</span>(<span class="bn">0xff0000</span>)<span class="op">;</span> <span class="co">// Sets the color to bright red</span></span></code></pre></div></li>
+<li><p><strong>Performance:</strong> This method is highly performant.
+Because the input is already a raw number, Three.js can directly extract
+the red, green, and blue channels mathematically without any string
+parsing.</p></li>
+<li><p><strong>Best Use Case:</strong> Use <code>setHex()</code> when
+working with hardcoded color values, math-driven color generation, or in
+performance-critical rendering loops where colors change
+frequently.</p></li>
+</ul>
+<h3 id="material.color.setstyle">2. material.color.setStyle()</h3>
+<p>The <code>setStyle()</code> method updates the material’s color using
+a <strong>CSS-style string</strong>.</p>
+<ul>
+<li><p><strong>Input Format:</strong> It accepts standard CSS color
+strings, including color names, hex strings, RGB, RGBA, HSL, and
+HSLA.</p></li>
+<li><p><strong>Syntax Examples:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setStyle</span>(<span class="st">&#39;red&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setStyle</span>(<span class="st">&#39;#ff0000&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setStyle</span>(<span class="st">&#39;rgb(255, 0, 0)&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setStyle</span>(<span class="st">&#39;hsl(0, 100%, 50%)&#39;</span>)<span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Performance:</strong> This method is slower than
+<code>setHex()</code>. Behind the scenes, Three.js must use regular
+expressions to parse the string, identify the format, and convert the
+values into a normalized 0-1 range for the GPU.</p></li>
+<li><p><strong>Best Use Case:</strong> Use <code>setStyle()</code> when
+integrating Three.js with web APIs, CSS variables, HTML color pickers
+(<code>&lt;input type="color"&gt;</code>), or when handling
+user-inputted color strings.</p></li>
+</ul>
+<hr />
+<h2 id="comparison-summary">Comparison Summary</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>setHex()</code></th>
+<th style="text-align: left;"><code>setStyle()</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Argument Type</strong></td>
+<td style="text-align: left;">Number (e.g., <code>0xff0000</code>)</td>
+<td style="text-align: left;">String (e.g., <code>'#ff0000'</code>,
+<code>'red'</code>, <code>'rgb(255,0,0)'</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Parsing Overhead</strong></td>
+<td style="text-align: left;">None (Direct conversion)</td>
+<td style="text-align: left;">Moderate (Requires string parsing)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Flexibility</strong></td>
+<td style="text-align: left;">Low (Strictly numeric hex codes)</td>
+<td style="text-align: left;">High (Supports names, rgb, hsl, and string
+hex)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Speed</strong></td>
+<td style="text-align: left;">Extremely Fast</td>
+<td style="text-align: left;">Slower</td>
+</tr>
+</tbody>
+</table></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

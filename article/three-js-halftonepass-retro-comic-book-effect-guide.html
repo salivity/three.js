@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js HalftonePass Retro Comic Book Effect Guide - three.js</title>
+    <meta name="description" content="This article explores the HalftonePass in Three.js, explaining what it is and how it replicates the classic retro comic-book CMYK printing aesthetic. You will learn the underlying mechanics of halftone rendering, how to implement this post-processing pas">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-halftonepass-retro-comic-book-effect-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js HalftonePass Retro Comic Book Effect Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-halftonepass-retro-comic-book-effect-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the HalftonePass in Three.js, explaining what it is and how it replicates the classic retro comic-book CMYK printing aesthetic. You will learn the underlying mechanics of halftone rendering, how to implement this post-processing pas" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-halftonepass-retro-comic-book-effect-guide">Three.js
+HalftonePass Retro Comic Book Effect Guide</h1>
+<p>This article explores the <code>HalftonePass</code> in Three.js,
+explaining what it is and how it replicates the classic retro comic-book
+CMYK printing aesthetic. You will learn the underlying mechanics of
+halftone rendering, how to implement this post-processing pass in your
+3D web applications, and how to customize its parameters to achieve a
+stylized, nostalgic visual effect.</p>
+<h2 id="what-is-halftonepass">What is HalftonePass?</h2>
+<p><code>HalftonePass</code> is a post-processing shader pass in
+Three.js that mimics the traditional halftone printing process.
+Historically used in newspapers and comic books, halftoning is a
+technique that uses grids of dots varying in size, spacing, or shape to
+simulate continuous-tone imagery.</p>
+<p>In a digital 3D environment, the <code>HalftonePass</code> takes the
+final rendered pixels of a scene and projects them through a virtual
+screen grid. Instead of rendering solid gradients, it translates the
+light and color values of your 3D models into tiny, overlapping dots of
+primary print colors (Cyan, Magenta, Yellow, and Black), giving your
+real-time 3D render a distinct, retro 2D printed look.</p>
+<h2 id="how-the-retro-comic-book-effect-works">How the Retro Comic-Book
+Effect Works</h2>
+<p>The stylized visual appeal of the <code>HalftonePass</code> relies on
+simulating physical offset printing mechanics:</p>
+<ul>
+<li><strong>Color Separation (CMYK):</strong> The pass splits the RGB
+colors of your Three.js render into CMYK (Cyan, Magenta, Yellow, and
+Key/Black) channels.</li>
+<li><strong>Grid Rotation:</strong> To avoid harsh interference
+patterns, traditional printers rotate the dot grids of each color
+channel at different angles. <code>HalftonePass</code> simulates these
+specific angles (typically 15°, 75°, 0°, and 45°) to create authentic
+moiré patterns.</li>
+<li><strong>Dot Modulations:</strong> Brightness in the scene dictates
+the size of the dots. Darker areas feature larger, overlapping dots,
+while lighter areas feature smaller, sparser dots.</li>
+</ul>
+<h2 id="implementing-halftonepass-in-three.js">Implementing HalftonePass
+in Three.js</h2>
+<p>To use the halftone effect, you must set up the Three.js
+post-processing pipeline using <code>EffectComposer</code>.</p>
+<h3 id="import-the-required-modules">1. Import the Required Modules</h3>
+<p>First, import the necessary classes from the Three.js library and its
+examples directory:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { HalftonePass } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/postprocessing/HalftonePass.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="set-up-the-composer">2. Set Up the Composer</h3>
+<p>Initialize the <code>EffectComposer</code> with your renderer, add a
+standard <code>RenderPass</code> to capture your 3D scene, and then
+append the <code>HalftonePass</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up renderer, scene, and camera</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up the post-processing composer</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Render Pass (renders the base scene)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(renderPass)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Halftone Pass (applies the comic book effect)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> params <span class="op">=</span> {</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">shape</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">radius</span><span class="op">:</span> <span class="dv">4</span><span class="op">,</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">rotateR</span><span class="op">:</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">12</span><span class="op">,</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">rotateG</span><span class="op">:</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">4</span><span class="op">,</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="dt">rotateB</span><span class="op">:</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">3</span><span class="op">,</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">scatter</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="dt">blending</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">blendingMode</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="dt">greyscale</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="dt">disable</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> halftonePass <span class="op">=</span> <span class="kw">new</span> <span class="fu">HalftonePass</span>(width<span class="op">,</span> height<span class="op">,</span> params)<span class="op">;</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(halftonePass)<span class="op">;</span></span></code></pre></div>
+<h3 id="update-the-render-loop">3. Update the Render Loop</h3>
+<p>Replace your standard <code>renderer.render(scene, camera)</code>
+call inside your animation loop with <code>composer.render()</code> to
+render the scene with the post-processing effects applied.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Rotate a mesh or update animations here</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="key-customization-parameters">Key Customization Parameters</h2>
+<p>The <code>HalftonePass</code> can be highly customized to fit your
+desired art style. The parameters object accepts several key
+properties:</p>
+<ul>
+<li><strong><code>radius</code> (Number):</strong> Controls the maximum
+size of the halftone dots. Larger values result in a chunkier, more
+stylized retro print look, while smaller values create a finer, subtler
+texture.</li>
+<li><strong><code>scatter</code> (Number):</strong> Adds random
+noise/displacement to the dot positions, simulating low-quality paper
+ink bleeding or rough printing press misalignments.</li>
+<li><strong><code>shape</code> (Integer):</strong> Defines the dot
+geometry. <code>1</code> produces circles, <code>2</code> produces
+ellipses, <code>3</code> produces lines, and <code>4</code> produces
+squares.</li>
+<li><strong><code>greyscale</code> (Boolean):</strong> When set to
+<code>true</code>, it bypasses the CMYK color separation and renders the
+scene in black-and-white dots, mimicking old manga pages or newspaper
+prints.</li>
+<li><strong><code>blending</code> (Number):</strong> Adjusts how much of
+the original, un-halftoned render blends back into the halftone effect.
+A value of <code>1</code> is fully halftoned, while lower values
+reintroduce the original smooth shading of the scene.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

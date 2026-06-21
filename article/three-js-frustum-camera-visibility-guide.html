@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Frustum Camera Visibility Guide - three.js</title>
+    <meta name="description" content="In web-based 3D graphics, rendering performance depends heavily on only drawing what is visible to the user. This article explains the function of the Frustum class in Three.js, detailing how it represents the camera's viewing volume and how it is used t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-frustum-camera-visibility-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Frustum Camera Visibility Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-frustum-camera-visibility-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In web-based 3D graphics, rendering performance depends heavily on only drawing what is visible to the user. This article explains the function of the Frustum class in Three.js, detailing how it represents the camera's viewing volume and how it is used t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-frustum-camera-visibility-guide">Three.js Frustum
+Camera Visibility Guide</h1>
+<p>In web-based 3D graphics, rendering performance depends heavily on
+only drawing what is visible to the user. This article explains the
+function of the <code>Frustum</code> class in Three.js, detailing how it
+represents the camera’s viewing volume and how it is used to determine
+whether 3D objects are visible on screen. You will learn about automatic
+frustum culling and how to manually perform visibility checks using the
+Three.js API.</p>
+<h2 id="what-is-a-frustum">What is a Frustum?</h2>
+<p>In 3D computer graphics, a frustum (specifically a viewing frustum)
+is the region of space in the modeled world that may appear on the
+screen. It is shaped like a pyramid with its top cut off, representing
+the field of view of a camera.</p>
+<p>The frustum is defined by six flat planes: * <strong>Near
+plane:</strong> The closest boundary to the camera. * <strong>Far
+plane:</strong> The furthest boundary from the camera. * <strong>Left,
+Right, Top, and Bottom planes:</strong> The lateral boundaries of the
+camera’s field of view.</p>
+<p>Any 3D object located entirely outside of these six planes is
+invisible to the camera and does not need to be rendered.</p>
+<h2 id="automatic-frustum-culling-in-three.js">Automatic Frustum Culling
+in Three.js</h2>
+<p>By default, Three.js handles visibility optimization automatically
+through a process called <strong>frustum culling</strong>.</p>
+<p>Every standard 3D object inheriting from <code>THREE.Object3D</code>
+has a property called <code>frustumCulled</code>, which is set to
+<code>true</code> by default. Before rendering a frame, the Three.js
+<code>WebGLRenderer</code> automatically checks each object’s bounding
+sphere or bounding box against the camera’s frustum. If the object lies
+completely outside the frustum, Three.js skips rendering it, saving
+valuable GPU resources.</p>
+<h2 id="the-role-of-the-three.frustum-class">The Role of the
+THREE.Frustum Class</h2>
+<p>The <code>THREE.Frustum</code> class allows developers to manually
+recreate, update, and query this viewing volume. This is highly useful
+for CPU-side optimization, such as disabling heavy calculations, pausing
+animations, or managing game logic for entities that are currently
+off-screen.</p>
+<p>To use the <code>Frustum</code> class, you must first instantiate it
+and then update its planes to match the camera’s current position and
+projection.</p>
+<h3 id="updating-the-frustum">Updating the Frustum</h3>
+<p>Because the camera can move, rotate, or change its field of view, the
+frustum must be updated dynamically. This is done by extracting the
+frustum planes from the camera’s projection matrix:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frustum <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Frustum</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cameraViewProjectionMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Force update the camera matrices to ensure accuracy</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">matrixWorldInverse</span><span class="op">.</span><span class="fu">copy</span>(camera<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">.</span><span class="fu">invert</span>()<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>cameraViewProjectionMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span> camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Update the frustum with the camera&#39;s projection matrix</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(cameraViewProjectionMatrix)<span class="op">;</span></span></code></pre></div>
+<h3 id="checking-for-object-visibility">Checking for Object
+Visibility</h3>
+<p>Once the frustum is updated, you can use several built-in methods to
+test the visibility of points, spheres, boxes, or entire objects:</p>
+<ul>
+<li><strong><code>frustum.intersectsObject(object)</code></strong>:
+Checks if the bounding sphere of the specified <code>Object3D</code>
+intersects the frustum.</li>
+<li><strong><code>frustum.intersectsSphere(sphere)</code></strong>:
+Checks if a specific <code>THREE.Sphere</code> is inside or intersecting
+the frustum.</li>
+<li><strong><code>frustum.intersectsBox(box)</code></strong>: Checks if
+a specific <code>THREE.Box3</code> is inside or intersecting the
+frustum.</li>
+<li><strong><code>frustum.containsPoint(point)</code></strong>: Checks
+if a specific <code>THREE.Vector3</code> point lies inside the
+frustum.</li>
+</ul>
+<h3 id="example-manual-visibility-check">Example: Manual Visibility
+Check</h3>
+<p>Here is how you can check if a mesh is visible to the camera during
+the animation loop:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update the frustum helper matrix</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    cameraViewProjectionMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span> camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(cameraViewProjectionMatrix)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if a specific mesh is visible</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (frustum<span class="op">.</span><span class="fu">intersectsObject</span>(myMesh)) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Code to execute when the object is visible (e.g., play animation)</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setHex</span>(<span class="bn">0x00ff00</span>)<span class="op">;</span> </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Code to execute when the object is hidden (e.g., pause updates)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">color</span><span class="op">.</span><span class="fu">setHex</span>(<span class="bn">0xff0000</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By leveraging the <code>THREE.Frustum</code> class, developers can
+write highly performant applications by ensuring that both rendering
+pipelines and CPU-bound logical updates are only executed for objects
+within the user’s active field of view.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

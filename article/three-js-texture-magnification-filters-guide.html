@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Texture Magnification Filters Guide - three.js</title>
+    <meta name="description" content="This article explains how to alter texture magnification filters in Three.js to control how low-resolution textures are rendered. You will learn how to modify the magFilter property of a texture to switch between smooth bilinear interpolation and crisp n">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-texture-magnification-filters-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Texture Magnification Filters Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-texture-magnification-filters-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to alter texture magnification filters in Three.js to control how low-resolution textures are rendered. You will learn how to modify the magFilter property of a texture to switch between smooth bilinear interpolation and crisp n" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-texture-magnification-filters-guide">Three.js Texture
+Magnification Filters Guide</h1>
+<p>This article explains how to alter texture magnification filters in
+Three.js to control how low-resolution textures are rendered. You will
+learn how to modify the <code>magFilter</code> property of a texture to
+switch between smooth bilinear interpolation and crisp nearest-neighbor
+rendering, allowing you to either eliminate blocky pixelation or
+preserve sharp pixel-art details.</p>
+<p>In Three.js, when a texture is applied to a 3D object that is closer
+to the camera than the texture’s native resolution, the WebGL renderer
+must upscale (magnify) the image. By default, Three.js uses bilinear
+filtering, which can make low-resolution textures look blurry. To change
+this behavior, you must adjust the texture’s <code>magFilter</code>
+property.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To alter the magnification filter, you need to target the
+<code>magFilter</code> property of your loaded texture and assign one of
+the two primary Three.js filter constants.</p>
+<h4 id="preventing-blur-achieving-crisp-pixel-art">1. Preventing Blur
+(Achieving Crisp Pixel Art)</h4>
+<p>If you are working with retro-style pixel art and want to prevent the
+renderer from blurring your pixels, you should use
+<code>THREE.NearestFilter</code>. This uses nearest-neighbor
+interpolation, keeping the edges of your pixels perfectly sharp.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/low-res-texture.png&#39;</span><span class="op">,</span> (texture) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Prevent blurring by using NearestFilter</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="at">magFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional: Align the minification filter for consistent scaling when far away</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="at">minFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply the texture to a material</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">map</span><span class="op">:</span> texture })<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="preventing-blocky-pixelation-achieving-smooth-scaling">2.
+Preventing Blocky Pixelation (Achieving Smooth Scaling)</h4>
+<p>If you have a low-resolution texture that you want to appear as
+smooth as possible rather than blocky and pixelated, you should use
+<code>THREE.LinearFilter</code>. This is the default setting in
+Three.js, which performs bilinear interpolation to blend the pixels
+together.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Smooth out pixelated edges using LinearFilter</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">magFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearFilter</span><span class="op">;</span></span></code></pre></div>
+<h3 id="updating-textures-dynamically">Updating Textures
+Dynamically</h3>
+<p>If you alter the <code>magFilter</code> after the texture has already
+been rendered in the scene, you must instruct the GPU to update the
+texture by setting <code>needsUpdate</code> to <code>true</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Change filter on an existing texture</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>myTexture<span class="op">.</span><span class="at">magFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>myTexture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

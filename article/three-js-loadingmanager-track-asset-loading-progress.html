@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js LoadingManager: Track Asset Loading Progress - three.js</title>
+    <meta name="description" content="In web-based 3D applications, loading heavy assets like 3D models, textures, and audio files can heavily impact user experience. This article explores the Three.js LoadingManager, explaining how it serves as a central hub to globally track the loading pr">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-loadingmanager-track-asset-loading-progress">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js LoadingManager: Track Asset Loading Progress - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-loadingmanager-track-asset-loading-progress" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In web-based 3D applications, loading heavy assets like 3D models, textures, and audio files can heavily impact user experience. This article explores the Three.js LoadingManager, explaining how it serves as a central hub to globally track the loading pr" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-loadingmanager-track-asset-loading-progress">Three.js
+LoadingManager: Track Asset Loading Progress</h1>
+<p>In web-based 3D applications, loading heavy assets like 3D models,
+textures, and audio files can heavily impact user experience. This
+article explores the Three.js <code>LoadingManager</code>, explaining
+how it serves as a central hub to globally track the loading progress of
+all your scene assets, and how you can use its built-in event hooks to
+build functional loading screens.</p>
+<h2 id="what-is-the-loadingmanager">What is the LoadingManager?</h2>
+<p>The <code>LoadingManager</code> is a built-in Three.js class designed
+to coordinate and monitor the loading status of multiple external files.
+Instead of tracking each loader (such as <code>GLTFLoader</code>,
+<code>TextureLoader</code>, or <code>FontLoader</code>) individually,
+you can pass a single <code>LoadingManager</code> instance to all of
+them. The manager then aggregates their progress, giving you a unified
+way to handle loading states.</p>
+<h2 id="how-global-tracking-works">How Global Tracking Works</h2>
+<p>When you instantiate a loader in Three.js, you can optionally pass a
+<code>LoadingManager</code> as an argument to its constructor. Once
+passed, the loader automatically registers its network requests with
+that manager.</p>
+<p>If you do not pass a custom manager to your loaders, Three.js
+automatically assigns them to a global default instance called
+<code>THREE.DefaultLoadingManager</code>. You can configure this default
+manager directly if you want to track all loading activity across your
+entire application without passing a manager to every individual
+loader.</p>
+<h2 id="key-callback-functions">Key Callback Functions</h2>
+<p>The <code>LoadingManager</code> provides four essential callback
+properties that you can define to handle different stages of the loading
+process:</p>
+<ul>
+<li><strong><code>onStart</code></strong>: Triggered when the first
+asset begins loading. It receives the URL of the first item, the number
+of items loaded so far (usually 0), and the total number of items to be
+loaded.</li>
+<li><strong><code>onProgress</code></strong>: Triggered every time an
+individual asset finishes loading. It receives the URL of the loaded
+asset, the number of items currently loaded, and the total number of
+items. This is the callback used to update progress bars or loading
+percentages (e.g., <code>(itemsLoaded / itemsTotal) * 100</code>).</li>
+<li><strong><code>onLoad</code></strong>: Triggered only when all
+registered files have successfully finished loading. This is where you
+typically dismiss your loading screen and render your 3D scene.</li>
+<li><strong><code>onError</code></strong>: Triggered when a loader
+encounters an error fetching a specific file, allowing you to handle
+broken paths or network failures.</li>
+</ul>
+<h2 id="code-implementation">Code Implementation</h2>
+<p>Here is a practical example of how to set up and use the
+<code>LoadingManager</code> with multiple loaders:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the LoadingManager</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loadingManager <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">LoadingManager</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the callbacks</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>loadingManager<span class="op">.</span><span class="at">onStart</span> <span class="op">=</span> <span class="kw">function</span> (url<span class="op">,</span> itemsLoaded<span class="op">,</span> itemsTotal) {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Started loading: </span><span class="sc">${</span>url<span class="sc">}</span><span class="vs">. Loaded </span><span class="sc">${</span>itemsLoaded<span class="sc">}</span><span class="vs"> of </span><span class="sc">${</span>itemsTotal<span class="sc">}</span><span class="vs"> files.`</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>loadingManager<span class="op">.</span><span class="at">onProgress</span> <span class="op">=</span> <span class="kw">function</span> (url<span class="op">,</span> itemsLoaded<span class="op">,</span> itemsTotal) {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> progressPercent <span class="op">=</span> (itemsLoaded <span class="op">/</span> itemsTotal) <span class="op">*</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Loading: </span><span class="sc">${</span>progressPercent<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">0</span>)<span class="sc">}</span><span class="vs">%`</span>)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update your HTML progress bar element here</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>loadingManager<span class="op">.</span><span class="at">onLoad</span> <span class="op">=</span> <span class="kw">function</span> () {</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;All assets loaded successfully! Ready to render scene.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Hide loading screen and start the animation loop here</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>loadingManager<span class="op">.</span><span class="at">onError</span> <span class="op">=</span> <span class="kw">function</span> (url) {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="vs">`There was an error loading </span><span class="sc">${</span>url<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Pass the manager to your loaders</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>(loadingManager)<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gltfLoader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>(loadingManager)<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Load your assets</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colorTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/color.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>gltfLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;models/character.gltf&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(gltf<span class="op">.</span><span class="at">scene</span>)<span class="op">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>By leveraging the <code>LoadingManager</code>, you avoid writing
+complex asynchronous tracking logic yourself. It keeps your code clean
+and provides a reliable way to ensure your users are greeted with a
+smooth, informative loading experience.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

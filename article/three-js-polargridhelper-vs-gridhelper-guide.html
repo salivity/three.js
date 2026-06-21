@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js PolarGridHelper vs GridHelper Guide - three.js</title>
+    <meta name="description" content="In Three.js, visualizing coordinates and spatial relationships is crucial for building and debugging 3D scenes. While the standard GridHelper creates a flat, rectangular coordinate system based on Cartesian coordinates, the PolarGridHelper offers a circu">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-polargridhelper-vs-gridhelper-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js PolarGridHelper vs GridHelper Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-polargridhelper-vs-gridhelper-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, visualizing coordinates and spatial relationships is crucial for building and debugging 3D scenes. While the standard GridHelper creates a flat, rectangular coordinate system based on Cartesian coordinates, the PolarGridHelper offers a circu" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-polargridhelper-vs-gridhelper-guide">Three.js
+PolarGridHelper vs GridHelper Guide</h1>
+<p>In Three.js, visualizing coordinates and spatial relationships is
+crucial for building and debugging 3D scenes. While the standard
+<code>GridHelper</code> creates a flat, rectangular coordinate system
+based on Cartesian coordinates, the <code>PolarGridHelper</code> offers
+a circular, polar-coordinate alternative. This article explains the key
+differences between these two helper classes, defines the unique
+features of <code>PolarGridHelper</code>, and highlights the specific
+scenarios where a polar grid is more useful than a standard rectangular
+grid.</p>
+<h2 id="what-is-a-gridhelper">What is a GridHelper?</h2>
+<p>The <code>GridHelper</code> is a 2D grid of lines that lies on the XZ
+plane by default. It represents a Cartesian coordinate system (X and Z
+axes), drawing a square grid of a specified size and division count. It
+is ideal for general-purpose 3D environments, architectural layouts, and
+scenes where objects move along straight, perpendicular axes.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example of a standard GridHelper</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> size <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> divisions <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gridHelper <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">GridHelper</span>(size<span class="op">,</span> divisions)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(gridHelper)<span class="op">;</span></span></code></pre></div>
+<h2 id="what-is-a-polargridhelper">What is a PolarGridHelper?</h2>
+<p>The <code>PolarGridHelper</code> is a 2D grid of concentric circles
+and radial lines, representing a polar coordinate system (radius and
+angle). Instead of measuring distance in blocks, it measures distance
+from a central origin point (radius) and direction in degrees or radians
+(angle).</p>
+<p>The constructor for <code>PolarGridHelper</code> accepts the
+following parameters: * <strong>radius</strong>: The outer radius of the
+polar grid. * <strong>sectors</strong>: The number of radial lines
+dividing the circle (representing angles). * <strong>rings</strong>: The
+number of concentric circles dividing the radius. *
+<strong>divisions</strong>: The number of line segments used to draw
+each circle (higher values make smoother circles). *
+<strong>color1</strong>: The color of the main axes. *
+<strong>color2</strong>: The color of the grid lines.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example of a PolarGridHelper</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radius <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sectors <span class="op">=</span> <span class="dv">16</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> rings <span class="op">=</span> <span class="dv">8</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> divisions <span class="op">=</span> <span class="dv">64</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> polarHelper <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PolarGridHelper</span>(radius<span class="op">,</span> sectors<span class="op">,</span> rings<span class="op">,</span> divisions)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(polarHelper)<span class="op">;</span></span></code></pre></div>
+<h2 id="when-is-polargridhelper-more-useful">When is PolarGridHelper
+More Useful?</h2>
+<p>While the standard <code>GridHelper</code> is the default choice for
+most 3D scenes, the <code>PolarGridHelper</code> is significantly more
+useful in several specific applications:</p>
+<h3 id="rotational-and-orbital-movement">1. Rotational and Orbital
+Movement</h3>
+<p>If your scene involves objects rotating around a central point, a
+polar grid is far superior. Examples include planetary systems
+(visualizing orbits), rotating platforms, or wind turbines. The
+concentric rings make it easy to see an object’s distance from the
+center, while the radial lines help gauge its angular rotation.</p>
+<h3 id="radar-sonar-and-lidar-simulations">2. Radar, Sonar, and Lidar
+Simulations</h3>
+<p>Simulating radar sweeps, sonar pings, or Lidar sensor data requires a
+polar coordinate system. Since these sensors measure distance and angle
+relative to a central emitter, the concentric rings of a
+<code>PolarGridHelper</code> perfectly represent range rings, and the
+sectors represent angular fields of view.</p>
+<h3 id="audio-visualizers">3. Audio Visualizers</h3>
+<p>Circular audio visualizers that project frequency data outward from a
+center point benefit from a polar grid. It provides a natural background
+reference for radial bar graphs, particle rings, or expanding wave
+geometry.</p>
+<h3 id="directional-ui-and-targeting-reticles">4. Directional UI and
+Targeting Reticles</h3>
+<p>If you are designing a 3D user interface, a holographic HUD, or a
+targeting system, a polar grid offers a high-tech, directional
+aesthetic. It helps users easily identify the bearing (angle) and range
+(distance) of targets relative to the camera or player.</p>
+<h3 id="architectural-dome-and-round-room-modeling">5. Architectural
+Dome and Round-Room Modeling</h3>
+<p>When building circular structures, domes, or amphitheaters, a
+Cartesian grid makes alignment difficult. A polar grid aligns perfectly
+with circular geometry, allowing you to place pillars, seats, or arches
+at precise angular intervals.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

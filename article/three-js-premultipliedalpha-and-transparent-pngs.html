@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js premultipliedAlpha and Transparent PNGs - three.js</title>
+    <meta name="description" content="This article explains how the material.premultipliedAlpha property affects the rendering of transparent PNG textures in Three.js. You will learn how WebGL handles color blending under the hood, why transparent PNGs sometimes exhibit dark halos, and how t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-premultipliedalpha-and-transparent-pngs">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js premultipliedAlpha and Transparent PNGs - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-premultipliedalpha-and-transparent-pngs" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the material.premultipliedAlpha property affects the rendering of transparent PNG textures in Three.js. You will learn how WebGL handles color blending under the hood, why transparent PNGs sometimes exhibit dark halos, and how t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-premultipliedalpha-and-transparent-pngs">Three.js
+premultipliedAlpha and Transparent PNGs</h1>
+<p>This article explains how the
+<code>material.premultipliedAlpha</code> property affects the rendering
+of transparent PNG textures in Three.js. You will learn how WebGL
+handles color blending under the hood, why transparent PNGs sometimes
+exhibit dark halos, and how to configure your materials and textures to
+ensure clean, artifact-free transparency.</p>
+<h2 id="understanding-premultiplied-alpha-in-webgl">Understanding
+Premultiplied Alpha in WebGL</h2>
+<p>In computer graphics, transparency is represented by an alpha
+channel. There are two primary ways to store color and alpha data: *
+<strong>Straight Alpha (Unpremultiplied):</strong> Color channels (RGB)
+and the transparency channel (A) are kept entirely independent. *
+<strong>Premultiplied Alpha:</strong> The RGB values are multiplied by
+the alpha value beforehand (RGB × A). For example, a 50% transparent
+pure red pixel is stored as <code>(0.5, 0.0, 0.0, 0.5)</code> instead of
+<code>(1.0, 0.0, 0.0, 0.5)</code>.</p>
+<p>By default, WebGL and Three.js use premultiplied alpha for rendering
+because it produces mathematically correct color blending—especially
+when filtering textures, generating mipmaps, or blending overlapping
+transparent layers.</p>
+<h2 id="the-default-behavior-of-material.premultipliedalpha">The Default
+Behavior of material.premultipliedAlpha</h2>
+<p>In Three.js, the <code>material.premultipliedAlpha</code> property
+defaults to <code>true</code>.</p>
+<p>When this property is enabled, Three.js configures the WebGL blending
+equations to expect colors that have already been multiplied by their
+alpha values. The blending equation used on the GPU is:</p>
+<p><span class="math display">\[\text{Output Color} = \text{Source
+Color} + \text{Destination Color} \times (1 - \text{Source
+Alpha})\]</span></p>
+<p>For this to render correctly, the incoming texture must also be
+premultiplied. When you load a transparent PNG using
+<code>TextureLoader</code>, Three.js automatically sets
+<code>texture.premultipliedAlpha = true</code> and instructs the
+browser’s unpack process to premultiply the image’s color channels by
+its alpha channel during the upload to the GPU.</p>
+<h2
+id="what-happens-when-disabled-material.premultipliedalpha-false">What
+Happens When Disabled (material.premultipliedAlpha = false)</h2>
+<p>If you set <code>material.premultipliedAlpha = false</code>, Three.js
+changes the WebGL blending equation to accommodate straight
+(unpremultiplied) colors:</p>
+<p><span class="math display">\[\text{Output Color} = \text{Source
+Color} \times \text{Source Alpha} + \text{Destination Color} \times (1 -
+\text{Source Alpha})\]</span></p>
+<p>If you disable this property on the material, you must also set
+<code>texture.premultipliedAlpha = false</code> on the associated PNG
+texture. If you do not align these two properties, you will encounter
+rendering artifacts.</p>
+<h2 id="common-rendering-artifacts-the-dark-halo-effect">Common
+Rendering Artifacts: The Dark Halo Effect</h2>
+<p>The most common issue when rendering transparent PNGs is a dark,
+pixelated border (or “halo”) around the edges of transparent shapes.
+This occurs due to a mismatch between the texture data and the
+material’s rendering state:</p>
+<ol type="1">
+<li><strong>Mismatch Scenario:</strong> If
+<code>texture.premultipliedAlpha</code> is <code>true</code> (the color
+is scaled down) but <code>material.premultipliedAlpha</code> is set to
+<code>false</code>, the GPU multiplies the already-reduced color by the
+alpha value a second time during blending. This causes the
+semi-transparent edge pixels to become excessively dark.</li>
+<li><strong>Texture Filtering Issues:</strong> When WebGL scales a
+straight-alpha texture, it interpolates between transparent pixels
+(often stored as black with <span class="math inline">\(0\)</span>
+alpha, i.e., <code>0, 0, 0, 0</code>) and neighboring colored pixels.
+This interpolation introduces black into the RGB channels before the
+alpha is applied, resulting in dark fringes. Using premultiplied alpha
+prevents this interpolation error.</li>
+</ol>
+<h2 id="summary-of-best-practices">Summary of Best Practices</h2>
+<p>To ensure transparent PNGs render correctly in Three.js, use the
+following guidelines:</p>
+<ul>
+<li><strong>Stick to the Defaults (Recommended):</strong> Keep
+<code>material.premultipliedAlpha = true</code> and allow Three.js to
+handle texture loading automatically. This yields the most accurate
+blending and avoids dark outlines.</li>
+<li><strong>Keep Settings Synchronized:</strong> If you must disable
+premultiplication for specific custom shaders or blending requirements,
+ensure that both <code>material.premultipliedAlpha</code> and
+<code>texture.premultipliedAlpha</code> are set to
+<code>false</code>.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimize Multiple Dynamic Lights in Three.js - three.js</title>
+    <meta name="description" content="Rendering multiple dynamic lights in Three.js can drastically reduce frame rates due to increased draw calls, complex shader calculations, and shadow map overhead. This article outlines key strategies to optimize your render performance when your 3D scen">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/optimize-multiple-dynamic-lights-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimize Multiple Dynamic Lights in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/optimize-multiple-dynamic-lights-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering multiple dynamic lights in Three.js can drastically reduce frame rates due to increased draw calls, complex shader calculations, and shadow map overhead. This article outlines key strategies to optimize your render performance when your 3D scen" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="optimize-multiple-dynamic-lights-in-three.js">Optimize Multiple
+Dynamic Lights in Three.js</h1>
+<p>Rendering multiple dynamic lights in Three.js can drastically reduce
+frame rates due to increased draw calls, complex shader calculations,
+and shadow map overhead. This article outlines key strategies to
+optimize your render performance when your 3D scene requires multiple
+dynamic light sources, focusing on light culling, shadow optimization,
+material selection, and alternative rendering pipelines.</p>
+<h2 id="limit-the-range-and-culled-lights">Limit the Range and Culled
+Lights</h2>
+<p>By default, Three.js calculates the influence of active lights on all
+materials within the scene graph. To prevent unnecessary calculations,
+you should actively manage which lights are enabled based on their
+proximity to the camera.</p>
+<ul>
+<li><strong>Distance Culling:</strong> In your animation loop, calculate
+the distance between each light and the camera. If a light is too far
+away to contribute meaningfully to the visible scene, set
+<code>light.visible = false</code>.</li>
+<li><strong>Define Light Decay:</strong> Use <code>PointLight</code> or
+<code>SpotLight</code> with physically correct decay
+(<code>decay = 2</code>). This ensures the light naturally fades to zero
+over a set distance, allowing you to safely disable the light when the
+camera or objects move out of its range.</li>
+</ul>
+<h2 id="optimize-shadow-maps">Optimize Shadow Maps</h2>
+<p>Shadows are the most performance-intensive aspect of dynamic lighting
+because each shadow-casting light requires rendering the scene from its
+own perspective into a depth texture.</p>
+<ul>
+<li><strong>Disable Unnecessary Shadows:</strong> Only allow a few key
+lights to cast shadows (<code>light.castShadow = true</code>). Keep
+minor, accent, or fill lights as non-shadow casters.</li>
+<li><strong>Reduce Map Resolution:</strong> Lower the resolution of your
+shadow maps. Instead of the default size, use
+<code>light.shadow.mapSize.width = 512</code> (or even 256) for
+secondary lights.</li>
+<li><strong>Tighten the Shadow Camera Frustum:</strong> Restrict the
+shadow camera’s field of view and near/far clipping planes
+(<code>light.shadow.camera.near</code>, <code>far</code>,
+<code>left</code>, <code>right</code>, <code>top</code>,
+<code>bottom</code>) to tightly fit only the area where shadows are
+visible.</li>
+<li><strong>Choose Performance-Friendly Shadow Types:</strong> Set your
+renderer’s shadow map type to <code>THREE.BasicShadowMap</code> or
+<code>THREE.PCFShadowMap</code>. Avoid
+<code>THREE.PCFSoftShadowMap</code> as it requires significantly more
+GPU processing.</li>
+</ul>
+<h2 id="use-cheaper-materials">Use Cheaper Materials</h2>
+<p>The complexity of your materials determines how expensive the
+lighting calculations will be in the fragment shader.</p>
+<ul>
+<li><strong>Downgrade Material Complexity:</strong>
+<code>MeshStandardMaterial</code> and <code>MeshPhysicalMaterial</code>
+use physically-based rendering (PBR) algorithms that are computationally
+heavy under multiple lights. For scenes where high-fidelity realism is
+not required, use <code>MeshPhongMaterial</code> or
+<code>MeshToonMaterial</code>, which use simpler, faster mathematical
+approximations for lighting.</li>
+<li><strong>Static Lightmaps:</strong> For lights that do not move, bake
+their lighting into a texture (lightmap) using 3D modeling software like
+Blender. You can then apply this static lightmap to a
+<code>MeshBasicMaterial</code>, bypassing the runtime lighting engine
+entirely for those areas.</li>
+</ul>
+<h2 id="leverage-webgl-2-and-clustered-forward-rendering">Leverage WebGL
+2 and Clustered Forward Rendering</h2>
+<p>Standard Three.js forward rendering calculates lighting for every
+light source on every single fragment, which scales poorly.</p>
+<ul>
+<li><strong>Use WebGPURenderer:</strong> Modern versions of Three.js
+feature a <code>WebGPURenderer</code> (with WebGL 2 fallbacks) that
+supports clustered forward shading. This technique divides the screen
+into a 3D grid (clusters) and only computes lighting for the specific
+lights that overlap with each cluster. Switch to WebGPU features where
+possible to handle dozens of dynamic lights with minimal performance
+loss.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

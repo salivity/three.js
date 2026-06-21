@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Tangents for BufferGeometry in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to manually calculate and assign tangent vectors to a Three.js BufferGeometry to enable proper normal mapping. You will learn how to use the built-in Three.js utility library to compute tangents automatically using the industry-">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/calculate-tangents-for-buffergeometry-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Calculate Tangents for BufferGeometry in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/calculate-tangents-for-buffergeometry-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to manually calculate and assign tangent vectors to a Three.js BufferGeometry to enable proper normal mapping. You will learn how to use the built-in Three.js utility library to compute tangents automatically using the industry-" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="calculate-tangents-for-buffergeometry-in-three.js">Calculate
+Tangents for BufferGeometry in Three.js</h1>
+<p>This article explains how to manually calculate and assign tangent
+vectors to a Three.js <code>BufferGeometry</code> to enable proper
+normal mapping. You will learn how to use the built-in Three.js utility
+library to compute tangents automatically using the industry-standard
+MikkTSpace algorithm, as well as how to write a custom mathematical loop
+to compute and assign 4D tangent attributes manually.</p>
+<h2 id="why-tangents-are-necessary-for-normal-mapping">Why Tangents are
+Necessary for Normal Mapping</h2>
+<p>Normal maps store perturbation vectors in “tangent space” rather than
+world or object space. To transform these normal map vectors into world
+space during rendering, the fragment shader needs three vectors per
+vertex to establish a coordinate frame: the <strong>Normal</strong>, the
+<strong>Tangent</strong>, and the <strong>Bitangent</strong> (often
+calculated dynamically in the shader using the cross product of the
+normal and tangent).</p>
+<p>In Three.js, tangent vectors are represented as 4-component vectors
+<code>(x, y, z, w)</code>. The <code>w</code> component (either
+<code>1</code> or <code>-1</code>) defines the “handedness” of the
+coordinate system, which determines how the bitangent is oriented.</p>
+<hr />
+<h2 id="method-1-using-buffergeometryutils-recommended">Method 1: Using
+BufferGeometryUtils (Recommended)</h2>
+<p>The most reliable way to manually trigger tangent generation in
+Three.js is using <code>BufferGeometryUtils</code>. This utility uses
+the <strong>MikkTSpace</strong> algorithm, which ensures your normal
+maps align perfectly with baking software like Substance Painter or
+Blender.</p>
+<p>First, import the utility and the MikkTSpace library (packaged with
+Three.js):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> BufferGeometryUtils <span class="im">from</span> <span class="st">&#39;three/examples/jsm/utils/BufferGeometryUtils.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { createLWJSInterface } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/libs/meshopt_decoder.module.js&#39;</span><span class="op">;</span> <span class="co">// or a standard MikkTSpace loader</span></span></code></pre></div>
+<p>To compute and assign the tangents, call
+<code>computeMikkTSpaceTangents</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure your geometry has &#39;position&#39;, &#39;normal&#39;, and &#39;uv&#39; attributes</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>BufferGeometryUtils<span class="op">.</span><span class="fu">computeMikkTSpaceTangents</span>(geometry<span class="op">,</span> MikkTSpace)<span class="op">;</span></span></code></pre></div>
+<p>This automatically generates and assigns a 4-component
+<code>tangent</code> attribute to your <code>BufferGeometry</code>.</p>
+<hr />
+<h2
+id="method-2-pure-mathematical-calculation-custom-implementation">Method
+2: Pure Mathematical Calculation (Custom Implementation)</h2>
+<p>If you cannot use external utilities, you can calculate the tangents
+manually by looping through the triangles of your geometry. The formula
+uses the UV coordinates and vertex positions to find the direction of
+the U texture coordinate relative to the 3D triangle.</p>
+<p>Here is the complete JavaScript function to manually calculate and
+assign tangents:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">calculateTangents</span>(geometry) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> normalAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">normal</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> uvAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">uv</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> indexAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vertexCount <span class="op">=</span> positionAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> tangents <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(vertexCount <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Temporary arrays to accumulate tangents and bitangents</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> tan1 <span class="op">=</span> <span class="kw">new</span> <span class="bu">Array</span>(vertexCount)<span class="op">.</span><span class="fu">fill</span>(<span class="kw">null</span>)<span class="op">.</span><span class="fu">map</span>(() <span class="kw">=&gt;</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>())<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> tan2 <span class="op">=</span> <span class="kw">new</span> <span class="bu">Array</span>(vertexCount)<span class="op">.</span><span class="fu">fill</span>(<span class="kw">null</span>)<span class="op">.</span><span class="fu">map</span>(() <span class="kw">=&gt;</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>())<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> p1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> p2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> p3 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> uv1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> uv2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> uv3 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> sdir <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> tdir <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> triangleCount <span class="op">=</span> indexAttribute <span class="op">?</span> indexAttribute<span class="op">.</span><span class="at">count</span> <span class="op">/</span> <span class="dv">3</span> <span class="op">:</span> vertexCount <span class="op">/</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> triangleCount<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> i1<span class="op">,</span> i2<span class="op">,</span> i3<span class="op">;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (indexAttribute) {</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>      i1 <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>      i2 <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>      i3 <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>      i1 <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>      i2 <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>      i3 <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    p1<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i1)<span class="op">;</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    p2<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i2)<span class="op">;</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    p3<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i3)<span class="op">;</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    uv1<span class="op">.</span><span class="fu">fromBufferAttribute</span>(uvAttribute<span class="op">,</span> i1)<span class="op">;</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    uv2<span class="op">.</span><span class="fu">fromBufferAttribute</span>(uvAttribute<span class="op">,</span> i2)<span class="op">;</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>    uv3<span class="op">.</span><span class="fu">fromBufferAttribute</span>(uvAttribute<span class="op">,</span> i3)<span class="op">;</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> x1 <span class="op">=</span> p2<span class="op">.</span><span class="at">x</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> x2 <span class="op">=</span> p3<span class="op">.</span><span class="at">x</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> y1 <span class="op">=</span> p2<span class="op">.</span><span class="at">y</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> y2 <span class="op">=</span> p3<span class="op">.</span><span class="at">y</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> z1 <span class="op">=</span> p2<span class="op">.</span><span class="at">z</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> z2 <span class="op">=</span> p3<span class="op">.</span><span class="at">z</span> <span class="op">-</span> p1<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> s1 <span class="op">=</span> uv2<span class="op">.</span><span class="at">x</span> <span class="op">-</span> uv1<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> s2 <span class="op">=</span> uv3<span class="op">.</span><span class="at">x</span> <span class="op">-</span> uv1<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t1 <span class="op">=</span> uv2<span class="op">.</span><span class="at">y</span> <span class="op">-</span> uv1<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t2 <span class="op">=</span> uv3<span class="op">.</span><span class="at">y</span> <span class="op">-</span> uv1<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> r <span class="op">=</span> <span class="fl">1.0</span> <span class="op">/</span> (s1 <span class="op">*</span> t2 <span class="op">-</span> s2 <span class="op">*</span> t1)<span class="op">;</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>    sdir<span class="op">.</span><span class="fu">set</span>(</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>      (t2 <span class="op">*</span> x1 <span class="op">-</span> t1 <span class="op">*</span> x2) <span class="op">*</span> r<span class="op">,</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>      (t2 <span class="op">*</span> y1 <span class="op">-</span> t1 <span class="op">*</span> y2) <span class="op">*</span> r<span class="op">,</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>      (t2 <span class="op">*</span> z1 <span class="op">-</span> t1 <span class="op">*</span> z2) <span class="op">*</span> r</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>    )<span class="op">;</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>    tdir<span class="op">.</span><span class="fu">set</span>(</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>      (s1 <span class="op">*</span> x2 <span class="op">-</span> s2 <span class="op">*</span> x1) <span class="op">*</span> r<span class="op">,</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>      (s1 <span class="op">*</span> y2 <span class="op">-</span> s2 <span class="op">*</span> y1) <span class="op">*</span> r<span class="op">,</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>      (s1 <span class="op">*</span> z2 <span class="op">-</span> s2 <span class="op">*</span> z1) <span class="op">*</span> r</span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>    )<span class="op">;</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>    tan1[i1]<span class="op">.</span><span class="fu">add</span>(sdir)<span class="op">;</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>    tan1[i2]<span class="op">.</span><span class="fu">add</span>(sdir)<span class="op">;</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>    tan1[i3]<span class="op">.</span><span class="fu">add</span>(sdir)<span class="op">;</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>    tan2[i1]<span class="op">.</span><span class="fu">add</span>(tdir)<span class="op">;</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>    tan2[i2]<span class="op">.</span><span class="fu">add</span>(tdir)<span class="op">;</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>    tan2[i3]<span class="op">.</span><span class="fu">add</span>(tdir)<span class="op">;</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> n <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> t <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> temp <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> vertexCount<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>    n<span class="op">.</span><span class="fu">fromBufferAttribute</span>(normalAttribute<span class="op">,</span> i)<span class="op">;</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>    t<span class="op">.</span><span class="fu">copy</span>(tan1[i])<span class="op">;</span></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Gram-Schmidt orthogonalization</span></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a>    temp<span class="op">.</span><span class="fu">copy</span>(n)<span class="op">.</span><span class="fu">multiplyScalar</span>(n<span class="op">.</span><span class="fu">dot</span>(t))<span class="op">;</span></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a>    t<span class="op">.</span><span class="fu">sub</span>(temp)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Calculate handedness (w component)</span></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a>    temp<span class="op">.</span><span class="fu">crossVectors</span>(n<span class="op">,</span> t)<span class="op">;</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> w <span class="op">=</span> (temp<span class="op">.</span><span class="fu">dot</span>(tan2[i]) <span class="op">&lt;</span> <span class="fl">0.0</span>) <span class="op">?</span> <span class="op">-</span><span class="fl">1.0</span> <span class="op">:</span> <span class="fl">1.0</span><span class="op">;</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a>    tangents[i <span class="op">*</span> <span class="dv">4</span>] <span class="op">=</span> t<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>    tangents[i <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> <span class="dv">1</span>] <span class="op">=</span> t<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a>    tangents[i <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> <span class="dv">2</span>] <span class="op">=</span> t<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a>    tangents[i <span class="op">*</span> <span class="dv">4</span> <span class="op">+</span> <span class="dv">3</span>] <span class="op">=</span> w<span class="op">;</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Assign the attribute to your geometry</span></span>
+<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;tangent&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(tangents<span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="activating-tangent-vectors-in-materials">Activating Tangent
+Vectors in Materials</h2>
+<p>Once you have calculated and assigned your tangents using either
+method, you must instruct your <code>MeshStandardMaterial</code> or
+<code>MeshPhysicalMaterial</code> to read them.</p>
+<p>Three.js automatically detects the <code>tangent</code> attribute if
+it exists on the geometry. However, you should ensure that your texture
+mapping parameters are configured correctly:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalMap <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/normalMap.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> colorMap<span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">normalMap</span><span class="op">:</span> normalMap<span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">normalScale</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>) <span class="co">// Adjust intensity if needed</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>With the <code>tangent</code> attribute added to your
+<code>BufferGeometry</code>, Three.js will bypass its default
+screen-space derivative approximation for normal mapping and use your
+precise, calculated vertex tangents.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Three.js SSAOPass Calculates Contact Shadows - three.js</title>
+    <meta name="description" content="Screen-space ambient occlusion (SSAO) is a post-processing technique used in 3D computer graphics to calculate real-time contact shadows and soft ambient lighting. In Three.js, the SSAOPass simulates this effect by analyzing the depth and normal buffers">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-three-js-ssaopass-calculates-contact-shadows">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Three.js SSAOPass Calculates Contact Shadows - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-three-js-ssaopass-calculates-contact-shadows" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Screen-space ambient occlusion (SSAO) is a post-processing technique used in 3D computer graphics to calculate real-time contact shadows and soft ambient lighting. In Three.js, the SSAOPass simulates this effect by analyzing the depth and normal buffers" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-three.js-ssaopass-calculates-contact-shadows">How Three.js
+SSAOPass Calculates Contact Shadows</h1>
+<p>Screen-space ambient occlusion (SSAO) is a post-processing technique
+used in 3D computer graphics to calculate real-time contact shadows and
+soft ambient lighting. In Three.js, the <code>SSAOPass</code> simulates
+this effect by analyzing the depth and normal buffers of a rendered
+scene in screen space, rather than performing expensive 3D ray-tracing.
+This article explains the step-by-step rendering pipeline that
+<code>SSAOPass</code> uses to determine pixel occlusion and add
+depth-enhancing shadows where surfaces meet.</p>
+<h2 id="generating-depth-and-normal-buffers">1. Generating Depth and
+Normal Buffers</h2>
+<p>Before calculating occlusion, <code>SSAOPass</code> requires
+information about the scene’s geometry from the camera’s perspective. It
+performs a pre-pass to render the scene’s depth and camera-space normals
+into separate textures (often referred to as a G-buffer).</p>
+<ul>
+<li><strong>Depth Buffer:</strong> Stores the distance of each pixel
+from the camera.</li>
+<li><strong>Normal Buffer:</strong> Stores the direction that each
+surface point is facing.</li>
+</ul>
+<p>These two textures provide the mathematical foundation for
+calculating spatial relationships in screen space.</p>
+<h2 id="creating-the-sample-kernel-and-noise-texture">2. Creating the
+Sample Kernel and Noise Texture</h2>
+<p>To determine if a point on a surface is occluded (blocked by nearby
+geometry), the shader needs to sample the surrounding area.</p>
+<ul>
+<li><strong>Sample Kernel:</strong> <code>SSAOPass</code> generates a
+hemisphere of random 3D sample points (kernel) oriented along the
+surface normal. By using a hemisphere instead of a sphere, samples only
+project outward from the surface, preventing self-occlusion.</li>
+<li><strong>Noise Texture:</strong> To prevent banding artifacts and
+simulate smooth shadows without using thousands of samples, a small,
+repeating random rotation texture (usually 4x4 pixels) is tiled across
+the screen. This rotates the sample kernel randomly at each pixel,
+turning harsh banding into high-frequency noise that can be easily
+blurred later.</li>
+</ul>
+<h2 id="projecting-and-comparing-samples">3. Projecting and Comparing
+Samples</h2>
+<p>For every pixel on the screen, the SSAO shader performs the following
+calculations:</p>
+<ol type="1">
+<li><strong>Reconstruct 3D Position:</strong> Using the pixel’s screen
+coordinates and its corresponding value from the depth buffer, the
+shader reconstructs the 3D coordinate of the point in view-space.</li>
+<li><strong>Orient the Kernel:</strong> The shader retrieves the surface
+normal from the normal texture and uses the noise texture to rotate the
+sample hemisphere so it aligns with the surface.</li>
+<li><strong>Sample the Surrounding Space:</strong> The shader loops
+through the random sample points in the hemisphere. For each sample
+point, it projects the 3D position back onto the 2D screen
+coordinates.</li>
+<li><strong>Depth Comparison:</strong> The shader compares the depth of
+the sample point with the actual depth stored in the depth buffer at
+those coordinates:
+<ul>
+<li>If the sample point is deeper than the geometry in the depth buffer,
+it is inside an object (occluded).</li>
+<li>If the sample point is closer to the camera than the geometry, it is
+in open space (unoccluded).</li>
+</ul></li>
+</ol>
+<h2 id="applying-a-range-check">4. Applying a Range Check</h2>
+<p>If a sample is occluded by geometry that is extremely far behind or
+far in front of the target pixel, it could falsely contribute to the
+occlusion value. To prevent this, <code>SSAOPass</code> implements a
+range check. If the depth difference between the sample point and the
+geometry exceeds a set threshold (the occlusion radius), the occlusion
+contribution is discarded or heavily scaled down.</p>
+<h2 id="blur-and-composition">5. Blur and Composition</h2>
+<p>The raw occlusion factor is calculated as the ratio of occluded
+samples to total samples. Because random sampling is used to keep
+performance high, this raw output looks highly pixelated and noisy.</p>
+<p>To resolve this, the <code>SSAOPass</code> applies a bilateral blur
+filter. Unlike a standard blur, a bilateral blur preserves sharp edges
+by checking depth and normal differences, ensuring that shadows do not
+bleed across depth discontinuities (like the edge of a foreground object
+against a distant background).</p>
+<p>Finally, the blurred ambient occlusion map is multiplied by the
+original scene color, darkening crevices, corners, and contact points to
+produce realistic contact shadows.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

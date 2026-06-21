@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Center and Scale Loaded 3D Models in Three.js - three.js</title>
+    <meta name="description" content="When loading 3D models into a Three.js scene, they often arrive with unpredictable scales, off-center pivot points, or positions far from the scene's origin. This article explains how to accurately calculate the physical dimensions of any loaded 3D model">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/center-and-scale-loaded-3d-models-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Center and Scale Loaded 3D Models in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/center-and-scale-loaded-3d-models-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When loading 3D models into a Three.js scene, they often arrive with unpredictable scales, off-center pivot points, or positions far from the scene's origin. This article explains how to accurately calculate the physical dimensions of any loaded 3D model" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="center-and-scale-loaded-3d-models-in-three.js">Center and Scale
+Loaded 3D Models in Three.js</h1>
+<p>When loading 3D models into a Three.js scene, they often arrive with
+unpredictable scales, off-center pivot points, or positions far from the
+scene’s origin. This article explains how to accurately calculate the
+physical dimensions of any loaded 3D model using bounding boxes, and how
+to programmatically center the model at the origin of your Three.js
+world.</p>
+<h2 id="calculate-the-models-bounding-box-and-size">1. Calculate the
+Model’s Bounding Box and Size</h2>
+<p>To find the exact physical dimensions of a loaded model (such as a
+GLTF, OBJ, or FBX), you must compute its bounding box. Three.js provides
+the <code>THREE.Box3</code> utility, which calculates the minimum and
+maximum coordinates of the geometry in 3D space.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Box3<span class="op">,</span> Vector3 } <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/model.gltf&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Compute the bounding box</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> box <span class="op">=</span> <span class="kw">new</span> <span class="fu">Box3</span>()<span class="op">.</span><span class="fu">setFromObject</span>(model)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Calculate the size (width, height, depth)</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> size <span class="op">=</span> <span class="kw">new</span> <span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    box<span class="op">.</span><span class="fu">getSize</span>(size)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Width: </span><span class="sc">${</span>size<span class="op">.</span><span class="at">x</span><span class="sc">}</span><span class="vs">, Height: </span><span class="sc">${</span>size<span class="op">.</span><span class="at">y</span><span class="sc">}</span><span class="vs">, Depth: </span><span class="sc">${</span>size<span class="op">.</span><span class="at">z</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Using <code>Box3().setFromObject(object)</code> is the most accurate
+method because it traverses all child meshes within the group and
+accounts for their world transformations.</p>
+<h2 id="centrally-position-the-model">2. Centrally Position the
+Model</h2>
+<p>Once you have the bounding box, you can find the geometric center of
+the model. To place the model’s exact center at the scene coordinates
+<code>(0, 0, 0)</code>, you must subtract this center vector from the
+model’s current position.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Calculate the geometric center</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> center <span class="op">=</span> <span class="kw">new</span> <span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">getCenter</span>(center)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Center the model at the world origin (0, 0, 0)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">+=</span> (model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">-</span> center<span class="op">.</span><span class="at">x</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">y</span> <span class="op">+=</span> (model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">y</span> <span class="op">-</span> center<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">+=</span> (model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">-</span> center<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Add the centered model to the scene</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(model)<span class="op">;</span></span></code></pre></div>
+<p>By offsetting the model’s position by the negative values of its
+bounding box center, you override any offset pivot points baked into the
+original 3D file.</p>
+<h2 id="scale-the-model-uniformly-optional">3. Scale the Model Uniformly
+(Optional)</h2>
+<p>If the loaded model is too large or too small for your scene, you can
+use the calculated size to scale it to a normalized fit.</p>
+<p>For example, to scale the model so that its largest dimension is
+exactly 10 units:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxDimension <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(size<span class="op">.</span><span class="at">x</span><span class="op">,</span> size<span class="op">.</span><span class="at">y</span><span class="op">,</span> size<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetSize <span class="op">=</span> <span class="fl">10.0</span><span class="op">;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaleFactor <span class="op">=</span> targetSize <span class="op">/</span> maxDimension<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>model<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(scaleFactor<span class="op">,</span> scaleFactor<span class="op">,</span> scaleFactor)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Re-calculate the box and center after scaling if you need to reposition it</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">setFromObject</span>(model)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">getCenter</span>(center)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>model<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">sub</span>(center)<span class="op">;</span> </span></code></pre></div>
+<p>Implementing these steps ensures that regardless of the software your
+3D assets were exported from, they will consistently render at the
+correct size and position in your Three.js application.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

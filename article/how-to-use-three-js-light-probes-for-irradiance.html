@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js Light Probes for Irradiance - three.js</title>
+    <meta name="description" content="This article explains how the light probe system in Three.js captures and applies diffuse indirect lighting (irradiance) to 3D materials. You will learn how Spherical Harmonics (SH) are used to store light data, how to generate light probes from environm">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-light-probes-for-irradiance">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js Light Probes for Irradiance - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-light-probes-for-irradiance" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the light probe system in Three.js captures and applies diffuse indirect lighting (irradiance) to 3D materials. You will learn how Spherical Harmonics (SH) are used to store light data, how to generate light probes from environm" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-three.js-light-probes-for-irradiance">How to Use
+Three.js Light Probes for Irradiance</h1>
+<p>This article explains how the light probe system in Three.js captures
+and applies diffuse indirect lighting (irradiance) to 3D materials. You
+will learn how Spherical Harmonics (SH) are used to store light data,
+how to generate light probes from environment maps, and how Three.js
+materials process this data in the shader pipeline to achieve realistic,
+high-performance ambient lighting.</p>
+<h2 id="understanding-light-probes-and-irradiance">Understanding Light
+Probes and Irradiance</h2>
+<p>In 3D graphics, irradiance represents the total amount of light
+falling onto a surface from all directions. While direct light sources
+(like directional or point lights) handle immediate light rays, indirect
+lighting (global illumination) simulates how light bounces off
+surrounding environments.</p>
+<p>A <code>LightProbe</code> in Three.js is an invisible object placed
+in a scene that captures this indirect diffuse light. Unlike lightmaps,
+which are baked directly onto 3D meshes, light probes store light
+information at a specific point in space. This allows dynamic objects
+moving through the scene to receive realistic, location-specific ambient
+lighting.</p>
+<h2 id="how-three.js-captures-irradiance">How Three.js Captures
+Irradiance</h2>
+<p>Three.js captures irradiance using a mathematical technique called
+<strong>Spherical Harmonics (SH)</strong>. Spherical Harmonics project
+3D light data onto a sphere using a series of mathematical coefficients,
+similar to how Fourier transforms compress audio signals.</p>
+<p>By default, Three.js uses a third-order Spherical Harmonics system,
+which requires only 9 color coefficients (vectors of Red, Green, and
+Blue) to represent an entire 360-degree light profile. This compression
+makes light probes incredibly lightweight and efficient for real-time
+rendering.</p>
+<p>To capture irradiance, Three.js provides a utility called
+<code>LightProbeGenerator</code>. This helper extracts light data from
+an environment map (such as a cube texture or an equirectangular image)
+and calculates the correct SH coefficients:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { LightProbeGenerator } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/lights/LightProbeGenerator.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Load an environment cube map</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cubeTextureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CubeTextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>cubeTextureLoader<span class="op">.</span><span class="fu">load</span>([ <span class="st">&#39;px.png&#39;</span><span class="op">,</span> <span class="st">&#39;nx.png&#39;</span><span class="op">,</span> <span class="st">&#39;py.png&#39;</span><span class="op">,</span> <span class="st">&#39;ny.png&#39;</span><span class="op">,</span> <span class="st">&#39;pz.png&#39;</span><span class="op">,</span> <span class="st">&#39;nz.png&#39;</span> ]<span class="op">,</span> (cubeTexture) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Generate the light probe from the cube texture</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> lightProbe <span class="op">=</span> LightProbeGenerator<span class="op">.</span><span class="fu">fromCubeTexture</span>(cubeTexture)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Add the probe to the scene</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(lightProbe)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>During this generation process, the <code>LightProbeGenerator</code>
+scans the pixels of the cube map, computes their brightness and color
+distribution, and populates the <code>lightProbe.sh</code> property with
+the resulting 9 coefficients.</p>
+<h2 id="how-three.js-applies-irradiance-to-materials">How Three.js
+Applies Irradiance to Materials</h2>
+<p>Once a <code>LightProbe</code> is added to the scene, Three.js
+automatically incorporates its data into the rendering pipeline for
+standard materials, such as <code>MeshStandardMaterial</code> and
+<code>MeshPhysicalMaterial</code>.</p>
+<p>The application of irradiance to a material occurs in the WebGL
+shader during the fragment rendering stage:</p>
+<ol type="1">
+<li><strong>Reading the Normal Vector:</strong> The shader identifies
+the surface normal (the direction the surface is facing) of the fragment
+currently being rendered.</li>
+<li><strong>Reconstructing the Light:</strong> The shader passes this
+normal vector into a Spherical Harmonics mathematical function alongside
+the 9 stored coefficients from the light probe.</li>
+<li><strong>Calculating Diffuse Shading:</strong> This function outputs
+the exact color and intensity of the ambient light coming from the
+direction of the surface normal.</li>
+<li><strong>Blending with Albedo:</strong> The calculated irradiance is
+multiplied by the material’s base diffuse color (albedo) and added to
+the final lighting equation of the pixel.</li>
+</ol>
+<p>Because Spherical Harmonics only capture low-frequency (blurry)
+lighting detail, they are ideal for diffuse reflections but cannot
+handle sharp, mirror-like specular reflections. For specular
+reflections, Three.js materials rely on PMREM (Prefiltered Mipmapped
+Radiance Environment Map) textures rather than light probes.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

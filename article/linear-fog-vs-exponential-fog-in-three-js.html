@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Fog vs Exponential Fog in Three.js - three.js</title>
+    <meta name="description" content="This article explains the core differences between linear fog (THREE.Fog) and exponential fog (THREE.FogExp2) in Three.js. You will learn how each fog type calculates depth, how their configuration parameters differ, and how to choose the right atmospher">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/linear-fog-vs-exponential-fog-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Linear Fog vs Exponential Fog in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/linear-fog-vs-exponential-fog-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the core differences between linear fog (THREE.Fog) and exponential fog (THREE.FogExp2) in Three.js. You will learn how each fog type calculates depth, how their configuration parameters differ, and how to choose the right atmospher" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="linear-fog-vs-exponential-fog-in-three.js">Linear Fog vs
+Exponential Fog in Three.js</h1>
+<p>This article explains the core differences between linear fog
+(<code>THREE.Fog</code>) and exponential fog
+(<code>THREE.FogExp2</code>) in Three.js. You will learn how each fog
+type calculates depth, how their configuration parameters differ, and
+how to choose the right atmospheric effect for your 3D web
+applications.</p>
+<h2 id="linear-fog-three.fog">Linear Fog (THREE.Fog)</h2>
+<p>Linear fog in Three.js is defined by a starting distance
+(<code>near</code>) and an ending distance (<code>far</code>). The fog
+begins applied at the <code>near</code> distance and increases in a
+straight, linear progression until it reaches maximum density at the
+<code>far</code> distance. Any object positioned beyond the
+<code>far</code> limit will be completely obscured by the fog color.</p>
+<p>To implement linear fog, you define it using three parameters:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="at">fog</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Fog</span>(color<span class="op">,</span> near<span class="op">,</span> far)<span class="op">;</span></span></code></pre></div>
+<p>Because of its distinct start and end points, linear fog is highly
+predictable. It is ideal for performance optimization, such as hiding
+the abrupt spawning (pop-in) of 3D models at the edge of the camera’s
+view frustum. However, it can look artificial because real-world fog
+does not have a defined starting line or a sudden maximum threshold.</p>
+<h2 id="exponential-fog-three.fogexp2">Exponential Fog
+(THREE.FogExp2)</h2>
+<p>Exponential fog simulates realistic atmospheric haze by defining fog
+density rather than physical start and end boundaries. It uses an
+exponential function of distance, meaning the fog starts immediately at
+the camera lens and grows exponentially thicker the further an object is
+from the camera.</p>
+<p>To implement exponential fog, you define it using two parameters:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="at">fog</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">FogExp2</span>(color<span class="op">,</span> density)<span class="op">;</span></span></code></pre></div>
+<p>The <code>density</code> parameter determines how quickly the fog
+saturates the view. Even with low density values (e.g.,
+<code>0.02</code>), objects gradually fade into the background. Because
+exponential decay mimics how light scatters through real-world
+particulates, <code>FogExp2</code> is the preferred choice for creating
+realistic outdoor environments, natural mist, smoke, or underwater
+scenes.</p>
+<h2 id="key-differences-summary">Key Differences Summary</h2>
+<ul>
+<li><strong>Parameters:</strong> Linear fog requires a defined range
+(<code>near</code> and <code>far</code> limits), whereas exponential fog
+requires only a <code>density</code> value.</li>
+<li><strong>Visual Realism:</strong> Linear fog has a noticeable
+boundary where the fog starts and ends. Exponential fog provides a
+smooth, natural transition that starts immediately at the camera and
+thickens over distance.</li>
+<li><strong>Use Cases:</strong> Use linear fog when you need strict
+control over where the fog starts and stops (e.g., rendering boundaries
+or stylized games). Use exponential fog when aiming for realistic
+environmental effects like natural weather, depth perception, or
+realistic lighting attenuation.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

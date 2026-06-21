@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js TransformControls for 3D Editors - three.js</title>
+    <meta name="description" content="This article explains the purpose and utility of TransformControls in Three.js when developing interactive, in-browser 3D editors. You will learn how this essential class enables users to manipulate 3D objects directly in the viewport through intuitive v">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-transformcontrols-for-3d-editors">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js TransformControls for 3D Editors - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-transformcontrols-for-3d-editors" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the purpose and utility of TransformControls in Three.js when developing interactive, in-browser 3D editors. You will learn how this essential class enables users to manipulate 3D objects directly in the viewport through intuitive v" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-transformcontrols-for-3d-editors">Three.js
+TransformControls for 3D Editors</h1>
+<p>This article explains the purpose and utility of
+<code>TransformControls</code> in Three.js when developing interactive,
+in-browser 3D editors. You will learn how this essential class enables
+users to manipulate 3D objects directly in the viewport through
+intuitive visual gizmos for translation, rotation, and scaling.</p>
+<p>In Three.js, building a 3D editor requires a way for users to
+interact with objects in the 3D space. While controls like
+<code>OrbitControls</code> allow users to navigate the camera around the
+scene, <code>TransformControls</code> is specifically designed to
+manipulate the 3D objects themselves. It acts as the bridge between user
+input (mouse clicks and drags) and the underlying mathematical
+transformations of 3D meshes.</p>
+<h3 id="core-functionalities">Core Functionalities</h3>
+<p><code>TransformControls</code> provides three primary modes of
+manipulation, which are standard in almost all professional 3D modeling
+software: * <strong>Translate (Position):</strong> Displays directional
+arrows along the X, Y, and Z axes. Dragging these arrows moves the
+object along the corresponding axis. * <strong>Rotate:</strong> Displays
+circular rings around the object. Dragging these rings rotates the
+object around the selected axis. * <strong>Scale:</strong> Displays
+boxes at the ends of the axes. Dragging these boxes resizes the object
+either uniformly or along a specific axis.</p>
+<h3 id="the-role-of-visual-gizmos">The Role of Visual Gizmos</h3>
+<p>Without a visual aid, users would have to input numerical coordinates
+into a sidebar UI to move objects. <code>TransformControls</code> solves
+this by rendering 3D gizmos (the colorful red, green, and blue handle
+graphics) directly on top of the active object. The colors represent the
+standard 3D coordinate system (Red for X, Green for Y, and Blue for Z),
+making the interface instantly recognizable and user-friendly.</p>
+<h3 id="preventing-conflict-with-camera-controls">Preventing Conflict
+with Camera Controls</h3>
+<p>In a typical 3D editor, both camera navigation and object
+manipulation rely on mouse drag events. If a user tries to drag a
+transform gizmo, the camera might orbit at the same time, causing a
+chaotic user experience. <code>TransformControls</code> provides
+built-in event listeners to resolve this. Developers can temporarily
+disable camera controls (like <code>OrbitControls</code>) the moment a
+user starts dragging a transform handle, and re-enable them once the
+drag event ends.</p>
+<h3 id="advanced-editor-features">Advanced Editor Features</h3>
+<p>Beyond basic movement, <code>TransformControls</code> supports
+several advanced features necessary for a production-ready 3D editor: *
+<strong>Coordinate Spaces:</strong> Users can toggle between “world”
+space (aligning gizmos with the global grid) and “local” space (aligning
+gizmos with the object’s own rotated axes). * <strong>Snapping:</strong>
+It supports grid and angle snapping, allowing users to move or rotate
+objects by precise increments (e.g., snapping every 1 unit or every 15
+degrees). * <strong>Keyboard Shortcuts:</strong> It can easily be bound
+to keyboard listeners so users can quickly switch modes (e.g., pressing
+“W” for translate, “E” for rotate, and “R” for scale).</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js CubeCamera Reflections Guide - three.js</title>
+    <meta name="description" content="In Three.js, creating realistic environment reflections on 3D objects requires specialized tools, and the CubeCamera is the primary object used to achieve this effect. This article explains what a CubeCamera is, how it works to capture dynamic 360-degree">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-cubecamera-reflections-guide">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js CubeCamera Reflections Guide - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-cubecamera-reflections-guide" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, creating realistic environment reflections on 3D objects requires specialized tools, and the CubeCamera is the primary object used to achieve this effect. This article explains what a CubeCamera is, how it works to capture dynamic 360-degree" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="three.js-cubecamera-reflections-guide">Three.js CubeCamera
+Reflections Guide</h1>
+<p>In Three.js, creating realistic environment reflections on 3D objects
+requires specialized tools, and the <code>CubeCamera</code> is the
+primary object used to achieve this effect. This article explains what a
+<code>CubeCamera</code> is, how it works to capture dynamic 360-degree
+surroundings, and how to implement it to build real-time, high-quality
+reflections in your WebGL scenes.</p>
+<h2 id="what-is-a-cubecamera">What is a CubeCamera?</h2>
+<p>A <code>CubeCamera</code> is a specialized camera helper in Three.js
+designed to capture a 360-degree view of a scene from a specific point
+in 3D space. It consists of six individual cameras pointed in six
+different directions (forward, backward, left, right, up, and down).</p>
+<p>The images captured by these six cameras are rendered onto a
+specialized texture called a <strong>Cube Texture</strong> (or Cubemap).
+This texture can then be applied to the material of a reflective object,
+allowing it to reflect its surrounding environment dynamically.</p>
+<h2 id="dynamic-vs.-static-reflections">Dynamic vs. Static
+Reflections</h2>
+<p>While static reflections can be achieved using pre-rendered cubemap
+images (like skyboxes), they cannot reflect moving objects within the
+scene. The <code>CubeCamera</code> solves this by rendering the
+environment in real-time. If an object moves past a shiny sphere, the
+<code>CubeCamera</code> captures that movement, making the sphere
+reflect the moving object dynamically.</p>
+<h2 id="how-to-implement-cubecamera-for-reflections">How to Implement
+CubeCamera for Reflections</h2>
+<p>To build dynamic reflections using a <code>CubeCamera</code>, you
+need to set up a render target, initialize the camera, assign the
+texture to a material, and update the camera in your render loop.</p>
+<h3 id="create-the-cube-render-target-and-cubecamera">1. Create the Cube
+Render Target and CubeCamera</h3>
+<p>First, you must define a <code>WebGLCubeRenderTarget</code> which
+acts as the WebGL memory space where the six camera views are saved.
+Then, instantiate the <code>CubeCamera</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the resolution of the reflection texture (e.g., 256x256 or 512x512)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cubeRenderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLCubeRenderTarget</span>(<span class="dv">256</span><span class="op">,</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">generateMipmaps</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearMipmapLinearFilter</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the CubeCamera (near plane, far plane, render target)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cubeCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CubeCamera</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1000</span><span class="op">,</span> cubeRenderTarget)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(cubeCamera)<span class="op">;</span></span></code></pre></div>
+<h3 id="apply-the-reflection-texture-to-a-material">2. Apply the
+Reflection Texture to a Material</h3>
+<p>To make an object reflective, assign the texture generated by the
+<code>WebGLCubeRenderTarget</code> to the <code>envMap</code>
+(environment map) property of the object’s material.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shinyMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span> <span class="co">// Low roughness for a mirror-like finish</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span> <span class="co">// High metalness to enhance reflectivity</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">envMap</span><span class="op">:</span> cubeRenderTarget<span class="op">.</span><span class="at">texture</span> <span class="co">// Apply the dynamic texture</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> reflectiveSphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SphereGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">32</span><span class="op">,</span> <span class="dv">32</span>)<span class="op">,</span> shinyMaterial)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(reflectiveSphere)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Keep the CubeCamera at the center of the reflective object</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>cubeCamera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(reflectiveSphere<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="update-the-reflection-in-the-animation-loop">3. Update the
+Reflection in the Animation Loop</h3>
+<p>To ensure the reflection updates as things move in the scene, you
+must update the <code>CubeCamera</code> inside your animation loop.</p>
+<p>To prevent the reflective object from rendering its own interior, you
+should hide the object before updating the camera, and make it visible
+again afterward.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 1. Hide the reflective object so it doesn&#39;t reflect itself</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  reflectiveSphere<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 2. Update the CubeCamera with the current renderer and scene</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  cubeCamera<span class="op">.</span><span class="fu">update</span>(renderer<span class="op">,</span> scene)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 3. Bring the reflective object back</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  reflectiveSphere<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 4. Render the main scene with the default camera</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<p>Because a <code>CubeCamera</code> renders the entire 3D scene six
+times per update (once for each face of the cube), it is highly
+resource-intensive. To maintain a smooth frame rate:</p>
+<ul>
+<li><strong>Reduce Resolution:</strong> Keep the render target
+resolution as low as possible (e.g., 128x128 or 256x256). Highly
+detailed reflections are rarely necessary for realistic visuals.</li>
+<li><strong>Throttled Updates:</strong> Instead of updating the
+<code>CubeCamera</code> every frame, update it every second or third
+frame, or only when objects in the environment move.</li>
+<li><strong>Layer Filtering:</strong> Use layers to exclude complex,
+non-essential background objects from being rendered by the
+<code>CubeCamera</code>.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

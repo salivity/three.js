@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js StereoCamera for Anaglyph 3D - three.js</title>
+    <meta name="description" content="This article provides a comprehensive guide on how the StereoCamera works in Three.js and how it can be implemented to create immersive, red-cyan anaglyph 3D effects. You will learn the underlying principles of stereoscopic vision in web graphics and how">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-stereocamera-for-anaglyph-3d">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js StereoCamera for Anaglyph 3D - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-stereocamera-for-anaglyph-3d" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a comprehensive guide on how the StereoCamera works in Three.js and how it can be implemented to create immersive, red-cyan anaglyph 3D effects. You will learn the underlying principles of stereoscopic vision in web graphics and how" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-three.js-stereocamera-for-anaglyph-3d">How to Use
+Three.js StereoCamera for Anaglyph 3D</h1>
+<p>This article provides a comprehensive guide on how the
+<code>StereoCamera</code> works in Three.js and how it can be
+implemented to create immersive, red-cyan anaglyph 3D effects. You will
+learn the underlying principles of stereoscopic vision in web graphics
+and how to easily integrate this effect into your 3D web applications
+using the built-in Three.js tools.</p>
+<h2 id="understanding-the-three.js-stereocamera">Understanding the
+Three.js StereoCamera</h2>
+<p>In Three.js, <code>THREE.StereoCamera</code> is a utility class
+designed to mimic human binocular vision. Humans perceive depth because
+our eyes are separated by a small distance (interpupillary distance),
+allowing each eye to view the world from a slightly different angle. The
+brain combines these two distinct images into a single 3D scene.</p>
+<p>The <code>StereoCamera</code> replicates this by managing two
+internal <code>PerspectiveCamera</code> instances—one for the left eye
+and one for the right eye. When configured, it calculates the correct
+offset and projection matrices for both cameras based on a defined eye
+separation (stereoscopic focus) and the aspect ratio of the
+viewport.</p>
+<h2 id="how-stereocamera-generates-anaglyph-3d-effects">How StereoCamera
+Generates Anaglyph 3D Effects</h2>
+<p>Anaglyph 3D is a technique where the left-eye image and right-eye
+image are filtered with chromatically opposite colors (usually red for
+the left eye and cyan for the right eye). When viewed through matching
+color-filtered glasses, each eye only sees its intended image, resulting
+in a perceived 3D depth.</p>
+<p>While <code>StereoCamera</code> handles the math of positioning the
+two virtual eyes, Three.js uses the <code>AnaglyphEffect</code> class to
+handle the rendering and color-filtering process. The
+<code>AnaglyphEffect</code> wraps around your standard renderer and uses
+<code>StereoCamera</code> under the hood to perform the following
+steps:</p>
+<ol type="1">
+<li><strong>Left Eye Render:</strong> It renders the scene from the
+perspective of the left camera, filtering the output to a red color
+channel.</li>
+<li><strong>Right Eye Render:</strong> It renders the scene from the
+perspective of the right camera, filtering the output to a cyan (blue
+and green) color channel.</li>
+<li><strong>Composite:</strong> It overlays these two renders onto the
+screen.</li>
+</ol>
+<h2 id="implementing-anaglyph-3d-in-three.js">Implementing Anaglyph 3D
+in Three.js</h2>
+<p>To implement anaglyph 3D, you do not need to manually configure the
+<code>StereoCamera</code>. Instead, you use the
+<code>AnaglyphEffect</code> helper, which is available in the Three.js
+addons repository.</p>
+<h3 id="step-1-import-the-anaglypheffect">Step 1: Import the
+AnaglyphEffect</h3>
+<p>First, ensure you import the necessary module alongside the standard
+Three.js library:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { AnaglyphEffect } <span class="im">from</span> <span class="st">&#39;three/addons/effects/AnaglyphEffect.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="step-2-set-up-the-effect">Step 2: Set Up the Effect</h3>
+<p>Create your standard scene, perspective camera, and WebGLRenderer.
+Then, instantiate the <code>AnaglyphEffect</code> by passing the
+renderer and the viewport dimensions to it:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effect <span class="op">=</span> <span class="kw">new</span> <span class="fu">AnaglyphEffect</span>(renderer<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span></code></pre></div>
+<h3 id="step-3-render-using-the-effect">Step 3: Render Using the
+Effect</h3>
+<p>Instead of calling <code>renderer.render(scene, camera)</code> in
+your animation loop, call the render method of the
+<code>AnaglyphEffect</code> instance:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update your animations or controls here</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Render the scene using the 3D effect</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    effect<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="step-4-handle-window-resizing">Step 4: Handle Window
+Resizing</h3>
+<p>When the window is resized, you must update both the camera aspect
+ratio and the size of the anaglyph effect:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    effect<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>By wrapping the standard WebGLRenderer with the
+<code>AnaglyphEffect</code>, the <code>StereoCamera</code> handles the
+dual-camera offset automatically, giving your users an instant retro 3D
+experience with standard red-cyan glasses.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

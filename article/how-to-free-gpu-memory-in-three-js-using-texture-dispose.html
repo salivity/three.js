@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Free GPU Memory in Three.js Using Texture Dispose - three.js</title>
+    <meta name="description" content="This article explains how to properly release GPU memory in Three.js by explicitly disposing of textures that are no longer needed. You will learn why manual memory management is necessary in WebGL, how to call the dispose() method on textures and materi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-free-gpu-memory-in-three-js-using-texture-dispose">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Free GPU Memory in Three.js Using Texture Dispose - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-free-gpu-memory-in-three-js-using-texture-dispose" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to properly release GPU memory in Three.js by explicitly disposing of textures that are no longer needed. You will learn why manual memory management is necessary in WebGL, how to call the dispose() method on textures and materi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-free-gpu-memory-in-three.js-using-texture-dispose">How to
+Free GPU Memory in Three.js Using Texture Dispose</h1>
+<p>This article explains how to properly release GPU memory in Three.js
+by explicitly disposing of textures that are no longer needed. You will
+learn why manual memory management is necessary in WebGL, how to call
+the <code>dispose()</code> method on textures and materials, and see a
+practical code example to prevent memory leaks in your 3D WebGL
+applications.</p>
+<h2 id="why-manual-memory-management-is-necessary">Why Manual Memory
+Management is Necessary</h2>
+<p>In standard JavaScript applications, the garbage collector
+automatically reclaims memory when variables go out of scope. However,
+in Three.js, WebGL resources such as textures, geometries, and render
+targets are allocated directly on the GPU. The JavaScript garbage
+collector cannot see or manage GPU memory.</p>
+<p>If you remove a mesh from your scene but do not explicitly dispose of
+its resources, the data remains allocated on the graphics card, leading
+to severe memory leaks and eventual application crashes.</p>
+<h2 id="how-to-dispose-of-a-texture">How to Dispose of a Texture</h2>
+<p>To free up the GPU memory allocated for a texture, you must call the
+<code>.dispose()</code> method directly on the texture instance.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Dispose of a single texture</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>myTexture<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p>Calling <code>.dispose()</code> sends a signal to the WebGL rendering
+context to delete the texture buffer from the GPU. Once disposed, the
+texture can no longer be rendered.</p>
+<h2 id="a-complete-cleanup-workflow">A Complete Cleanup Workflow</h2>
+<p>Disposing of a texture alone is often not enough because the texture
+is usually bound to a material, which in turn is bound to a mesh. To
+completely clean up a mesh and its texture from memory, you should
+follow these steps:</p>
+<ol type="1">
+<li><strong>Remove the mesh</strong> from the parent scene.</li>
+<li><strong>Dispose of the geometry</strong> associated with the
+mesh.</li>
+<li><strong>Dispose of the texture(s)</strong> mapped to the
+material.</li>
+<li><strong>Dispose of the material</strong> itself.</li>
+</ol>
+<p>Here is a reusable JavaScript function demonstrating how to safely
+clean up a mesh and all of its associated GPU resources, including
+textures:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">removeAndDisposeMesh</span>(scene<span class="op">,</span> mesh) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Remove the mesh from the scene</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">remove</span>(mesh)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Dispose of the geometry</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (mesh<span class="op">.</span><span class="at">geometry</span>) {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Dispose of the materials and textures</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (mesh<span class="op">.</span><span class="at">material</span>) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="bu">Array</span><span class="op">.</span><span class="fu">isArray</span>(mesh<span class="op">.</span><span class="at">material</span>)) {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            mesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="fu">forEach</span>(material <span class="kw">=&gt;</span> <span class="fu">disposeMaterial</span>(material))<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="fu">disposeMaterial</span>(mesh<span class="op">.</span><span class="at">material</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">disposeMaterial</span>(material) {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check for common texture maps and dispose of them</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> textureKeys <span class="op">=</span> [<span class="st">&#39;map&#39;</span><span class="op">,</span> <span class="st">&#39;lightMap&#39;</span><span class="op">,</span> <span class="st">&#39;bumpMap&#39;</span><span class="op">,</span> <span class="st">&#39;normalMap&#39;</span><span class="op">,</span> <span class="st">&#39;specularMap&#39;</span><span class="op">,</span> <span class="st">&#39;roughnessMap&#39;</span><span class="op">,</span> <span class="st">&#39;metalnessMap&#39;</span><span class="op">,</span> <span class="st">&#39;emissiveMap&#39;</span>]<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    textureKeys<span class="op">.</span><span class="fu">forEach</span>(key <span class="kw">=&gt;</span> {</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (material[key] <span class="op">&amp;&amp;</span> <span class="kw">typeof</span> material[key]<span class="op">.</span><span class="at">dispose</span> <span class="op">===</span> <span class="st">&#39;function&#39;</span>) {</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>            material[key]<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose of the material itself</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    material<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>Reusability:</strong> If multiple materials share the same
+texture, do not dispose of the texture until you are sure no other
+active materials are using it.</li>
+<li><strong>Re-uploading:</strong> Once a texture is disposed, you
+cannot use it again. If you need it later, you must create a new texture
+instance and load the image again.</li>
+<li><strong>Render Loop:</strong> Ensure you do not call
+<code>.dispose()</code> inside your active requestAnimationFrame render
+loop unless you are explicitly discarding an asset, as allocating and
+deallocating memory mid-render will cause noticeable performance
+drops.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

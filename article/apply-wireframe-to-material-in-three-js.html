@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Wireframe to Material in Three.js - three.js</title>
+    <meta name="description" content="Applying a wireframe effect to an existing material in Three.js is a straightforward process that helps visualize the underlying geometry of a 3D model. This guide demonstrates how to quickly enable the wireframe property on any standard Three.js materia">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/apply-wireframe-to-material-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Apply Wireframe to Material in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/apply-wireframe-to-material-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Applying a wireframe effect to an existing material in Three.js is a straightforward process that helps visualize the underlying geometry of a 3D model. This guide demonstrates how to quickly enable the wireframe property on any standard Three.js materia" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="apply-wireframe-to-material-in-three.js">Apply Wireframe to
+Material in Three.js</h1>
+<p>Applying a wireframe effect to an existing material in Three.js is a
+straightforward process that helps visualize the underlying geometry of
+a 3D model. This guide demonstrates how to quickly enable the wireframe
+property on any standard Three.js material, how to toggle the effect
+dynamically, and how to create a dual-material overlay to display both
+the solid mesh and its wireframe outline simultaneously.</p>
+<h2 id="method-1-modify-the-materials-wireframe-property">Method 1:
+Modify the Material’s Wireframe Property</h2>
+<p>Most materials in Three.js (such as <code>MeshBasicMaterial</code>,
+<code>MeshStandardMaterial</code>, and <code>MeshPhongMaterial</code>)
+inherit from the base <code>Material</code> class. This class contains a
+built-in <code>wireframe</code> boolean property.</p>
+<p>To apply the wireframe effect to an existing mesh’s material, set
+this property to <code>true</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Access the material of an existing mesh and enable wireframe</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">wireframe</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>If you want to toggle the wireframe state dynamically (for example,
+via a UI button click), you can flip the boolean value:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Toggle wireframe on and off</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">wireframe</span> <span class="op">=</span> <span class="op">!</span>myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">wireframe</span><span class="op">;</span></span></code></pre></div>
+<p>If your material is shared across multiple meshes and you only want
+to apply the wireframe to one specific mesh, you must first clone the
+material to avoid affecting the other objects:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Clone the material to isolate the wireframe change to this mesh only</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>myMesh<span class="op">.</span><span class="at">material</span> <span class="op">=</span> myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>myMesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">wireframe</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h2 id="method-2-create-a-wireframe-overlay">Method 2: Create a
+Wireframe Overlay</h2>
+<p>Sometimes you want to keep the solid, shaded look of your material
+but overlay a contrasting wireframe on top to highlight the polygon
+edges. This cannot be done by simply toggling the
+<code>.wireframe</code> property on a single material.</p>
+<p>Instead, use <code>WireframeGeometry</code> and
+<code>LineSegments</code> to create an independent wireframe object and
+add it as a child of your original mesh:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Get the geometry of your existing mesh</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> myMesh<span class="op">.</span><span class="at">geometry</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create wireframe geometry from the existing geometry</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wireframeGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WireframeGeometry</span>(geometry)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create a line material for the wireframe</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lineMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">LineBasicMaterial</span>({ </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span> <span class="co">// White lines</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">linewidth</span><span class="op">:</span> <span class="dv">1</span>     <span class="co">// Note: linewidth &gt; 1 is usually not supported by WebGL implementations</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Create the wireframe line segments</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wireframeOverlay <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">LineSegments</span>(wireframeGeometry<span class="op">,</span> lineMaterial)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Add the wireframe as a child of the original mesh so they move together</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>myMesh<span class="op">.</span><span class="fu">add</span>(wireframeOverlay)<span class="op">;</span></span></code></pre></div>
+<p>Using this overlay method ensures that the wireframe perfectly aligns
+and scales with the parent mesh, providing a clean wireframe-on-shading
+visual effect.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

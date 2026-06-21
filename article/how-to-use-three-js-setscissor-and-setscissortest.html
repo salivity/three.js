@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js setScissor and setScissorTest - three.js</title>
+    <meta name="description" content="In Three.js, rendering can be restricted to a specific rectangular region of the canvas using the setScissor and setScissorTest methods of the WebGLRenderer. This article provides a straightforward guide on how to enable scissor testing, define a custom">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-setscissor-and-setscissortest">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js setScissor and setScissorTest - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-setscissor-and-setscissortest" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, rendering can be restricted to a specific rectangular region of the canvas using the setScissor and setScissorTest methods of the WebGLRenderer. This article provides a straightforward guide on how to enable scissor testing, define a custom" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-three.js-setscissor-and-setscissortest">How to Use
+Three.js setScissor and setScissorTest</h1>
+<p>In Three.js, rendering can be restricted to a specific rectangular
+region of the canvas using the <code>setScissor</code> and
+<code>setScissorTest</code> methods of the <code>WebGLRenderer</code>.
+This article provides a straightforward guide on how to enable scissor
+testing, define a custom rendering viewport, and use these tools to
+render multiple scenes or views on a single canvas.</p>
+<h3 id="understanding-the-scissor-test">Understanding the Scissor
+Test</h3>
+<p>By default, Three.js renders to the entire WebGL canvas. When you
+enable the scissor test, you tell the WebGL context to discard any
+pixels that fall outside of a specified rectangular mask. This is highly
+useful for creating split-screen effects, minimaps, or rendering
+multiple independent views in a single canvas
+performance-efficiently.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To restrict rendering to a specific rectangle, you must configure the
+renderer using three main steps: enabling the scissor test, defining the
+scissor box, and updating the viewport.</p>
+<h4 id="enable-the-scissor-test">1. Enable the Scissor Test</h4>
+<p>Before specifying the boundaries, you must explicitly enable scissor
+testing on the renderer.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setScissorTest</span>(<span class="kw">true</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="define-the-scissor-rectangle">2. Define the Scissor
+Rectangle</h4>
+<p>Use the <code>setScissor</code> method to define the boundaries of
+the rendering region. The parameters are
+<code>(x, y, width, height)</code>.</p>
+<p><em>Note: In WebGL, the coordinate system starts at the
+<strong>bottom-left</strong> corner of the canvas (0,0 is
+bottom-left).</em></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> x <span class="op">=</span> <span class="dv">100</span><span class="op">;</span>       <span class="co">// Pixels from the left</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> y <span class="op">=</span> <span class="dv">50</span><span class="op">;</span>        <span class="co">// Pixels from the bottom</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">400</span><span class="op">;</span>   <span class="co">// Width of the rectangle</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">300</span><span class="op">;</span>  <span class="co">// Height of the rectangle</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setScissor</span>(x<span class="op">,</span> y<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span></code></pre></div>
+<h4 id="update-the-viewport">3. Update the Viewport</h4>
+<p>To ensure that your camera’s projection scales correctly to the new
+rectangle (rather than squishing the full-canvas render into the smaller
+box), you should update the viewport to match the scissor
+dimensions.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setViewport</span>(x<span class="op">,</span> y<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span></code></pre></div>
+<h4 id="render-the-scene">4. Render the Scene</h4>
+<p>Once the scissor and viewport are configured, trigger the standard
+render call. Only the defined rectangular area will be drawn on.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span></code></pre></div>
+<h3 id="complete-code-example">Complete Code Example</h3>
+<p>Below is a complete implementation showing how to render a scene
+inside a specific <span class="math inline">\(300 \times 200\)</span>
+pixel box in the bottom-left corner of the canvas.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup renderer</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">canvas</span><span class="op">:</span> myCanvas })<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the rendering region</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">300</span><span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">200</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> x <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> y <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// Bottom-left corner</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Enable scissor testing</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setScissorTest</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Constrain the rendering area</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setScissor</span>(x<span class="op">,</span> y<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setViewport</span>(x<span class="op">,</span> y<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Render the scene</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Disable scissor test (optional)</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a><span class="co">// Disable this if you need to perform full-screen rendering passes afterward</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setScissorTest</span>(<span class="kw">false</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="rendering-multiple-views">Rendering Multiple Views</h3>
+<p>If you are rendering multiple views (like a split-screen game or a
+CAD editor with top, side, and front views), repeat this process for
+each view inside your animation loop:</p>
+<ol type="1">
+<li>Enable <code>setScissorTest(true)</code>.</li>
+<li>Define the boundaries for View A using <code>setScissor</code> and
+<code>setViewport</code>.</li>
+<li>Render View A.</li>
+<li>Define the boundaries for View B using <code>setScissor</code> and
+<code>setViewport</code>.</li>
+<li>Render View B.</li>
+<li>Disable <code>setScissorTest(false)</code> if you need to render
+full-screen UI overlays.</li>
+</ol></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

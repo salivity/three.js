@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide to Three.js NodeMaterial for Shaders - three.js</title>
+    <meta name="description" content="This article explores how to leverage the Three.js NodeMaterial system to create sophisticated shaders without writing a single line of raw GLSL. We will cover the core concepts of node-based material creation, demonstrate how to construct shaders progra">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/guide-to-three-js-nodematerial-for-shaders">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Guide to Three.js NodeMaterial for Shaders - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/guide-to-three-js-nodematerial-for-shaders" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how to leverage the Three.js NodeMaterial system to create sophisticated shaders without writing a single line of raw GLSL. We will cover the core concepts of node-based material creation, demonstrate how to construct shaders progra" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="guide-to-three.js-nodematerial-for-shaders">Guide to Three.js
+NodeMaterial for Shaders</h1>
+<p>This article explores how to leverage the Three.js NodeMaterial
+system to create sophisticated shaders without writing a single line of
+raw GLSL. We will cover the core concepts of node-based material
+creation, demonstrate how to construct shaders programmatically using
+the Node API, and highlight visual tool integration to streamline your
+WebGL and WebGPU development workflow.</p>
+<h2 id="understanding-the-nodematerial-system">Understanding the
+NodeMaterial System</h2>
+<p>Traditionally, custom shaders in Three.js require writing GLSL
+(OpenGL Shading Language) within a <code>ShaderMaterial</code> or
+<code>RawShaderMaterial</code>. While powerful, this approach isolates
+shader logic from JavaScript, making maintenance, code sharing, and
+WebGPU migration difficult.</p>
+<p>The <code>NodeMaterial</code> system solves this by representing
+shader operations as a graph of JavaScript objects. Each node represents
+a specific piece of data or mathematical operation—such as colors,
+texture coordinates, math functions, or lighting inputs. When rendered,
+Three.js parses this graph and dynamically compiles it into the
+appropriate shading language (GLSL for WebGL or WGSL for WebGPU).</p>
+<h2 id="building-shaders-via-code">Building Shaders via Code</h2>
+<p>To build a shader programmatically, you import specific nodes from
+the <code>three/addons/nodes/Nodes.js</code> module. By chaining these
+nodes together, you can define both vertex and fragment behaviors.</p>
+<p>Here is a basic example of creating a pulsing color effect using the
+Node API:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MeshBasicNodeMaterial<span class="op">,</span> color<span class="op">,</span> timerLocal<span class="op">,</span> sine } <span class="im">from</span> <span class="st">&#39;three/addons/nodes/Nodes.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a time-based node that pulses between 0 and 1</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> time <span class="op">=</span> <span class="fu">timerLocal</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pulse <span class="op">=</span> <span class="fu">sine</span>(time)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a base color and multiply it by the pulse value</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseColor <span class="op">=</span> <span class="fu">color</span>(<span class="bn">0x00ff00</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shiftingColor <span class="op">=</span> baseColor<span class="op">.</span><span class="fu">mul</span>(pulse)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign the node output to a NodeMaterial</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> <span class="fu">MeshBasicNodeMaterial</span>()<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">colorNode</span> <span class="op">=</span> shiftingColor<span class="op">;</span></span></code></pre></div>
+<p>In this example, <code>timerLocal()</code> tracks elapsed time,
+<code>sine()</code> performs the mathematical sine operation, and
+<code>mul()</code> multiplies the color vector. The
+<code>colorNode</code> property of the
+<code>MeshBasicNodeMaterial</code> accepts this final node chain,
+dictating the material’s output color.</p>
+<h2 id="utilizing-common-node-types">Utilizing Common Node Types</h2>
+<p>To build more complex shaders, you can leverage a wide array of
+built-in nodes:</p>
+<ul>
+<li><strong>Input Nodes:</strong> <code>positionLocal</code>,
+<code>uv()</code>, and <code>normalLocal</code> provide direct access to
+mesh attributes.</li>
+<li><strong>Math Nodes:</strong> Standard operations like
+<code>add()</code>, <code>sub()</code>, <code>mul()</code>,
+<code>div()</code>, <code>dot()</code>, and <code>cross()</code> allow
+for complex vector and scalar calculations.</li>
+<li><strong>Texture Nodes:</strong> <code>texture(map)</code> allows you
+to sample textures and manipulate their UV coordinates
+programmatically.</li>
+<li><strong>Procedural Nodes:</strong> Noise functions and math utility
+nodes help generate patterns without external assets.</li>
+</ul>
+<p>For instance, to distort a texture using UV coordinates, you can add
+a noise node to the UV coordinates before passing them to the texture
+node.</p>
+<h2 id="visual-shader-creation">Visual Shader Creation</h2>
+<p>If you prefer a visual, node-based interface similar to Blender’s
+Shader Editor or Unreal Engine’s Material Editor, Three.js provides an
+official Web-based Node Editor. This tool is available in the official
+Three.js repository under the examples directory.</p>
+<p>Using the visual editor, you can: 1. Drag and drop nodes representing
+colors, math, textures, and lighting. 2. Connect ports visually to
+define the shader logic. 3. Preview the material in real-time on various
+3D geometries. 4. Export the completed graph as a JSON file.</p>
+<p>To use the exported visual shader in your project, you load the JSON
+using the <code>NodeMaterialLoader</code> class, which reconstructs the
+node graph instantly in your application code.</p>
+<h2 id="advantages-of-nodematerial">Advantages of NodeMaterial</h2>
+<p>Adopting the NodeMaterial system offers several distinct advantages
+over traditional raw GLSL:</p>
+<ul>
+<li><strong>Universal Compatibility:</strong> Shaders written with
+NodeMaterial automatically compile to GLSL for WebGL renderers and WGSL
+for WebGPU renderers.</li>
+<li><strong>Modular Code:</strong> Node graphs are highly reusable. You
+can easily share logic blocks across different materials.</li>
+<li><strong>Dynamic Updating:</strong> Because nodes are JavaScript
+objects, you can update properties dynamically at runtime without
+manually parsing and updating raw shader strings.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

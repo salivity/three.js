@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Frustum Culling Works in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, automatic frustum culling is a crucial performance optimization technique that prevents the GPU from wasting resources on objects outside the camera's field of view. By calculating whether a 3D object's bounding volume intersects with the ca">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-frustum-culling-works-in-three-js">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Frustum Culling Works in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-frustum-culling-works-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, automatic frustum culling is a crucial performance optimization technique that prevents the GPU from wasting resources on objects outside the camera's field of view. By calculating whether a 3D object's bounding volume intersects with the ca" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-frustum-culling-works-in-three.js">How Frustum Culling Works
+in Three.js</h1>
+<p>In Three.js, automatic frustum culling is a crucial performance
+optimization technique that prevents the GPU from wasting resources on
+objects outside the camera’s field of view. By calculating whether a 3D
+object’s bounding volume intersects with the camera’s viewing frustum,
+Three.js automatically skips the rendering process for off-screen
+objects. This article explains the mechanics of this process, how
+bounding volumes are used, and how developers can configure or
+troubleshoot frustum culling in their applications.</p>
+<h2 id="what-is-the-viewing-frustum">What is the Viewing Frustum?</h2>
+<p>The viewing frustum is the 3D region of space modeled by the camera
+that is visible on the screen. It is shaped like a truncated pyramid,
+bounded by six planes: near, far, top, bottom, left, and right. Anything
+lying entirely outside this pyramid is invisible to the user.</p>
+<h2 id="the-mechanism-of-automatic-frustum-culling">The Mechanism of
+Automatic Frustum Culling</h2>
+<p>By default, Three.js enables automatic frustum culling for all
+renderable objects, such as meshes and points. Before sending data to
+the GPU for rendering during each frame, Three.js performs a CPU-side
+check:</p>
+<ol type="1">
+<li><strong>Bounding Volume Generation</strong>: For every mesh,
+Three.js computes a simplified bounding volume, typically a bounding
+sphere or a bounding box (<code>Box3</code>). This volume represents the
+outermost boundaries of the complex 3D geometry.</li>
+<li><strong>Frustum Intersection Test</strong>: The engine extracts the
+six mathematical planes defining the camera’s current viewing frustum.
+It then tests whether the object’s bounding volume intersects with these
+planes.</li>
+<li><strong>Conditional Drawing</strong>: If the bounding volume is
+entirely outside the frustum, Three.js flags the object to be skipped
+during the current render pass. If any part of the bounding volume
+intersects or lies completely inside the frustum, the object is sent to
+the GPU to be drawn.</li>
+</ol>
+<h2 id="how-it-improves-rendering-performance">How It Improves Rendering
+Performance</h2>
+<p>Rendering 3D scenes can be highly resource-intensive. Frustum culling
+improves performance in several key areas:</p>
+<ul>
+<li><strong>Reduced Draw Calls</strong>: The CPU avoids sending
+unnecessary draw commands to the GPU, minimizing CPU-to-GPU
+communication overhead.</li>
+<li><strong>Decreased GPU Workload</strong>: The GPU does not have to
+process vertices, perform rasterization, or calculate pixel shaders for
+geometry that the camera cannot see anyway.</li>
+<li><strong>Scalability</strong>: This allows developers to build large,
+complex virtual worlds. As long as the player only looks at a fraction
+of the world at any given time, the rendering engine only processes the
+visible portion.</li>
+</ul>
+<h2 id="managing-frustum-culling-in-your-code">Managing Frustum Culling
+in Your Code</h2>
+<p>While automatic frustum culling works seamlessly for most static
+objects, developers occasionally need to manage it manually. This is
+controlled via the <code>frustumCulled</code> property on
+<code>Object3D</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">frustumCulled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span> <span class="co">// Enabled by default</span></span></code></pre></div>
+<p>If you set this property to <code>false</code>, Three.js will bypass
+the intersection test and always send the object to the GPU, regardless
+of camera position.</p>
+<h2 id="troubleshooting-common-issues">Troubleshooting Common
+Issues</h2>
+<p>Sometimes, an object might suddenly disappear or “pop” out of view
+when its center moves off-screen, even if parts of it should still be
+visible. This usually happens when the bounding volume does not
+accurately reflect the geometry’s actual shape, a common issue when
+using custom vertex shaders or skinned mesh animations that displace
+vertices dynamically.</p>
+<p>To resolve this, you can manually recompute the bounding volumes
+after modifying the geometry:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span></code></pre></div>
+<p>Alternatively, if the geometry is highly dynamic and constantly
+changes shape, disabling frustum culling
+(<code>mesh.frustumCulled = false</code>) for that specific object
+ensures it remains visible, though at a slight performance cost.</p></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

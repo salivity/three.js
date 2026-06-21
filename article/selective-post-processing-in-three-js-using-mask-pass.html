@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selective Post-Processing in Three.js Using Mask Pass - three.js</title>
+    <meta name="description" content="Applying post-processing effects to specific objects in a Three.js scene—rather than the entire viewport—is a common requirement for creating advanced visual highlights, glowing elements, or localized shaders. This article explains how to achieve sel">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/selective-post-processing-in-three-js-using-mask-pass">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js" defer></script>
+    <script id="MathJax-script" src="/three.js/js/mathjax.min.js" async></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Selective Post-Processing in Three.js Using Mask Pass - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/selective-post-processing-in-three-js-using-mask-pass" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Applying post-processing effects to specific objects in a Three.js scene—rather than the entire viewport—is a common requirement for creating advanced visual highlights, glowing elements, or localized shaders. This article explains how to achieve sel" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="https://github.com/salivity" title="Github" aria-label="Go To Github Profile Page"><svg class="svg-icon" focusable="false" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 1.27a11 11 0 00-3.48 21.46c.55.09.73-.28.73-.55v-1.84c-3.03.64-3.67-1.46-3.67-1.46-.55-1.29-1.28-1.65-1.28-1.65-.92-.65.1-.65.1-.65 1.1 0 1.73 1.1 1.73 1.1.92 1.65 2.57 1.2 3.21.92a2 2 0 01.64-1.47c-2.47-.27-5.04-1.19-5.04-5.5 0-1.1.46-2.1 1.2-2.84a3.76 3.76 0 010-2.93s.91-.28 3.11 1.1c1.8-.49 3.7-.49 5.5 0 2.1-1.38 3.02-1.1 3.02-1.1a3.76 3.76 0 010 2.93c.83.74 1.2 1.74 1.2 2.94 0 4.21-2.57 5.13-5.04 5.4.45.37.82.92.82 2.02v3.03c0 .27.1.64.73.55A11 11 0 0012 1.27"></path></svg></a></li>
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="selective-post-processing-in-three.js-using-mask-pass">Selective
+Post-Processing in Three.js Using Mask Pass</h1>
+<p>Applying post-processing effects to specific objects in a Three.js
+scene—rather than the entire viewport—is a common requirement for
+creating advanced visual highlights, glowing elements, or localized
+shaders. This article explains how to achieve selective post-processing
+using layers, the <code>EffectComposer</code>, and the
+<code>MaskPass</code> (accompanied by <code>ClearMaskPass</code>) to
+isolate rendering effects to a designated subset of your 3D objects.</p>
+<h2 id="the-core-concept">The Core Concept</h2>
+<p>To apply an effect to only specific objects, you must define which
+pixels on the screen those objects occupy. The <code>MaskPass</code>
+achieves this by writing the stencil buffer based on the geometry of
+your selected objects. Any subsequent post-processing passes will only
+render within the boundaries of that stencil mask.</p>
+<p>To implement this, you will use Three.js <strong>Layers</strong> to
+separate your standard objects from your masked objects, allowing a
+single camera to view different sets of objects during different
+rendering passes.</p>
+<hr />
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="set-up-the-layers">1. Set Up the Layers</h3>
+<p>Three.js objects have a <code>.layers</code> property. By default,
+all objects and cameras belong to Layer 0. Allocate a separate layer
+(e.g., Layer 1) for the objects that should receive the selective
+post-processing effect.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> DEFAULT_LAYER <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> SELECTIVE_LAYER <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Create standard object</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> backgroundBox <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> standardMaterial)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>backgroundBox<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(DEFAULT_LAYER)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(backgroundBox)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the object that will receive the effect</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> glowingSphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> effectMaterial)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>glowingSphere<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">enable</span>(SELECTIVE_LAYER)<span class="op">;</span> <span class="co">// Object now exists on both 0 and 1</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(glowingSphere)<span class="op">;</span></span></code></pre></div>
+<h3 id="configure-the-effectcomposer-and-passes">2. Configure the
+EffectComposer and Passes</h3>
+<p>Import the necessary post-processing files. You will need
+<code>EffectComposer</code>, <code>RenderPass</code>,
+<code>MaskPass</code>, <code>ClearMaskPass</code>, and the shader/effect
+pass you wish to apply (e.g., <code>ShaderPass</code> or
+<code>GlitchPass</code>).</p>
+<p>Ensure your WebGLRenderer has <code>stencil</code> enabled, as the
+<code>MaskPass</code> relies on the stencil buffer to mask the
+pixels.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">stencil</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span></code></pre></div>
+<h3 id="build-the-pass-stack">3. Build the Pass Stack</h3>
+<p>The rendering pipeline must be structured so that the main scene
+renders first, followed by the mask definition, the localized effect,
+and finally the removal of the mask.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Render the entire scene normally</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderPass <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">RenderPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(renderPass)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the Mask Pass</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskPass <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MaskPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(maskPass)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the effect pass (e.g., a custom vignette, color-shift, or blur)</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effectPass <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderPass</span>(MyCustomShader)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(effectPass)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Create the Clear Mask Pass to stop masking subsequent passes</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clearMaskPass <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ClearMaskPass</span>()<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(clearMaskPass)<span class="op">;</span></span></code></pre></div>
+<h3 id="direct-the-camera-via-render-hooks">4. Direct the Camera via
+Render Hooks</h3>
+<p>By default, the <code>MaskPass</code> will render the entire scene
+into the stencil buffer. To restrict the mask to your specific layer,
+temporarily alter the camera’s layer mask before the
+<code>MaskPass</code> executes, and restore it afterward.</p>
+<p>You can hook into the rendering cycle of the passes:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Before the mask pass renders, force the camera to only see the selective layer</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>maskPass<span class="op">.</span><span class="at">onBeforeRender</span> <span class="op">=</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">autoClear</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(SELECTIVE_LAYER)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// After the mask pass renders, restore the camera to see the default layer</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>maskPass<span class="op">.</span><span class="at">onAfterRender</span> <span class="op">=</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(DEFAULT_LAYER)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<h3 id="update-the-render-loop">5. Update the Render Loop</h3>
+<p>Replace your standard <code>renderer.render(scene, camera)</code>
+call in your animation loop with the composer’s update method.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update animations or controls here</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Render through the composer</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ul>
+<li><strong>Stencil Buffer Cost:</strong> Masking relies on stencil
+buffer operations, which are highly efficient on modern GPUs but still
+require an extra render call for the masked objects. Keep the geometry
+in the masked layer as simple as possible.</li>
+<li><strong>AutoClear:</strong> Setting
+<code>renderer.autoClear = false</code> prevents the WebGL context from
+clearing the color buffer between passes, which is necessary for the
+effect to draw on top of the base scene. Ensure your pipeline ends with
+a pass that handles rendering to the screen.</li>
+</ul></article>
+        <div id=comments-container></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'light' ? 'github-light' : 'github-dark'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
