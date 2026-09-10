@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read Pixel Colors from CanvasTexture in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to extract specific pixel color values from a Three.js CanvasTexture via the WebGL pipeline rather than accessing the underlying 2D canvas context directly. By rendering the texture onto an off-screen WebGLRenderTarget and sampl">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/read-pixel-colors-from-canvastexture-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Read Pixel Colors from CanvasTexture in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/read-pixel-colors-from-canvastexture-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to extract specific pixel color values from a Three.js CanvasTexture via the WebGL pipeline rather than accessing the underlying 2D canvas context directly. By rendering the texture onto an off-screen WebGLRenderTarget and sampl" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="read-pixel-colors-from-canvastexture-in-threejs">Read Pixel
+Colors from CanvasTexture in Three.js</h1>
+<p>This article explains how to extract specific pixel color values from
+a Three.js <code>CanvasTexture</code> via the WebGL pipeline rather than
+accessing the underlying 2D canvas context directly. By rendering the
+texture onto an off-screen <code>WebGLRenderTarget</code> and sampling
+the GPU buffer using <code>WebGLRenderer.readRenderTargetPixels</code>,
+you can retrieve accurate RGBA values entirely within Three.js APIs.</p>
+<h3 id="the-render-target-approach">The Render Target Approach</h3>
+<p>When you cannot or do not want to call <code>getImageData()</code>
+directly on the source HTML canvas element, you must query the texture
+data after it has been uploaded to the GPU. Three.js does not provide a
+direct method to read raw texture memory without a render pass. Instead,
+you render the <code>CanvasTexture</code> onto a
+<code>WebGLRenderTarget</code> and read back the target's pixel
+data.</p>
+<h3 id="1-set-up-the-off-screen-scene-and-render-target">1. Set Up the
+Off-Screen Scene and Render Target</h3>
+<p>To sample pixels, create a dedicated 1×1
+<code>WebGLRenderTarget</code> (or one matching the texture size if
+reading multiple coordinates) alongside a minimal orthographic camera
+and a plane mesh carrying the texture.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume &#39;renderer&#39; and &#39;canvasTexture&#39; are already initialized</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> canvasTexture<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">width</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> canvasTexture<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">height</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a 1x1 render target for single-pixel reading</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pixelRenderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">UnsignedByteType</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up an isolated orthographic scene</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> readScene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> readCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(<span class="op">-</span><span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="op">-</span><span class="fl">0.5</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> quadMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> canvasTexture<span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthTest</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> quadGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> quadMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(quadGeometry<span class="op">,</span> quadMaterial)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>readScene<span class="op">.</span><span class="fu">add</span>(quadMesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-extract-the-pixel-color">2. Extract the Pixel Color</h3>
+<p>To read a specific <code>(x, y)</code> coordinate, configure the
+camera view bounds to target that specific pixel, render the scene to
+the render target, and read the pixel buffer.</p>
+<p>Keep in mind that WebGL's coordinate system starts at the bottom-left
+corner, whereas HTML canvas coordinates originate from the top-left
+corner. You must invert the vertical coordinate accordingly.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getPixelColor</span>(renderer<span class="op">,</span> x<span class="op">,</span> y<span class="op">,</span> textureWidth<span class="op">,</span> textureHeight) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Convert top-left (canvas) coordinates to bottom-left (WebGL) coordinates</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> glY <span class="op">=</span> textureHeight <span class="op">-</span> y <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set the camera viewport to focus on the exact 1x1 pixel region</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  readCamera<span class="op">.</span><span class="fu">setViewOffset</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    textureWidth<span class="op">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    textureHeight<span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    x<span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    glY<span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Preserve existing renderer state</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> currentRenderTarget <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getRenderTarget</span>()<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Render the quad into the 1x1 render target</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(pixelRenderTarget)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(readScene<span class="op">,</span> readCamera)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Read the pixel data into a Uint8Array</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> pixelBuffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(<span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">readRenderTargetPixels</span>(pixelRenderTarget<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> pixelBuffer)<span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Restore the previous render target</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(currentRenderTarget)<span class="op">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  readCamera<span class="op">.</span><span class="fu">clearViewOffset</span>()<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">r</span><span class="op">:</span> pixelBuffer[<span class="dv">0</span>]<span class="op">,</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">g</span><span class="op">:</span> pixelBuffer[<span class="dv">1</span>]<span class="op">,</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    <span class="dt">b</span><span class="op">:</span> pixelBuffer[<span class="dv">2</span>]<span class="op">,</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="dt">a</span><span class="op">:</span> pixelBuffer[<span class="dv">3</span>]<span class="op">,</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="usage-example">Usage Example</h3>
+<p>Call the function by passing your renderer and desired pixel
+coordinates:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> color <span class="op">=</span> <span class="fu">getPixelColor</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dv">50</span><span class="op">,</span> <span class="co">// X coordinate</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dv">100</span><span class="op">,</span> <span class="co">// Y coordinate</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  canvasTexture<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">width</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  canvasTexture<span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">height</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`RGBA: (</span><span class="sc">${</span>color<span class="op">.</span><span class="at">r</span><span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>color<span class="op">.</span><span class="at">g</span><span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>color<span class="op">.</span><span class="at">b</span><span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>color<span class="op">.</span><span class="at">a</span><span class="sc">}</span><span class="vs">)`</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<p>Reading pixels from GPU memory to CPU memory with
+<code>readRenderTargetPixels</code> causes a pipeline stall because the
+CPU must wait for the GPU to finish rendering. For real-time
+applications requiring frequent reads across multiple frames, minimize
+the frequency of reads or bundle multiple pixel lookups into a single
+render pass to maintain high performance.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

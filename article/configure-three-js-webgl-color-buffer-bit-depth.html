@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configure Three.js WebGL Color Buffer Bit Depth - three.js</title>
+    <meta name="description" content="Configuring specific color buffer bit depths in Three.js depends on whether you are adjusting the main canvas drawing buffer or rendering off-screen using render targets. While the default HTML5 WebGL canvas is generally constrained by the browser to an">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/configure-three-js-webgl-color-buffer-bit-depth">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Configure Three.js WebGL Color Buffer Bit Depth - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/configure-three-js-webgl-color-buffer-bit-depth" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Configuring specific color buffer bit depths in Three.js depends on whether you are adjusting the main canvas drawing buffer or rendering off-screen using render targets. While the default HTML5 WebGL canvas is generally constrained by the browser to an" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="configure-threejs-webgl-color-buffer-bit-depth">Configure
+Three.js WebGL Color Buffer Bit Depth</h1>
+<p>Configuring specific color buffer bit depths in Three.js depends on
+whether you are adjusting the main canvas drawing buffer or rendering
+off-screen using render targets. While the default HTML5 WebGL canvas is
+generally constrained by the browser to an 8-bit-per-channel (RGBA8)
+format, Three.js allows you to implement specific bit depths—such as
+16-bit half-precision, 32-bit full-precision floating-point, or packed
+integer formats—using custom <code>THREE.WebGLRenderTarget</code>
+instances or WebGL 2 capabilities.</p>
+<h3 id="canvas-drawing-buffer-bit-depth">Canvas Drawing Buffer Bit
+Depth</h3>
+<p>When initializing <code>THREE.WebGLRenderer</code>, the WebGL context
+is bound to an HTML <code>&lt;canvas&gt;</code> element. The default
+canvas drawing buffer is dictated by browser capabilities and standard
+WebGL context attributes, typically defaulting to 8 bits per color
+channel (24-bit RGB or 32-bit RGBA):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">alpha</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">powerPreference</span><span class="op">:</span> <span class="st">&#39;high-performance&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Standard WebGL does not provide direct canvas context initialization
+attributes to force arbitrary channel bit depths (such as 10-bit or
+12-bit native display buffers). For deep color output (e.g., Display P3
+or Rec. 2020 on supported displays), configure the color space rather
+than raw bit depth directly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span> <span class="co">// or THREE.LinearSRGBColorSpace</span></span></code></pre></div>
+<h3 id="specifying-bit-depth-via-webglrendertarget">Specifying Bit Depth
+via WebGLRenderTarget</h3>
+<p>To achieve precise control over the color buffer bit depth during
+rendering passes, use <code>THREE.WebGLRenderTarget</code>. The
+<code>type</code> property defines the data format and precision of the
+color buffer.</p>
+<h4 id="1-16-bit-half-float-buffers-rgba16f">1. 16-Bit Half-Float
+Buffers (RGBA16F)</h4>
+<p>Ideal for High Dynamic Range (HDR) rendering, post-processing
+pipelines, and bloom passes where higher color precision is needed
+without the performance overhead of full 32-bit floats:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget16Bit <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">HalfFloatType</span><span class="op">,</span> <span class="co">// 16-bit float per channel</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearFilter</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearFilter</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="2-32-bit-full-float-buffers-rgba32f">2. 32-Bit Full-Float
+Buffers (RGBA32F)</h4>
+<p>Best for scientific calculations, deep G-buffers in deferred shading,
+or extreme-range physics data where maximum precision is required:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget32Bit <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">FloatType</span><span class="op">,</span> <span class="co">// 32-bit float per channel</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span><span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="3-8-bit-unsigned-byte-buffers-rgba8">3. 8-Bit Unsigned Byte
+Buffers (RGBA8)</h4>
+<p>The standard and most performant buffer depth for conventional
+rendering:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget8Bit <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">UnsignedByteType</span><span class="op">,</span> <span class="co">// 8-bit unsigned integer per channel (default)</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="4-packed-low-bit-depth-formats">4. Packed Low-Bit Depth
+Formats</h4>
+<p>For memory-constrained environments, Three.js supports packed 16-bit
+integer formats:</p>
+<ul>
+<li><code>THREE.UnsignedShort565Type</code>: 5 bits red, 6 bits green, 5
+bits blue (16-bit total, no alpha).</li>
+<li><code>THREE.UnsignedShort5551Type</code>: 5 bits red, 5 bits green,
+5 bits blue, 1 bit alpha.</li>
+<li><code>THREE.UnsignedShort4444Type</code>: 4 bits per RGBA
+channel.</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget565 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">UnsignedShort565Type</span><span class="op">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBFormat</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="rendering-pipeline-execution">Rendering Pipeline Execution</h3>
+<p>To render to your custom bit-depth buffer and display the result:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Direct rendering into the high-precision target</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(renderTarget16Bit)<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Reset back to the default canvas framebuffer</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(<span class="kw">null</span>)<span class="op">;</span></span></code></pre></div>
+<p>If the high-precision buffer contains values outside the standard
+[0.0, 1.0] range, map it back to the screen using a post-processing quad
+with tone mapping (such as <code>THREE.ACESFilmicToneMapping</code>) to
+avoid clipping artifacts on standard 8-bit displays.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

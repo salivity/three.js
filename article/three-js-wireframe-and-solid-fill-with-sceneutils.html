@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Wireframe and Solid Fill with SceneUtils - three.js</title>
+    <meta name="description" content="Rendering both a solid surface and an overlaid wireframe on a single 3D geometry is a common requirement in Three.js visualizations. This guide explains how to use the SceneUtils.createMultiMaterialObject utility to combine multiple materials on identica">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-wireframe-and-solid-fill-with-sceneutils">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Wireframe and Solid Fill with SceneUtils - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-wireframe-and-solid-fill-with-sceneutils" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering both a solid surface and an overlaid wireframe on a single 3D geometry is a common requirement in Three.js visualizations. This guide explains how to use the SceneUtils.createMultiMaterialObject utility to combine multiple materials on identica" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-wireframe-and-solid-fill-with-sceneutils">Three.js
+Wireframe and Solid Fill with SceneUtils</h1>
+<p>Rendering both a solid surface and an overlaid wireframe on a single
+3D geometry is a common requirement in Three.js visualizations. This
+guide explains how to use the
+<code>SceneUtils.createMultiMaterialObject</code> utility to combine
+multiple materials on identical geometry, walking through module
+imports, material definition, z-fighting prevention, and adding the
+composite object to your scene.</p>
+<h3 id="understanding-sceneutilscreatemultimaterialobject">Understanding
+<code>SceneUtils.createMultiMaterialObject</code></h3>
+<p>In modern Three.js, a standard <code>THREE.Mesh</code> accepts an
+array of materials only when the underlying geometry has defined groups
+(typically for multi-sided cube textures). It cannot render multiple
+full-coverage materials over the exact same faces simultaneously.</p>
+<p>To overcome this, <code>SceneUtils.createMultiMaterialObject</code>
+takes a single geometry and an array of materials, creating a
+<code>THREE.Group</code> containing a distinct <code>THREE.Mesh</code>
+for each material provided. This allows you to stack a wireframe mesh
+directly over a solid fill mesh while managing them as a single
+object.</p>
+<h3 id="implementation-steps">Implementation Steps</h3>
+<h4 id="1-import-the-utility">1. Import the Utility</h4>
+<p><code>SceneUtils</code> is an add-on and must be imported from the
+<code>addons</code> directory alongside core Three.js.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { SceneUtils } <span class="im">from</span> <span class="st">&#39;three/addons/utils/SceneUtils.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-create-the-geometry">2. Create the Geometry</h4>
+<p>Define the geometry you want to render.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="3-define-the-solid-and-wireframe-materials">3. Define the Solid
+and Wireframe Materials</h4>
+<p>Create two materials: one for the solid surface and one for the
+wireframe. When layering meshes in the same spatial coordinates,
+depth-buffer precision issues (z-fighting) can occur. To eliminate
+flickering, apply <code>polygonOffset</code> properties to the solid
+material.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Solid fill material</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> solidMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0x156289</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.4</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.2</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">polygonOffset</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">polygonOffsetFactor</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="co">// Push the solid mesh back slightly</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">polygonOffsetUnits</span><span class="op">:</span> <span class="dv">1</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Wireframe material</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wireframeMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materials <span class="op">=</span> [solidMaterial<span class="op">,</span> wireframeMaterial]<span class="op">;</span></span></code></pre></div>
+<h4 id="4-generate-and-add-the-multi-material-object">4. Generate and
+Add the Multi-Material Object</h4>
+<p>Pass the geometry and materials array to
+<code>SceneUtils.createMultiMaterialObject</code>, then add the returned
+group to your scene.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> multiMaterialObject <span class="op">=</span> SceneUtils<span class="op">.</span><span class="fu">createMultiMaterialObject</span>(geometry<span class="op">,</span> materials)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(multiMaterialObject)<span class="op">;</span></span></code></pre></div>
+<h3 id="manipulating-the-resulting-object">Manipulating the Resulting
+Object</h3>
+<p>Because <code>SceneUtils.createMultiMaterialObject</code> returns a
+<code>THREE.Group</code>, transformations such as position, rotation,
+and scale apply uniformly to both the solid and wireframe layers:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Transform both layers simultaneously</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>multiMaterialObject<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>multiMaterialObject<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Access individual meshes if needed</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> solidMesh <span class="op">=</span> multiMaterialObject<span class="op">.</span><span class="at">children</span>[<span class="dv">0</span>]<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wireframeMesh <span class="op">=</span> multiMaterialObject<span class="op">.</span><span class="at">children</span>[<span class="dv">1</span>]<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

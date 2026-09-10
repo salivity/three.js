@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js PointLight Physically Accurate Decay - three.js</title>
+    <meta name="description" content="This article explains how to configure a PointLight in Three.js to emulate real-world light attenuation using the physical inverse-square law. You will learn the exact properties to adjust on both the PointLight and the WebGLRenderer, how the decay and d">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-pointlight-physically-accurate-decay">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js PointLight Physically Accurate Decay - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-pointlight-physically-accurate-decay" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure a PointLight in Three.js to emulate real-world light attenuation using the physical inverse-square law. You will learn the exact properties to adjust on both the PointLight and the WebGLRenderer, how the decay and d" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-pointlight-physically-accurate-decay">Three.js
+PointLight Physically Accurate Decay</h1>
+<p>This article explains how to configure a <code>PointLight</code> in
+Three.js to emulate real-world light attenuation using the physical
+inverse-square law. You will learn the exact properties to adjust on
+both the <code>PointLight</code> and the <code>WebGLRenderer</code>, how
+the <code>decay</code> and <code>distance</code> values interact, and
+how to verify that your scene adheres to physically accurate lighting
+calculations.</p>
+<h2 id="setting-the-decay-property">Setting the Decay Property</h2>
+<p>To follow the physically accurate inverse-square law, set the
+<code>decay</code> property of the <code>PointLight</code> to
+<code>2</code>.</p>
+<p>In physics, the intensity of light radiating from a point source
+decreases inversely with the square of the distance from the source
+(<span class="math inline">\(I \propto 1/r^2\)</span>). In Three.js,
+setting <code>decay</code> to <code>2</code> implements this exact
+quadratic attenuation curve.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pointLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PointLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>pointLight<span class="op">.</span><span class="at">decay</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span></code></pre></div>
+<h2 id="configuring-the-distance-property">Configuring the Distance
+Property</h2>
+<p>The <code>distance</code> property works alongside <code>decay</code>
+to define the cutoff point for light calculations:</p>
+<ul>
+<li><strong>Infinite Range (<code>distance = 0</code>):</strong> Setting
+<code>distance = 0</code> allows the inverse-square falloff to continue
+indefinitely without an artificial cutoff. The light simply fades toward
+zero as distance increases. This is the most physically accurate
+configuration.</li>
+<li><strong>Capped Range (<code>distance &gt; 0</code>):</strong>
+Setting a positive value defines a radius where the light's intensity
+smoothly drops to zero. While mathematically an approximation, this
+improves rendering performance by allowing Three.js to cull objects
+beyond the light's effective reach.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Physically accurate with infinite reach</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>pointLight<span class="op">.</span><span class="at">distance</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Physically accurate curve with a cutoff radius of 50 units for performance</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>pointLight<span class="op">.</span><span class="at">distance</span> <span class="op">=</span> <span class="dv">50</span><span class="op">;</span></span></code></pre></div>
+<h2 id="renderer-configuration">Renderer Configuration</h2>
+<p>In recent versions of Three.js (r155 and later), physically correct
+lighting is enabled by default. If you are using an older version of
+Three.js, you must ensure your <code>WebGLRenderer</code> is not using
+legacy lighting modes:</p>
+<ul>
+<li><strong>r150 to r154:</strong> Set
+<code>renderer.useLegacyLights = false;</code></li>
+<li><strong>Prior to r150:</strong> Set
+<code>renderer.physicallyCorrectLights = true;</code></li>
+</ul>
+<p>When physical lighting is active, standard
+<code>PointLight.intensity</code> values will appear much dimmer because
+the light energy dissipates quadratically. You will need to increase the
+light's <code>intensity</code> significantly (measured in candela or
+lumens depending on your color management and unit scale) to properly
+illuminate your scene.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

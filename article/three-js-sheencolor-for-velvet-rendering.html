@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js sheenColor for Velvet Rendering - three.js</title>
+    <meta name="description" content="This article explains the function of the sheenColor property in Three.js's MeshPhysicalMaterial, focusing on how it enables realistic rendering of microfiber fabrics such as velvet. You will learn how sheenColor controls grazing-angle light scattering,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-sheencolor-for-velvet-rendering">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js sheenColor for Velvet Rendering - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-sheencolor-for-velvet-rendering" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the function of the sheenColor property in Three.js's MeshPhysicalMaterial, focusing on how it enables realistic rendering of microfiber fabrics such as velvet. You will learn how sheenColor controls grazing-angle light scattering," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-sheencolor-for-velvet-rendering">Three.js sheenColor for
+Velvet Rendering</h1>
+<p>This article explains the function of the <code>sheenColor</code>
+property in Three.js's <code>MeshPhysicalMaterial</code>, focusing on
+how it enables realistic rendering of microfiber fabrics such as velvet.
+You will learn how <code>sheenColor</code> controls grazing-angle light
+scattering, how it interacts with the diffuse base color, and how to
+combine it with other sheen properties to produce accurate textile
+appearances in WebGL.</p>
+<h3 id="the-physics-of-microfiber-and-velvet">The Physics of Microfiber
+and Velvet</h3>
+<p>Woven materials like velvet, satin, and microfiber cloth do not
+reflect light like standard hard surfaces. Instead of producing sharp
+specular highlights, they feature millions of tiny, perpendicular fabric
+fibers that catch light primarily at grazing angles—the outer edges of
+the surface relative to the camera. This creates a soft, luminous rim
+highlight known as the sheen effect.</p>
+<p>In Three.js, standard materials like
+<code>MeshStandardMaterial</code> lack the specialized shading model
+required to simulate this phenomenon. To address this,
+<code>MeshPhysicalMaterial</code> incorporates an analytical cloth
+shading model based on the Charlie sheen distribution.</p>
+<h3 id="the-specific-function-of-sheencolor">The Specific Function of
+<code>sheenColor</code></h3>
+<p>The <code>sheenColor</code> property defines the exact hue and
+brightness of the specular reflection observed at grazing angles. While
+standard specular reflections typically inherit the light source's color
+on non-metallic surfaces, cloth fibers disperse and tint reflected light
+through subsurface scattering and fiber composition.</p>
+<p>Key functions of <code>sheenColor</code> include:</p>
+<ul>
+<li><strong>Defining Rim Light Chrominance:</strong> It dictates whether
+the edge glow matches the fabric's base color or introduces a
+complementary shift. Setting <code>sheenColor</code> to a slightly
+lighter or shifted tint compared to the base color creates the rich,
+deep texture characteristic of luxury velvet.</li>
+<li><strong>Simulating Two-Tone and Iridescent Fabrics:</strong> Many
+velvet fabrics appear darker when viewed directly and shift to a
+brighter, lighter shade along the silhouettes. By decoupling
+<code>sheenColor</code> from the material’s base <code>color</code>,
+developers can simulate synthetic or dual-tone weaves (such as shot silk
+or crushed velvet) where the fibers reflect a completely different hue
+than the backing weave.</li>
+<li><strong>Controlling Specular Energy per Color Channel:</strong> By
+modifying the RGB components of <code>sheenColor</code>, you control how
+strongly individual color wavelengths reflect off the microfibers.</li>
+</ul>
+<h3 id="interaction-with-related-properties">Interaction with Related
+Properties</h3>
+<p><code>sheenColor</code> does not function in isolation; it works in
+tandem with two other properties on
+<code>MeshPhysicalMaterial</code>:</p>
+<ol type="1">
+<li><strong><code>sheen</code> (or
+<code>sheenIntensity</code>):</strong> A scalar value (typically
+<code>0.0</code> to <code>1.0</code>) that acts as a master multiplier
+for the sheen effect. If <code>sheen</code> is set to <code>0</code>,
+the <code>sheenColor</code> will have no visible effect on the
+render.</li>
+<li><strong><code>sheenRoughness</code>:</strong> Determines how broadly
+the sheen highlight spreads from the grazing edges inward across the
+geometry. A low roughness produces a tight, narrow rim along the extreme
+silhouettes, whereas a high roughness spreads the soft microfiber glow
+deeper into the face of the geometry, mimicking thick pile or plush
+velvet.</li>
+</ol>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>To configure a realistic red velvet material using
+<code>sheenColor</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velvetMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0x3b0008</span><span class="op">,</span>          <span class="co">// Deep, dark crimson base</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.8</span><span class="op">,</span>           <span class="co">// High diffuse roughness</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span>           <span class="co">// Fabrics are non-metallic</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheen</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span>               <span class="co">// Enable full sheen strength</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheenColor</span><span class="op">:</span> <span class="bn">0xff4d6d</span><span class="op">,</span>     <span class="co">// Bright, saturated pink/red rim highlight</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheenRoughness</span><span class="op">:</span> <span class="fl">0.5</span>       <span class="co">// Soft spread across fiber tips</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>By explicitly setting <code>sheenColor</code>, you provide the
+physical rendering engine with the optical data needed to simulate light
+catching the tips of microscopic fibers, elevating flat meshes into
+tactile, visually convincing textiles.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

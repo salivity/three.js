@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Depth Context Attribute in Three.js Explained - three.js</title>
+    <meta name="description" content="This article examines the significance of the depth context attribute when initializing a Three.js rendering canvas. It explores what the depth parameter controls in WebGL, how it impacts 3D object occlusion through Z-buffering, and the practical scenari">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/the-depth-context-attribute-in-three-js-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="The Depth Context Attribute in Three.js Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/the-depth-context-attribute-in-three-js-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article examines the significance of the depth context attribute when initializing a Three.js rendering canvas. It explores what the depth parameter controls in WebGL, how it impacts 3D object occlusion through Z-buffering, and the practical scenari" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="the-depth-context-attribute-in-threejs-explained">The Depth
+Context Attribute in Three.js Explained</h1>
+<p>This article examines the significance of the <code>depth</code>
+context attribute when initializing a Three.js rendering canvas. It
+explores what the <code>depth</code> parameter controls in WebGL, how it
+impacts 3D object occlusion through Z-buffering, and the practical
+scenarios where toggling this setting can optimize memory allocation and
+rendering performance.</p>
+<p>When instantiating a <code>THREE.WebGLRenderer</code>, the
+<code>depth</code> attribute is passed as a boolean in the
+initialization options. This configuration directly maps to the
+underlying WebGL context creation parameter, determining whether the
+drawing buffer is allocated with an integrated depth buffer (typically
+16 or 24 bits).</p>
+<p>By default, the <code>depth</code> attribute is set to
+<code>true</code>. This enables depth testing, also known as
+Z-buffering. In standard 3D rendering, the depth buffer keeps track of
+the distance between the camera and every fragment drawn to the screen.
+When multiple meshes overlap along the camera's line of sight, the GPU
+compares their depth values to ensure that closer objects correctly
+occlude those behind them, regardless of the order in which the meshes
+are drawn.</p>
+<p>Setting <code>depth: false</code> instructs the WebGL context not to
+allocate a depth buffer. Without depth testing, the renderer falls back
+on the painter's algorithm, where visual elements are drawn strictly in
+the sequence they are processed. Consequently, objects drawn later in
+the pipeline will overwrite earlier pixels, even if those newer objects
+are positioned further away in 3D world space.</p>
+<p>Disabling the depth buffer provides specific benefits in distinct use
+cases:</p>
+<ul>
+<li><strong>Performance and Memory Optimization:</strong> Allocating and
+continuously writing to a depth buffer consumes video memory (VRAM) and
+memory bandwidth. On mobile devices or resource-constrained hardware,
+eliminating the depth buffer reduces the GPU footprint.</li>
+<li><strong>Pure 2D or UI Rendering:</strong> If a Three.js canvas is
+used exclusively for 2D interfaces, HUD overlays, or screen-space
+effects where layer order is managed manually via draw order or scene
+graph hierarchy, a depth buffer is redundant.</li>
+<li><strong>Post-Processing Passes:</strong> In multi-pass rendering
+pipelines, dedicated full-screen quads or post-processing filter passes
+do not require spatial depth resolution and can operate efficiently with
+<code>depth: false</code>.</li>
+</ul>
+<p>For standard 3D environments requiring realistic occlusion, the
+<code>depth</code> attribute should remain enabled. It should only be
+disabled when draw order is manually managed or when building flat,
+non-overlapping canvas layers to save graphics resources.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

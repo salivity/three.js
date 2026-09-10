@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spherical Harmonics vs Directional Vectors in Three.js - three.js</title>
+    <meta name="description" content="This article explains the mathematical differences between standard directional vectors and spherical harmonics when lighting a Three.js scene. While standard directional vectors use discrete geometric rays to calculate direct specular and diffuse illumi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/spherical-harmonics-vs-directional-vectors-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Spherical Harmonics vs Directional Vectors in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/spherical-harmonics-vs-directional-vectors-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the mathematical differences between standard directional vectors and spherical harmonics when lighting a Three.js scene. While standard directional vectors use discrete geometric rays to calculate direct specular and diffuse illumi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="spherical-harmonics-vs-directional-vectors-in-threejs">Spherical
+Harmonics vs Directional Vectors in Three.js</h1>
+<p>This article explains the mathematical differences between standard
+directional vectors and spherical harmonics when lighting a Three.js
+scene. While standard directional vectors use discrete geometric rays to
+calculate direct specular and diffuse illumination via dot products,
+spherical harmonics project continuous environmental lighting into a
+frequency-space polynomial basis. Below, we break down their
+mathematical formulations, coordinate representations, and how each
+method solves the rendering equation in real-time WebGL
+applications.</p>
+<h3 id="1-mathematical-representation">1. Mathematical
+Representation</h3>
+<p>A <strong>directional vector</strong> in Three.js
+(<code>THREE.DirectionalLight</code>) represents a single, infinitely
+distant light source. Mathematically, it is defined as a discrete unit
+vector on the unit sphere <span class="math inline">\(S^2\)</span>:</p>
+<p><span class="math display">\[\mathbf{L} = (x, y, z) \in \mathbb{R}^3
+\quad \text{where} \quad \|\mathbf{L}\| = 1\]</span></p>
+<p>The incident radiance <span
+class="math inline">\(L_i(\mathbf{\omega})\)</span> from a directional
+light is modeled as a Dirac delta function centered at direction <span
+class="math inline">\(\mathbf{L}\)</span>:</p>
+<p><span class="math display">\[L_i(\mathbf{\omega}) = E_{\text{light}}
+\, \delta(\mathbf{\omega} - \mathbf{L})\]</span></p>
+<p>where <span class="math inline">\(E_{\text{light}}\)</span> is the
+color and intensity of the light source.</p>
+<p><strong>Spherical harmonics</strong> (used in
+<code>THREE.LightProbe</code> and
+<code>THREE.SphericalHarmonics3</code>) represent continuous functions
+over the sphere <span class="math inline">\(S^2\)</span>. Instead of a
+single vector, a spherical harmonic expansion models an entire spherical
+irradiance field as a linear combination of orthonormal basis functions
+<span class="math inline">\(Y_l^m(\theta, \phi)\)</span>, analogous to a
+Fourier transform mapped onto a sphere:</p>
+<p><span class="math display">\[f(\theta, \phi) = \sum_{l=0}^{\infty}
+\sum_{m=-l}^{l} c_l^m Y_l^m(\theta, \phi)\]</span></p>
+<p>In Three.js, this infinite series is truncated to order <span
+class="math inline">\(l = 2\)</span> (3 bands), yielding 9 basis
+functions (<span class="math inline">\(l=0\)</span>: 1 term, <span
+class="math inline">\(l=1\)</span>: 3 terms, <span
+class="math inline">\(l=2\)</span>: 5 terms). Because light has color,
+each coefficient <span class="math inline">\(c_l^m\)</span> contains an
+RGB vector, resulting in 27 scalar values (<span class="math inline">\(9
+\times 3\)</span>) to define the lighting environment.</p>
+<h3 id="2-solving-the-rendering-equation">2. Solving the Rendering
+Equation</h3>
+<p>The rendering equation for diffuse Lambertian surfaces requires
+integrating incoming radiance over the hemisphere <span
+class="math inline">\(\Omega\)</span>:</p>
+<p><span class="math display">\[E(\mathbf{N}) = \int_{\Omega}
+L_i(\mathbf{\omega}) (\mathbf{N} \cdot \mathbf{\omega}) \,
+d\mathbf{\omega}\]</span></p>
+<h4 id="directional-vectors-discrete-evaluation">Directional Vectors
+(Discrete Evaluation)</h4>
+<p>Because a directional light uses a Dirac delta distribution, the
+integral collapses into a single direct evaluation:</p>
+<p><span class="math display">\[E(\mathbf{N}) = E_{\text{light}} \max(0,
+\mathbf{N} \cdot \mathbf{L})\]</span></p>
+<p>In shader code, this requires only a standard Euclidean dot product
+between the normalized surface normal <span
+class="math inline">\(\mathbf{N}\)</span> and the light direction <span
+class="math inline">\(\mathbf{L}\)</span>.</p>
+<h4 id="spherical-harmonics-analytic-convolution">Spherical Harmonics
+(Analytic Convolution)</h4>
+<p>Spherical harmonics solve the entire hemispherical convolution
+analytically. By projecting both the incoming radiance function and the
+clamped cosine kernel <span class="math inline">\((\mathbf{N} \cdot
+\mathbf{\omega})\)</span> into the spherical harmonic basis, the
+convolution in spatial domain becomes an efficient coefficient
+multiplication in the frequency domain (the Funk-Hecke theorem).</p>
+<p>The diffuse irradiance <span
+class="math inline">\(E(\mathbf{N})\)</span> at any normal direction
+<span class="math inline">\(\mathbf{N} = (x, y, z)\)</span> is evaluated
+using a quadratic polynomial derived from the 9 basis functions:</p>
+<p><span class="math display">\[E(\mathbf{N}) = c_0 + c_1 y + c_2 z +
+c_3 x + c_4 x y + c_5 y z + c_6 (3z^2 - 1) + c_7 x z + c_8 (x^2 -
+y^2)\]</span></p>
+<p>Where <span class="math inline">\(c_0\)</span> through <span
+class="math inline">\(c_8\)</span> incorporate both the scene's
+projected light coefficients and the cosine lobe expansion
+coefficients.</p>
+<h3 id="3-key-differences-summary">3. Key Differences Summary</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Property</th>
+<th style="text-align: left;">Standard Directional Vector</th>
+<th style="text-align: left;">Spherical Harmonics (Order 2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Data Structure</strong></td>
+<td style="text-align: left;">Single <code>Vector3</code> + color (6
+floats)</td>
+<td style="text-align: left;">Array of 9 <code>Vector3</code>
+coefficients (27 floats)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Mathematical Domain</strong></td>
+<td style="text-align: left;">Discrete point on <span
+class="math inline">\(S^2\)</span></td>
+<td style="text-align: left;">Continuous low-frequency function over
+<span class="math inline">\(S^2\)</span></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Light Type</strong></td>
+<td style="text-align: left;">Direct, sharp, localized illumination</td>
+<td style="text-align: left;">Diffuse, indirect, ambient/environmental
+illumination</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Shader Workload</strong></td>
+<td style="text-align: left;">1 dot product, 1 clamp</td>
+<td style="text-align: left;">Quadratic polynomial evaluation using
+normal components</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>High Frequencies</strong></td>
+<td style="text-align: left;">Yes (hard shadows, sharp specular
+highlights)</td>
+<td style="text-align: left;">No (inherently blurred/low-frequency, no
+specular)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-implementation-in-threejs-shaders">4. Implementation in
+Three.js Shaders</h3>
+<p>A directional vector updates diffuse lighting linearly per light
+source:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Directional light evaluation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> dotNL <span class="op">=</span> <span class="bu">clamp</span><span class="op">(</span><span class="bu">dot</span><span class="op">(</span>geometryNormal<span class="op">,</span> directionalLight<span class="op">.</span><span class="fu">direction</span><span class="op">),</span> <span class="fl">0.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">vec3</span> directDiffuse <span class="op">=</span> dotNL <span class="op">*</span> directionalLight<span class="op">.</span><span class="fu">color</span><span class="op">;</span></span></code></pre></div>
+<p>A spherical harmonics probe evaluates irradiance as a continuous
+field without tracing multiple light rays:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Spherical harmonics diffuse evaluation (Three.js LightProbe)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">vec3</span> irradiance <span class="op">=</span> <span class="fu">shGetIrradianceAt</span><span class="op">(</span>geometryNormal<span class="op">,</span> sphericalHarmonicsCoefficients<span class="op">);</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">vec3</span> indirectDiffuse <span class="op">=</span> irradiance <span class="op">*</span> diffuseColor<span class="op">;</span></span></code></pre></div>
+<p>Directional vectors provide computationally cheap, high-frequency
+directional lighting suitable for the sun or localized spots. Spherical
+harmonics provide a compressed representation of low-frequency diffuse
+ambient light from an entire environment map, bypassing texture lookups
+and hemispherical numerical integration.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

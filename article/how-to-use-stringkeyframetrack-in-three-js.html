@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use StringKeyframeTrack in Three.js - three.js</title>
+    <meta name="description" content="Three.js provides StringKeyframeTrack to handle non-numeric, discrete data within its animation system. Unlike tracks that interpolate positions or colors smoothly, StringKeyframeTrack swaps string values instantly at designated timestamps using discrete">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-stringkeyframetrack-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use StringKeyframeTrack in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-stringkeyframetrack-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Three.js provides StringKeyframeTrack to handle non-numeric, discrete data within its animation system. Unlike tracks that interpolate positions or colors smoothly, StringKeyframeTrack swaps string values instantly at designated timestamps using discrete" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-stringkeyframetrack-in-threejs">How to Use
+StringKeyframeTrack in Three.js</h1>
+<p>Three.js provides <code>StringKeyframeTrack</code> to handle
+non-numeric, discrete data within its animation system. Unlike tracks
+that interpolate positions or colors smoothly,
+<code>StringKeyframeTrack</code> swaps string values instantly at
+designated timestamps using discrete interpolation. This guide covers
+how to instantiate a <code>StringKeyframeTrack</code>, integrate it with
+an <code>AnimationClip</code> and <code>AnimationMixer</code>, and apply
+it to manipulate text strings or swap material states across a
+timeline.</p>
+<h2 id="understanding-stringkeyframetrack">Understanding
+StringKeyframeTrack</h2>
+<p>A <code>StringKeyframeTrack</code> is constructed using three
+arguments: a target property path, an array of keyframe times in
+seconds, and an array of corresponding string values.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> THREE<span class="op">.</span><span class="fu">StringKeyframeTrack</span>(trackName<span class="op">,</span> times<span class="op">,</span> values)<span class="op">;</span></span></code></pre></div>
+<p>Because string values cannot blend mathematically, this track
+enforces discrete stepping: a value remains active until the timeline
+reaches the next keyframe timestamp.</p>
+<h2 id="animating-text-changes">Animating Text Changes</h2>
+<p>To animate text content over time, define a target property on your
+mesh or a custom data holder that your rendering loop can read to
+rebuild or update your displayed text.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create a container object holding the text property</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textHolder <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Object3D</span>()<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>textHolder<span class="op">.</span><span class="at">name</span> <span class="op">=</span> <span class="st">&quot;TextNode&quot;</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>textHolder<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">currentText</span> <span class="op">=</span> <span class="st">&quot;Intro&quot;</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(textHolder)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define keyframe times (seconds) and matching string values</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> times <span class="op">=</span> [<span class="dv">0</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">6</span>]<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> values <span class="op">=</span> [<span class="st">&quot;Intro&quot;</span><span class="op">,</span> <span class="st">&quot;Stage 1&quot;</span><span class="op">,</span> <span class="st">&quot;Stage 2&quot;</span><span class="op">,</span> <span class="st">&quot;Conclusion&quot;</span>]<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the StringKeyframeTrack targeting the property path</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textTrack <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">StringKeyframeTrack</span>(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;TextNode.userData[currentText]&#39;</span><span class="op">,</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  times<span class="op">,</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  values</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Wrap the track in an AnimationClip</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clip <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationClip</span>(<span class="st">&#39;TextSequence&#39;</span><span class="op">,</span> <span class="dv">6</span><span class="op">,</span> [textTrack])<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Initialize the AnimationMixer</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(textHolder)<span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> action <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(clip)<span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>action<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span></code></pre></div>
+<p>Inside your animation loop, monitor
+<code>textHolder.userData.currentText</code>. Whenever the value changes
+during playback, trigger an update to your text rendering mechanism
+(such as updating a Canvas texture, HTML overlay, or
+<code>TextGeometry</code>).</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> lastText <span class="op">=</span> <span class="st">&quot;&quot;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  mixer<span class="op">.</span><span class="fu">update</span>(delta)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (textHolder<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">currentText</span> <span class="op">!==</span> lastText) {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    lastText <span class="op">=</span> textHolder<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">currentText</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">updateTextDisplay</span>(lastText)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="animating-material-properties">Animating Material
+Properties</h2>
+<p>You can use <code>StringKeyframeTrack</code> to alter discrete
+material properties, such as a material's name or custom uniform
+identifiers, to trigger texture swaps or shader state transitions.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Target a specific mesh named &quot;DisplayMesh&quot;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> displayMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>displayMesh<span class="op">.</span><span class="at">name</span> <span class="op">=</span> <span class="st">&quot;DisplayMesh&quot;</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(displayMesh)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Define tracks targeting material metadata</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialTimes <span class="op">=</span> [<span class="dv">0</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">6</span>]<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialStates <span class="op">=</span> [<span class="st">&quot;diffuse_state&quot;</span><span class="op">,</span> <span class="st">&quot;damaged_state&quot;</span><span class="op">,</span> <span class="st">&quot;destroyed_state&quot;</span>]<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialTrack <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">StringKeyframeTrack</span>(</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;DisplayMesh.material.name&#39;</span><span class="op">,</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  materialTimes<span class="op">,</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  materialStates</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialClip <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationClip</span>(<span class="st">&#39;MaterialChange&#39;</span><span class="op">,</span> <span class="dv">6</span><span class="op">,</span> [materialTrack])<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialMixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(displayMesh)<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>materialMixer<span class="op">.</span><span class="fu">clipAction</span>(materialClip)<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span></code></pre></div>
+<p>In your update loop or via change detection, evaluate
+<code>displayMesh.material.name</code> to execute relevant asset swaps,
+such as changing texture maps when the state switches.</p>
+<h2 id="execution-and-playback">Execution and Playback</h2>
+<p>For all keyframe-driven property animations:</p>
+<ol type="1">
+<li>Ensure the root object passed to <code>THREE.AnimationMixer</code>
+contains the child hierarchy specified in your track name paths.</li>
+<li>Advance playback by invoking
+<code>mixer.update(clock.getDelta())</code> within your
+<code>requestAnimationFrame</code> loop.</li>
+<li>Configure timeline looping through
+<code>action.setLoop(THREE.LoopRepeat)</code> or
+<code>action.setLoop(THREE.LoopOnce)</code>.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

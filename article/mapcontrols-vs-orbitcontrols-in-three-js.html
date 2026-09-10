@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MapControls vs OrbitControls in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, MapControls is an extension of OrbitControls specifically designed to replicate the navigation dynamics of digital mapping services like Google Maps. While both control sets allow users to pan, rotate, and zoom around a central target in a 3">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/mapcontrols-vs-orbitcontrols-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="MapControls vs OrbitControls in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/mapcontrols-vs-orbitcontrols-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, MapControls is an extension of OrbitControls specifically designed to replicate the navigation dynamics of digital mapping services like Google Maps. While both control sets allow users to pan, rotate, and zoom around a central target in a 3" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mapcontrols-vs-orbitcontrols-in-threejs">MapControls vs
+OrbitControls in Three.js</h1>
+<p>In Three.js, <code>MapControls</code> is an extension of
+<code>OrbitControls</code> specifically designed to replicate the
+navigation dynamics of digital mapping services like Google Maps. While
+both control sets allow users to pan, rotate, and zoom around a central
+target in a 3D scene, <code>MapControls</code> alters default mouse
+bindings, touch interactions, and panning planes to make traversing flat
+terrain intuitive and stable.</p>
+<h3 id="ground-plane-panning-vs-screen-space-panning">Ground-Plane
+Panning vs. Screen-Space Panning</h3>
+<p>The primary mechanical difference when navigating flat terrain lies
+in the <code>screenSpacePanning</code> property.</p>
+<ul>
+<li><strong>OrbitControls</strong> sets <code>screenSpacePanning</code>
+to <code>true</code> by default. When you pan with the camera tilted
+toward the ground, the camera moves strictly up, down, left, or right
+relative to the camera viewport. Panning upward pulls the camera
+diagonally into the air, while panning downward pushes it toward or
+below the terrain surface.</li>
+<li><strong>MapControls</strong> forces <code>screenSpacePanning</code>
+to <code>false</code> by default. Panning is locked to the world
+coordinate ground plane (typically the XZ plane). Dragging the view
+slides the camera parallel to the terrain without changing its altitude
+or vertical distance relative to the ground, keeping the horizon and
+ground perspective consistent.</li>
+</ul>
+<h3 id="mouse-button-bindings">Mouse Button Bindings</h3>
+<p><code>MapControls</code> reverses the default primary mouse actions
+of <code>OrbitControls</code> to prioritize translation over
+rotation:</p>
+<ul>
+<li><strong>Left Mouse Button:</strong> In <code>OrbitControls</code>,
+left-clicking rotates (orbits) the camera around the target point. In
+<code>MapControls</code>, left-clicking pans the camera across the
+terrain surface.</li>
+<li><strong>Right Mouse Button:</strong> In <code>OrbitControls</code>,
+right-clicking pans the camera. In <code>MapControls</code>,
+right-clicking (or left-clicking while holding Ctrl) orbits the camera,
+allowing the user to tilt the pitch or rotate the compass bearing of the
+map.</li>
+<li><strong>Scroll Wheel:</strong> Both controllers use the scroll wheel
+to zoom (dolly) in and out toward the cursor's focus area or
+target.</li>
+</ul>
+<h3 id="touch-interactions-on-mobile">Touch Interactions on Mobile</h3>
+<p>The touch defaults in <code>MapControls</code> are tailored for flat
+navigation:</p>
+<ul>
+<li><strong>One-Finger Drag:</strong> Configured to pan across the
+terrain plane instead of rotating the view.</li>
+<li><strong>Two-Finger Gesture:</strong> Handles simultaneous
+pinch-to-zoom and two-finger rotation, closely matching native
+touchscreen map applications.</li>
+</ul>
+<p>By locking movement to the horizontal surface and prioritizing
+panning with the primary input, <code>MapControls</code> prevents
+accidental disorientation and ensures flat planes remain stable beneath
+the user's viewport.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

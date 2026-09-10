@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js ArrayCamera 4-Player Split-Screen Setup - three.js</title>
+    <meta name="description" content="This guide explains how to calculate the exact viewport array required to render a four-player split-screen layout using THREE.ArrayCamera in Three.js. By dividing the canvas into a 2x2 grid, you will configure each sub-camera's viewport vector using pix">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-arraycamera-4-player-split-screen-setup">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js ArrayCamera 4-Player Split-Screen Setup - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-arraycamera-4-player-split-screen-setup" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to calculate the exact viewport array required to render a four-player split-screen layout using THREE.ArrayCamera in Three.js. By dividing the canvas into a 2x2 grid, you will configure each sub-camera's viewport vector using pix" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-arraycamera-4-player-split-screen-setup">Three.js
+ArrayCamera 4-Player Split-Screen Setup</h1>
+<p>This guide explains how to calculate the exact viewport array
+required to render a four-player split-screen layout using
+<code>THREE.ArrayCamera</code> in Three.js. By dividing the canvas into
+a 2x2 grid, you will configure each sub-camera's <code>viewport</code>
+vector using pixel-based coordinates, account for WebGL's bottom-left
+origin system, and ensure correct projection matrices for
+distortion-free rendering.</p>
+<h3 id="understanding-viewport-coordinates-in-threejs">Understanding
+Viewport Coordinates in Three.js</h3>
+<p>Unlike normalized UV coordinates that scale from 0.0 to 1.0, the
+<code>viewport</code> property of an individual sub-camera in a
+<code>THREE.ArrayCamera</code> requires absolute pixel dimensions
+defined by a <code>THREE.Vector4(x, y, width, height)</code>:</p>
+<ul>
+<li><strong>x</strong>: The horizontal pixel offset from the left edge
+of the render target.</li>
+<li><strong>y</strong>: The vertical pixel offset from the
+<strong>bottom</strong> edge of the render target.</li>
+<li><strong>width</strong>: The width of the individual viewport in
+pixels.</li>
+<li><strong>height</strong>: The height of the individual viewport in
+pixels.</li>
+</ul>
+<p>Because WebGL defines <code>(0, 0)</code> at the bottom-left of the
+canvas rather than the top-left, the vertical offsets must be calculated
+with the bottom row starting at <code>y = 0</code> and the top row
+starting at half of the canvas height.</p>
+<hr />
+<h3 id="step-by-step-viewport-calculations">Step-by-Step Viewport
+Calculations</h3>
+<p>To produce a balanced 2x2 grid:</p>
+<ol type="1">
+<li><p>Determine the rendered canvas dimensions:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> totalWidth <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> totalHeight <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span></code></pre></div></li>
+<li><p>Calculate the dimensions of each sub-camera view:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> subWidth <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(totalWidth <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> subHeight <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(totalHeight <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> aspect <span class="op">=</span> subWidth <span class="op">/</span> subHeight<span class="op">;</span></span></code></pre></div></li>
+<li><p>Construct the four viewports using
+<code>THREE.Vector4</code>:</p></li>
+</ol>
+<ul>
+<li><p><strong>Player 1 (Top-Left):</strong></p>
+<ul>
+<li><code>x = 0</code></li>
+<li><code>y = subHeight</code></li>
+<li><code>Vector4(0, subHeight, subWidth, subHeight)</code></li>
+</ul></li>
+<li><p><strong>Player 2 (Top-Right):</strong></p>
+<ul>
+<li><code>x = subWidth</code></li>
+<li><code>y = subHeight</code></li>
+<li><code>Vector4(subWidth, subHeight, subWidth, subHeight)</code></li>
+</ul></li>
+<li><p><strong>Player 3 (Bottom-Left):</strong></p>
+<ul>
+<li><code>x = 0</code></li>
+<li><code>y = 0</code></li>
+<li><code>Vector4(0, 0, subWidth, subHeight)</code></li>
+</ul></li>
+<li><p><strong>Player 4 (Bottom-Right):</strong></p>
+<ul>
+<li><code>x = subWidth</code></li>
+<li><code>y = 0</code></li>
+<li><code>Vector4(subWidth, 0, subWidth, subHeight)</code></li>
+</ul></li>
+</ul>
+<hr />
+<h3 id="implementation-example">Implementation Example</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Setup the main canvas dimensions</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> subWidth <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(width <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> subHeight <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(height <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> aspect <span class="op">=</span> subWidth <span class="op">/</span> subHeight<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define sub-camera configurations</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> viewports <span class="op">=</span> [</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Top-Left (Player 1)</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector4</span>(<span class="dv">0</span><span class="op">,</span> subHeight<span class="op">,</span> subWidth<span class="op">,</span> subHeight)<span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Top-Right (Player 2)</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector4</span>(subWidth<span class="op">,</span> subHeight<span class="op">,</span> subWidth<span class="op">,</span> subHeight)<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Bottom-Left (Player 3)</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector4</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> subWidth<span class="op">,</span> subHeight)<span class="op">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Bottom-Right (Player 4)</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector4</span>(subWidth<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> subWidth<span class="op">,</span> subHeight)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cameras <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">4</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> subCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">60</span><span class="op">,</span> aspect<span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    subCamera<span class="op">.</span><span class="at">viewport</span> <span class="op">=</span> viewports[i]<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Position cameras independently per player</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    subCamera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    subCamera<span class="op">.</span><span class="fu">lookAt</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    subCamera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    cameras<span class="op">.</span><span class="fu">push</span>(subCamera)<span class="op">;</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the ArrayCamera container</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mainCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ArrayCamera</span>(cameras)<span class="op">;</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Handle window resizing</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newWidth <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newHeight <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newSubWidth <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(newWidth <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newSubHeight <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(newHeight <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newAspect <span class="op">=</span> newSubWidth <span class="op">/</span> newSubHeight<span class="op">;</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">setSize</span>(newWidth<span class="op">,</span> newHeight)<span class="op">;</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newOffsets <span class="op">=</span> [</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>        [<span class="dv">0</span><span class="op">,</span> newSubHeight]<span class="op">,</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>        [newSubWidth<span class="op">,</span> newSubHeight]<span class="op">,</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>        [<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>]<span class="op">,</span></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>        [newSubWidth<span class="op">,</span> <span class="dv">0</span>]</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">;</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    cameras<span class="op">.</span><span class="fu">forEach</span>((cam<span class="op">,</span> index) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>        cam<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> newAspect<span class="op">;</span></span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>        cam<span class="op">.</span><span class="at">viewport</span><span class="op">.</span><span class="fu">set</span>(</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>            newOffsets[index][<span class="dv">0</span>]<span class="op">,</span></span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>            newOffsets[index][<span class="dv">1</span>]<span class="op">,</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>            newSubWidth<span class="op">,</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>            newSubHeight</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>        )<span class="op">;</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>        cam<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="essential-rendering-considerations">Essential Rendering
+Considerations</h3>
+<ul>
+<li><strong>Projection Updates</strong>: Whenever the sub-camera
+viewports are modified during window resizing, you must recalculate
+<code>aspect = subWidth / subHeight</code> and call
+<code>subCamera.updateProjectionMatrix()</code> on all sub-cameras to
+prevent stretching.</li>
+<li><strong>Clear Scissor</strong>: <code>THREE.ArrayCamera</code>
+internally handles viewport offsets using WebGL scissors and viewports
+during its render loop. Do not manually call
+<code>renderer.setScissorTest(true)</code> or
+<code>renderer.setViewport()</code> inside the animation frame, as this
+interferes with the camera's internal pass.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

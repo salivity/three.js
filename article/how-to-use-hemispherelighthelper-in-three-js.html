@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use HemisphereLightHelper in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, a HemisphereLight simulates ambient outdoor illumination by blending distinct colors from the sky and the ground. This article explains how to construct and use the HemisphereLightHelper to visually debug these lighting properties directly i">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-hemispherelighthelper-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use HemisphereLightHelper in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-hemispherelighthelper-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, a HemisphereLight simulates ambient outdoor illumination by blending distinct colors from the sky and the ground. This article explains how to construct and use the HemisphereLightHelper to visually debug these lighting properties directly i" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-hemispherelighthelper-in-threejs">How to Use
+HemisphereLightHelper in Three.js</h1>
+<p>In Three.js, a <code>HemisphereLight</code> simulates ambient outdoor
+illumination by blending distinct colors from the sky and the ground.
+This article explains how to construct and use the
+<code>HemisphereLightHelper</code> to visually debug these lighting
+properties directly inside your 3D scene. You will learn the helper's
+constructor syntax, its parameters, and how to update its position
+alongside the light source.</p>
+<h3 id="understanding-the-hemispherelighthelper">Understanding the
+HemisphereLightHelper</h3>
+<p>The <code>HemisphereLightHelper</code> generates a wireframe
+geometry—typically shaped like a diamond or dual-colored sphere—at the
+light's position. One hemisphere reflects the light's sky color, while
+the opposing hemisphere reflects the ground color. This visual aid makes
+it easy to confirm the light's orientation, intensity, and color
+distribution without guessing.</p>
+<h3 id="step-1-create-the-hemispherelight">Step 1: Create the
+HemisphereLight</h3>
+<p>Before creating the helper, instantiate and configure your
+<code>HemisphereLight</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define sky color, ground color, and intensity</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> skyColor <span class="op">=</span> <span class="bn">0xb1e1ff</span><span class="op">;</span>  <span class="co">// Light blue</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> groundColor <span class="op">=</span> <span class="bn">0xb97a20</span><span class="op">;</span> <span class="co">// Brownish orange</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> intensity <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hemisphereLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">HemisphereLight</span>(skyColor<span class="op">,</span> groundColor<span class="op">,</span> intensity)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>hemisphereLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">50</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hemisphereLight)<span class="op">;</span></span></code></pre></div>
+<h3 id="step-2-construct-the-helper">Step 2: Construct the Helper</h3>
+<p>The <code>HemisphereLightHelper</code> takes up to three
+arguments:</p>
+<ul>
+<li><strong><code>light</code></strong> <em>(required)</em>: The
+<code>THREE.HemisphereLight</code> instance to visualize.</li>
+<li><strong><code>size</code></strong> <em>(required)</em>: A number
+defining the radius of the helper mesh.</li>
+<li><strong><code>color</code></strong> <em>(optional)</em>: An override
+color for the wireframe. If omitted, the helper automatically uses the
+sky and ground colors defined on the light source itself.</li>
+</ul>
+<p>To let the helper visualize both the sky and ground colors
+accurately, omit the optional third argument:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the helper with a size of 5 units</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> helperSize <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lightHelper <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">HemisphereLightHelper</span>(hemisphereLight<span class="op">,</span> helperSize)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Add the helper to the scene</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(lightHelper)<span class="op">;</span></span></code></pre></div>
+<h3 id="step-3-updating-the-helper">Step 3: Updating the Helper</h3>
+<p>If you animate or dynamically change the position, rotation, or
+colors of the <code>HemisphereLight</code> during runtime, you must
+invoke the helper's update method to keep the visualization
+synchronized:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// If the light&#39;s position or properties change</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    hemisphereLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(<span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>() <span class="op">*</span> <span class="fl">0.001</span>) <span class="op">*</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Refresh the helper&#39;s geometry and alignment</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    lightHelper<span class="op">.</span><span class="fu">update</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="disposing-of-the-helper">Disposing of the Helper</h3>
+<p>When the helper is no longer needed, remove it from the scene and
+dispose of its internal resources to prevent memory leaks:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">remove</span>(lightHelper)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>lightHelper<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

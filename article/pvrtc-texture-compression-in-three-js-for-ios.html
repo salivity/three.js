@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PVRTC Texture Compression in Three.js for iOS - three.js</title>
+    <meta name="description" content="This article explores the specific use case for utilizing PowerVR Texture Compression (PVRTC) in Three.js applications running on iOS. It details how PVRTC directly addresses mobile Safari's stringent memory limitations, eliminates runtime decoding overh">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/pvrtc-texture-compression-in-three-js-for-ios">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PVRTC Texture Compression in Three.js for iOS - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/pvrtc-texture-compression-in-three-js-for-ios" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the specific use case for utilizing PowerVR Texture Compression (PVRTC) in Three.js applications running on iOS. It details how PVRTC directly addresses mobile Safari's stringent memory limitations, eliminates runtime decoding overh" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="pvrtc-texture-compression-in-threejs-for-ios">PVRTC Texture
+Compression in Three.js for iOS</h1>
+<p>This article explores the specific use case for utilizing PowerVR
+Texture Compression (PVRTC) in Three.js applications running on iOS. It
+details how PVRTC directly addresses mobile Safari's stringent memory
+limitations, eliminates runtime decoding overhead, and prevents
+out-of-memory browser crashes. You will learn the technical mechanics of
+PVRTC in WebGL, when it is appropriate to use, and the performance
+trade-offs involved.</p>
+<h3 id="the-problem-mobile-safari-memory-limits">The Problem: Mobile
+Safari Memory Limits</h3>
+<p>When standard web formats like PNG or JPEG are loaded into a WebGL
+scene, the browser decodes them into uncompressed raw RGBA bitmaps in
+GPU memory (VRAM). A single uncompressed 2048x2048 texture requires 16
+megabytes of VRAM:</p>
+<p><span class="math display">\[\text{Memory} = 2048 \times 2048 \times
+4 \text{ bytes} = 16.77 \text{ MB}\]</span></p>
+<p>Mobile Safari enforces strict memory caps on web pages. If an
+application loads multiple high-resolution textures, the iOS operating
+system's memory manager (Jetsam) terminates the WebKit process,
+resulting in the page reloading or crashing with a "Webpage repeatedly
+crashed" error.</p>
+<h3 id="the-specific-use-case-for-pvrtc">The Specific Use Case for
+PVRTC</h3>
+<p>The primary use case for loading PVRTC textures via Three.js’s
+<code>PVRLoader</code> is maximizing VRAM efficiency and preventing
+memory-related crashes on iOS devices.</p>
+<p>PVRTC is the native hardware texture compression format supported by
+Apple mobile GPUs (PowerVR architecture and Apple silicon). Unlike PNG
+or JPEG, PVRTC textures remain compressed directly inside the GPU
+memory. The GPU decodes individual texels on the fly during
+rendering.</p>
+<p>Key benefits for iOS applications include:</p>
+<ul>
+<li><strong>Fixed VRAM Reduction:</strong> PVRTC typically compresses
+images to 4 bits per pixel (4bpp) or 2 bits per pixel (2bpp). A
+2048x2048 texture at 4bpp consumes roughly 2 megabytes of VRAM—an 87.5%
+reduction compared to raw RGBA textures.</li>
+<li><strong>Elimination of CPU Decoding Spikes:</strong> Standard image
+formats must be decompressed by the CPU before being sent to the GPU,
+causing frame drops and input lag. PVRTC files are uploaded directly to
+VRAM with minimal CPU overhead.</li>
+<li><strong>Reduced Memory Bandwidth:</strong> Because the textures
+remain small in VRAM, the GPU draws less memory bandwidth during render
+passes, leading to higher frame rates and reduced battery
+consumption.</li>
+</ul>
+<h3 id="constraints-and-considerations">Constraints and
+Considerations</h3>
+<p>While PVRTC solves memory bottlenecks, it introduces specific
+technical constraints:</p>
+<ol type="1">
+<li><strong>Power-of-Two (POT) and Square Only:</strong> Unlike desktop
+formats or modern ASTC, PVRTC requires textures to be both power-of-two
+and strictly square (e.g., 512x512, 1024x1024, 2048x2048). Non-square
+textures cannot be used.</li>
+<li><strong>Compression Artifacts:</strong> PVRTC relies on a
+dual-surface interpolation algorithm, which can introduce noticeable
+blurring or bleeding around high-contrast edges and alpha channels.</li>
+<li><strong>Platform Exclusivity:</strong> PVRTC is only supported on
+iOS and specific PowerVR-based Android devices. Desktop browsers and the
+majority of Android hardware cannot render PVRTC directly.</li>
+</ol>
+<h3 id="modern-context-raw-pvrtc-vs-basisktx2">Modern Context: Raw PVRTC
+vs. Basis/KTX2</h3>
+<p>In modern Three.js development, developers rarely ship raw
+<code>.pvr</code> files directly unless targeting a legacy runtime or
+optimizing specifically for a fixed iOS WebView wrapper.</p>
+<p>Instead, modern workflows use universal container formats like KTX2
+with Basis Universal compression. When a Three.js app loads a KTX2 file
+on an iOS device, the <code>KTX2Loader</code> dynamically transcodes the
+universal texture data into either PVRTC or ASTC at runtime based on the
+device's hardware capabilities. However, understanding raw PVRTC remains
+critical when managing strict VRAM quotas on iOS WebGL deployments.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smooth TorusKnotGeometry Segments in Three.js - three.js</title>
+    <meta name="description" content="Achieving visual smoothness on a TorusKnotGeometry at close camera ranges requires configuring the geometry's subdivision parameters to match screen-space pixel density. While default configurations cause visible polygon faceting when the camera zooms in">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/smooth-torusknotgeometry-segments-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Smooth TorusKnotGeometry Segments in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/smooth-torusknotgeometry-segments-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Achieving visual smoothness on a TorusKnotGeometry at close camera ranges requires configuring the geometry's subdivision parameters to match screen-space pixel density. While default configurations cause visible polygon faceting when the camera zooms in" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="smooth-torusknotgeometry-segments-in-threejs">Smooth
+TorusKnotGeometry Segments in Three.js</h1>
+<p>Achieving visual smoothness on a <code>TorusKnotGeometry</code> at
+close camera ranges requires configuring the geometry's subdivision
+parameters to match screen-space pixel density. While default
+configurations cause visible polygon faceting when the camera zooms in,
+calculating the ideal number of <code>radialSegments</code>—in
+conjunction with <code>tubularSegments</code>—eliminates angular edges
+along the tube's cross-section without wasting GPU memory on unneeded
+geometry.</p>
+<h3 id="understanding-the-parameters">Understanding the Parameters</h3>
+<p>In Three.js, the constructor for the knot geometry is defined as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(radius<span class="op">,</span> tube<span class="op">,</span> tubularSegments<span class="op">,</span> radialSegments<span class="op">,</span> p<span class="op">,</span> q)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>radialSegments</code></strong> controls the
+cross-sectional circle of the tube. This is the parameter responsible
+for the roundness of the tube itself when viewed head-on or along
+silhouette edges.</li>
+<li><strong><code>tubularSegments</code></strong> controls the number of
+segments along the winding path of the knot.</li>
+<li><strong><code>tube</code></strong> is the radius of the tube
+cross-section.</li>
+</ul>
+<p>The default value for <code>radialSegments</code> is <code>8</code>.
+While sufficient for distant rendering, this produces an obvious octagon
+at close range.</p>
+<hr />
+<h3 id="calculating-exact-radial-segments">Calculating Exact Radial
+Segments</h3>
+<p>To avoid noticeable faceting, the length of an individual polygon
+edge along the tube's circumference must project to less than 1 to 2
+pixels on the user's screen.</p>
+<h4 id="1-the-screen-space-formula">1. The Screen-Space Formula</h4>
+<p>Given the camera's closest approach distance (<span
+class="math inline">\(d\)</span>), field of view (<span
+class="math inline">\(FOV\)</span>), viewport height (<span
+class="math inline">\(H\)</span>), and the tube radius (<span
+class="math inline">\(r\)</span>):</p>
+<ol type="1">
+<li><p><strong>Calculate the apparent radius in pixels (<span
+class="math inline">\(r_{px}\)</span>):</strong> <span
+class="math display">\[r_{px} = \frac{r}{2 \cdot d \cdot
+\tan\left(\frac{FOV}{2}\right)} \times H\]</span></p></li>
+<li><p><strong>Determine the required segments (<span
+class="math inline">\(N_{radial}\)</span>):</strong> To make each
+segment chord length approximately 1.5 pixels: <span
+class="math display">\[N_{radial} = \left\lceil \frac{2 \cdot \pi \cdot
+r_{px}}{\text{Target Edge Length in Pixels}}
+\right\rceil\]</span></p></li>
+</ol>
+<h4 id="2-practical-implementation">2. Practical Implementation</h4>
+<p>In practice, human visual perception and hardware anti-aliasing
+(FXAA, SMAA, or MSAA) reduce the need for sub-pixel geometry. Use the
+following baseline rules for close-up inspections:</p>
+<ul>
+<li><strong>Medium Close-up</strong> (tube fills 10%–25% of the
+viewport): <strong>32 to 48 radial segments</strong>.</li>
+<li><strong>Macro / Extreme Close-up</strong> (tube fills 50%+ of the
+viewport): <strong>64 to 128 radial segments</strong>.</li>
+<li>Exceeding <strong>128 radial segments</strong> rarely improves
+visual quality because standard vertex shading and anti-aliasing already
+mask silhouette edges beyond this density.</li>
+</ul>
+<hr />
+<h3 id="dynamic-calculation-example">Dynamic Calculation Example</h3>
+<p>If your camera moves dynamically between distant and close ranges,
+compute the geometry dynamically or use Three.js's <code>LOD</code>
+(Level of Detail) system:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getOptimalRadialSegments</span>(tubeRadius<span class="op">,</span> minDistance<span class="op">,</span> camera<span class="op">,</span> rendererHeight) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> fovInRadians <span class="op">=</span> (camera<span class="op">.</span><span class="at">fov</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span>) <span class="op">/</span> <span class="dv">180</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> pixelRadius <span class="op">=</span> (tubeRadius <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> minDistance <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(fovInRadians <span class="op">/</span> <span class="dv">2</span>))) <span class="op">*</span> rendererHeight<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Target a maximum segment chord length of 2 pixels on screen</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> targetSegmentPixelLength <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> calculatedSegments <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">ceil</span>((<span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">*</span> pixelRadius) <span class="op">/</span> targetSegmentPixelLength)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Clamp between a minimum for performance and a maximum to avoid excessive vertices</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(<span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(calculatedSegments<span class="op">,</span> <span class="dv">16</span>)<span class="op">,</span> <span class="dv">128</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Example usage:</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> minCameraDistance <span class="op">=</span> <span class="fl">3.0</span><span class="op">;</span> <span class="co">// Closest unit distance camera will reach</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tubeRadius <span class="op">=</span> <span class="fl">0.4</span><span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radialSegments <span class="op">=</span> <span class="fu">getOptimalRadialSegments</span>(tubeRadius<span class="op">,</span> minCameraDistance<span class="op">,</span> camera<span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Match tubular segments proportionally to prevent lengthwise faceting</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tubularSegments <span class="op">=</span> radialSegments <span class="op">*</span> <span class="dv">4</span><span class="op">;</span> </span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="fl">1.5</span><span class="op">,</span>              <span class="co">// overall radius</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    tubeRadius<span class="op">,</span>       <span class="co">// tube radius</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    tubularSegments<span class="op">,</span>  <span class="co">// path subdivisions</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    radialSegments<span class="op">,</span>   <span class="co">// cross-section subdivisions</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="dv">2</span><span class="op">,</span>                <span class="co">// p</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="dv">3</span>                 <span class="co">// q</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="performance-considerations">Performance Considerations</h3>
+<ul>
+<li><strong>Proportional Scaling:</strong> Increasing
+<code>radialSegments</code> without scaling <code>tubularSegments</code>
+creates non-uniform UV coordinates and stretching. Keep
+<code>tubularSegments</code> roughly <span
+class="math inline">\(3\times\)</span> to <span
+class="math inline">\(6\times\)</span> higher than
+<code>radialSegments</code> due to the longer path length.</li>
+<li><strong>Vertex Normals:</strong> Ensure the mesh uses smooth
+shading. <code>TorusKnotGeometry</code> generates smooth vertex normals
+by default; do not call
+<code>geometry.computeFlatVertexNormals()</code>, as flat shading
+exposes polygonal edges regardless of segment count.</li>
+<li><strong>Level of Detail (LOD):</strong> If high segment counts
+impact frame rate, add multiple knot meshes to a <code>THREE.LOD</code>
+instance: use 16 segments at distance, 32 at mid-range, and 64–128
+segments at the closest threshold.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

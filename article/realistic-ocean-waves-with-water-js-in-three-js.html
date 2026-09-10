@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realistic Ocean Waves with Water.js in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to simulate dynamic ocean waves and planar reflections using the official Water shader component (Water.js) in Three.js. You will learn how to import the required modules, configure surface geometry, load wave normal maps, adjust">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/realistic-ocean-waves-with-water-js-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Realistic Ocean Waves with Water.js in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/realistic-ocean-waves-with-water-js-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to simulate dynamic ocean waves and planar reflections using the official Water shader component (Water.js) in Three.js. You will learn how to import the required modules, configure surface geometry, load wave normal maps, adjust" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="realistic-ocean-waves-with-waterjs-in-threejs">Realistic Ocean
+Waves with Water.js in Three.js</h1>
+<p>This guide explains how to simulate dynamic ocean waves and planar
+reflections using the official <code>Water</code> shader component
+(<code>Water.js</code>) in Three.js. You will learn how to import the
+required modules, configure surface geometry, load wave normal maps,
+adjust reflection and sun parameters, and animate the surface
+displacement inside the render loop.</p>
+<h2 id="1-import-dependencies">1. Import Dependencies</h2>
+<p>The <code>Water</code> class is not bundled in the core Three.js
+library; it resides in the add-ons directory. Import Three.js along with
+<code>Water</code> from the <code>three/addons</code> path:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Water } <span class="im">from</span> <span class="st">&#39;three/addons/objects/Water.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Sky } <span class="im">from</span> <span class="st">&#39;three/addons/objects/Sky.js&#39;</span><span class="op">;</span> <span class="co">// Optional, recommended for realistic reflections</span></span></code></pre></div>
+<h2 id="2-load-the-water-normal-map">2. Load the Water Normal Map</h2>
+<p>Realistic surface distortion relies on a normal map (commonly
+<code>waternormals.jpg</code>). The texture must repeat continuously
+across the surface:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waterNormals <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/waternormals.jpg&#39;</span><span class="op">,</span> <span class="kw">function</span> (texture) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="at">wrapS</span> <span class="op">=</span> texture<span class="op">.</span><span class="at">wrapT</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">RepeatWrapping</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="3-create-the-water-mesh">3. Create the Water Mesh</h2>
+<p>Construct a large flat plane geometry and pass it to the
+<code>Water</code> constructor alongside a configuration object:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waterGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">10000</span><span class="op">,</span> <span class="dv">10000</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> water <span class="op">=</span> <span class="kw">new</span> <span class="fu">Water</span>(waterGeometry<span class="op">,</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">textureWidth</span><span class="op">:</span> <span class="dv">512</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">textureHeight</span><span class="op">:</span> <span class="dv">512</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">waterNormals</span><span class="op">:</span> waterNormals<span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sunDirection</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sunColor</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">waterColor</span><span class="op">:</span> <span class="bn">0x001e0f</span><span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">distortionScale</span><span class="op">:</span> <span class="fl">3.7</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fog</span><span class="op">:</span> scene<span class="op">.</span><span class="at">fog</span> <span class="op">!==</span> <span class="kw">undefined</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Rotate the plane horizontally</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>water<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="op">-</span><span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(water)<span class="op">;</span></span></code></pre></div>
+<h3 id="key-configuration-parameters">Key Configuration Parameters:</h3>
+<ul>
+<li><strong><code>textureWidth</code> /
+<code>textureHeight</code></strong>: Resolution of the internal render
+target used for real-time planar reflections. Higher values yield
+sharper reflections at the cost of performance.</li>
+<li><strong><code>waterNormals</code></strong>: The repeating normal
+texture driving the wave perturbation.</li>
+<li><strong><code>distortionScale</code></strong>: Controls the
+intensity and choppiness of the wave reflections.</li>
+<li><strong><code>waterColor</code></strong>: The deep base color of the
+water body.</li>
+<li><strong><code>sunColor</code></strong> and
+<strong><code>sunDirection</code></strong>: Dictates specular highlights
+and sun glare on the wave crests.</li>
+</ul>
+<h2 id="4-align-sun-direction-and-lighting">4. Align Sun Direction and
+Lighting</h2>
+<p>Planar reflections dynamically mirror objects in the scene above the
+water plane. To ensure accurate specular highlights, bind the water
+shader's <code>sunDirection</code> uniform to your primary directional
+light source or sky system:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sun <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.5</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(directionalLight)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Update sun vector (example angles: elevation and azimuth)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> phi <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">90</span> <span class="op">-</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> theta <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">180</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>sun<span class="op">.</span><span class="fu">setFromSphericalCoords</span>(<span class="dv">1</span><span class="op">,</span> phi<span class="op">,</span> theta)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(sun)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>water<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;sunDirection&#39;</span>]<span class="op">.</span><span class="at">value</span><span class="op">.</span><span class="fu">copy</span>(sun)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="5-animate-wave-motion">5. Animate Wave Motion</h2>
+<p>To produce flowing waves, update the <code>time</code> uniform inside
+your application's request animation frame loop:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Increment time uniform to scroll normal maps</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    water<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;time&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">+=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="fl">60.0</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="complete-implementation-example">Complete Implementation
+Example</h2>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Water } <span class="im">from</span> <span class="st">&#39;three/addons/objects/Water.js&#39;</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Scene, Camera, Renderer</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">55</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">20000</span>)<span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">30</span><span class="op">,</span> <span class="dv">30</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">toneMapping</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ACESFilmicToneMapping</span><span class="op">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Sunlight</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sun <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">2.0</span>)<span class="op">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(light)<span class="op">;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Water Mesh</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waterGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">10000</span><span class="op">,</span> <span class="dv">10000</span>)<span class="op">;</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> water <span class="op">=</span> <span class="kw">new</span> <span class="fu">Water</span>(waterGeometry<span class="op">,</span> {</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">textureWidth</span><span class="op">:</span> <span class="dv">512</span><span class="op">,</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="dt">textureHeight</span><span class="op">:</span> <span class="dv">512</span><span class="op">,</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">waterNormals</span><span class="op">:</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/waternormals.jpg&#39;</span><span class="op">,</span> (t) <span class="kw">=&gt;</span> {</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        t<span class="op">.</span><span class="at">wrapS</span> <span class="op">=</span> t<span class="op">.</span><span class="at">wrapT</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">RepeatWrapping</span><span class="op">;</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    })<span class="op">,</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sunDirection</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">,</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sunColor</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">waterColor</span><span class="op">:</span> <span class="bn">0x001e0f</span><span class="op">,</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">distortionScale</span><span class="op">:</span> <span class="fl">3.7</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>water<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="op">-</span><span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(water)<span class="op">;</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a><span class="co">// Position Light and Update Water Uniform</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>sun<span class="op">.</span><span class="fu">set</span>(<span class="dv">100</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="op">-</span><span class="dv">100</span>)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(sun)<span class="op">;</span></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>water<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;sunDirection&#39;</span>]<span class="op">.</span><span class="at">value</span><span class="op">.</span><span class="fu">copy</span>(sun)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="co">// Animation Loop</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>    water<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;time&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">+=</span> <span class="fl">1.0</span> <span class="op">/</span> <span class="fl">60.0</span><span class="op">;</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

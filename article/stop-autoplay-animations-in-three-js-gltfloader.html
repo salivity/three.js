@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stop Autoplay Animations in Three.js GLTFLoader - three.js</title>
+    <meta name="description" content="This guide explains how to prevent and safely disable the automatic playback of embedded animations when importing 3D models with Three.js GLTFLoader. By default, Three.js does not play animations without an AnimationMixer, but many viewer setups, boiler">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/stop-autoplay-animations-in-three-js-gltfloader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Stop Autoplay Animations in Three.js GLTFLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/stop-autoplay-animations-in-three-js-gltfloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to prevent and safely disable the automatic playback of embedded animations when importing 3D models with Three.js GLTFLoader. By default, Three.js does not play animations without an AnimationMixer, but many viewer setups, boiler" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="stop-autoplay-animations-in-threejs-gltfloader">Stop Autoplay
+Animations in Three.js GLTFLoader</h1>
+<p>This guide explains how to prevent and safely disable the automatic
+playback of embedded animations when importing 3D models with Three.js
+<code>GLTFLoader</code>. By default, Three.js does not play animations
+without an <code>AnimationMixer</code>, but many viewer setups,
+boilerplates, and loaders automatically trigger playback within their
+loading callbacks. Below are the precise steps and code practices
+required to keep embedded glTF animations halted immediately upon
+loading until you explicitly trigger them.</p>
+<h3 id="why-gltf-animations-autoplay">Why GLTF Animations Autoplay</h3>
+<p>Three.js requires an <code>AnimationMixer</code> to advance animation
+clips. In glTF files, animations are stored inside the
+<code>gltf.animations</code> array. If an animation plays immediately
+upon loading, it is because your code (or a library wrapper) creates an
+<code>AnimationMixer</code>, retrieves an <code>AnimationAction</code>
+via <code>mixer.clipAction()</code>, and calls <code>.play()</code>
+within the <code>GLTFLoader.load()</code> success callback.</p>
+<h3 id="preventing-playback-at-the-loader-level">Preventing Playback at
+the Loader Level</h3>
+<p>The safest way to disable automatic playback is to instantiate the
+<code>AnimationMixer</code> without triggering <code>.play()</code> on
+any clip actions. Store references to the clips so they can be triggered
+later via user interaction or custom game logic.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> mixer <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> actions <span class="op">=</span> {}<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;model.glb&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(model)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Initialize the mixer</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(model)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Prepare animations without playing them</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    gltf<span class="op">.</span><span class="at">animations</span><span class="op">.</span><span class="fu">forEach</span>((clip) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> action <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(clip)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Do NOT call action.play() here</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        actions[clip<span class="op">.</span><span class="at">name</span>] <span class="op">=</span> action<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="safely-halting-pre-configured-or-wrapper-autoplay">Safely
+Halting Pre-Configured or Wrapper Autoplay</h3>
+<p>If you are using a setup where actions are already running, or if you
+use automated tools that launch animations automatically, call
+<code>.stop()</code> on all running actions immediately after
+initialization:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;model.glb&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(model)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(model)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    gltf<span class="op">.</span><span class="at">animations</span><span class="op">.</span><span class="fu">forEach</span>((clip) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> action <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(clip)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Immediately halt and reset the action if previously played</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        action<span class="op">.</span><span class="fu">stop</span>()<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        action<span class="op">.</span><span class="fu">reset</span>()<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Optional: Keep it on the first frame without running</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        action<span class="op">.</span><span class="at">paused</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="managing-the-animation-loop-safely">Managing the Animation Loop
+Safely</h3>
+<p>Even if <code>.play()</code> is called, the animation will not
+visibly progress in the scene unless the mixer's time is updated. To
+safely ensure background processing does not silently advance hidden
+animations, guard the <code>mixer.update()</code> call inside your
+render loop:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> isAnimationEnabled <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Only advance the mixer when you explicitly allow it</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (mixer <span class="op">&amp;&amp;</span> isAnimationEnabled) {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        mixer<span class="op">.</span><span class="fu">update</span>(delta)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<p>By decoupling action creation from <code>.play()</code> and
+conditionally controlling the <code>mixer.update(delta)</code> call in
+the render loop, you ensure embedded glTF animations remain completely
+static upon loading.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

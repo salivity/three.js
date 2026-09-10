@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js AlphaMap: Make Black Pixels Transparent - three.js</title>
+    <meta name="description" content="In Three.js, an alphaMap allows you to control the opacity of a surface using a grayscale texture, where black areas become completely transparent and white areas remain fully opaque. To achieve this effect, you must assign the texture to the material's">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-alphamap-make-black-pixels-transparent">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js AlphaMap: Make Black Pixels Transparent - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-alphamap-make-black-pixels-transparent" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, an alphaMap allows you to control the opacity of a surface using a grayscale texture, where black areas become completely transparent and white areas remain fully opaque. To achieve this effect, you must assign the texture to the material's" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-alphamap-make-black-pixels-transparent">Three.js
+AlphaMap: Make Black Pixels Transparent</h1>
+<p>In Three.js, an <code>alphaMap</code> allows you to control the
+opacity of a surface using a grayscale texture, where black areas become
+completely transparent and white areas remain fully opaque. To achieve
+this effect, you must assign the texture to the material's
+<code>alphaMap</code> property and explicitly enable transparency. This
+guide details the essential material settings, provides a working code
+example, and addresses common depth-sorting issues when rendering
+transparent textures.</p>
+<h3 id="1-load-the-grayscale-texture">1. Load the Grayscale Texture</h3>
+<p>An <code>alphaMap</code> uses a grayscale image where black
+(<code>#000000</code> or RGB 0,0,0) corresponds to an alpha value of 0
+(fully transparent), and white (<code>#ffffff</code> or RGB 255,255,255)
+corresponds to an alpha value of 1 (fully opaque). Load your image using
+<code>THREE.TextureLoader</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> alphaTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/mask.png&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-material">2. Configure the Material</h3>
+<p>Assigning the texture to <code>alphaMap</code> alone is not enough.
+You must set <code>transparent: true</code> on the material. Without
+this flag, Three.js ignores all alpha calculations, and the object will
+render as completely opaque.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">alphaMap</span><span class="op">:</span> alphaTexture<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-handle-binary-transparency-with-alphatest">3. Handle Binary
+Transparency with <code>alphaTest</code></h3>
+<p>If your texture has hard edges and only needs to be either 100%
+visible or 100% invisible (such as foliage, fences, or decals), use the
+<code>alphaTest</code> property.</p>
+<p>Setting <code>alphaTest</code> tells the WebGL renderer to discard
+pixels below a certain alpha threshold rather than blending them. This
+prevents common depth sorting artifacts where transparent objects
+incorrectly occlude items behind them.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">alphaMap</span><span class="op">:</span> alphaTexture<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">alphaTest</span><span class="op">:</span> <span class="fl">0.5</span> <span class="co">// Discards any pixel with an alpha lower than 0.5</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="4-manage-depth-sorting-for-smooth-gradients">4. Manage Depth
+Sorting for Smooth Gradients</h3>
+<p>If your <code>alphaMap</code> contains smooth gradients
+(semi-transparent values between pure black and pure white) instead of
+hard cutouts, do not use <code>alphaTest</code>. Instead, manage depth
+writing:</p>
+<ul>
+<li><strong><code>depthWrite: false</code></strong>: Prevents the
+semi-transparent object from writing to the depth buffer, ensuring
+objects behind it are drawn properly.</li>
+<li><strong><code>side: THREE.DoubleSide</code></strong>: Useful if the
+back of the geometry should also be visible through the transparent
+gaps.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">alphaMap</span><span class="op">:</span> alphaTexture<span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">side</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">DoubleSide</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="summary-checklist">Summary Checklist</h3>
+<ul>
+<li>Use an image with pure black pixels (<code>#000000</code>) for the
+areas that should disappear.</li>
+<li>Set <code>material.alphaMap = alphaTexture</code>.</li>
+<li>Always set <code>material.transparent = true</code>.</li>
+<li>Use <code>alphaTest: 0.1</code> to <code>0.5</code> for cutout
+textures to fix sorting issues.</li>
+<li>Disable <code>depthWrite: false</code> if using smooth,
+semi-transparent gradients.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why You Should Not Scale a Three.js PerspectiveCamera - three.js</title>
+    <meta name="description" content="In Three.js, the PerspectiveCamera inherits a scale vector from the base Object3D class, but modifying it is a common anti-pattern that leads to unexpected rendering artifacts and broken spatial calculations. This article explains how scaling affects a c">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/why-you-should-not-scale-a-three-js-perspectivecamera">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why You Should Not Scale a Three.js PerspectiveCamera - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/why-you-should-not-scale-a-three-js-perspectivecamera" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the PerspectiveCamera inherits a scale vector from the base Object3D class, but modifying it is a common anti-pattern that leads to unexpected rendering artifacts and broken spatial calculations. This article explains how scaling affects a c" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="why-you-should-not-scale-a-threejs-perspectivecamera">Why You
+Should Not Scale a Three.js PerspectiveCamera</h1>
+<p>In Three.js, the <code>PerspectiveCamera</code> inherits a
+<code>scale</code> vector from the base <code>Object3D</code> class, but
+modifying it is a common anti-pattern that leads to unexpected rendering
+artifacts and broken spatial calculations. This article explains how
+scaling affects a camera's underlying transformation matrices, why it
+causes critical issues with raycasting and shaders, and how to properly
+alter a camera's field of view or zoom level using standard Three.js
+methods.</p>
+<h2 id="how-the-scale-property-affects-a-camera">How the Scale Property
+Affects a Camera</h2>
+<p>Because <code>PerspectiveCamera</code> extends <code>Object3D</code>,
+it automatically includes properties for <code>position</code>,
+<code>rotation</code>, <code>quaternion</code>, and <code>scale</code>.
+When you modify <code>camera.scale</code>, Three.js applies that scaling
+factor to the camera's local transformation matrix
+(<code>camera.matrix</code>) and subsequent world matrix
+(<code>camera.matrixWorld</code>).</p>
+<p>A camera in 3D graphics does not render itself; instead, it defines
+the transformation that maps the 3D world into the camera's local
+coordinate space (the view matrix). The view matrix is calculated by
+taking the mathematical inverse of the camera's
+<code>matrixWorld</code>:</p>
+<p><span class="math display">\[\text{View Matrix} = (\text{Camera
+MatrixWorld})^{-1}\]</span></p>
+<p>If you apply a scale of <code>(2, 2, 2)</code> to your camera, its
+<code>matrixWorld</code> expands, meaning the resulting view matrix
+scales the entire rendered scene down by half
+<code>(0.5, 0.5, 0.5)</code>. Conversely, scaling the camera down causes
+the entire rendered world to appear larger. If non-uniform scaling is
+applied—such as <code>(1, 2, 1)</code>—the world is squashed or
+stretched unevenly.</p>
+<h2 id="why-modifying-camera-scale-is-avoided">Why Modifying Camera
+Scale Is Avoided</h2>
+<p>While scaling a camera might initially seem like a shortcut to zoom
+in or out, it introduces severe architectural and computational problems
+throughout a Three.js application.</p>
+<h3 id="1-it-does-not-affect-the-projection-matrix">1. It Does Not
+Affect the Projection Matrix</h3>
+<p>A camera's visual characteristics—such as perspective distortion,
+depth limits, and field of view—are governed strictly by its
+<code>projectionMatrix</code>. Modifying <code>camera.scale</code>
+completely bypasses the projection matrix and alters the view matrix
+instead. This creates a disconnect between the camera's optical
+parameters (<code>fov</code>, <code>aspect</code>, <code>near</code>,
+<code>far</code>) and its actual rendered output.</p>
+<h3 id="2-broken-raycasting-and-interaction">2. Broken Raycasting and
+Interaction</h3>
+<p>Three.js uses <code>Raycaster</code> for mouse picking, object
+selection, and collision detection. The raycasting algorithm relies on
+<code>camera.projectionMatrix</code> and <code>camera.matrixWorld</code>
+to unproject screen coordinates back into 3D world space.</p>
+<p>When a camera has non-unit scale values (anything other than
+<code>(1, 1, 1)</code>), the inverted transformation matrices produce
+incorrect directional vectors and origin points. As a result, raycasting
+fails to detect objects accurately beneath the mouse cursor.</p>
+<h3 id="3-shader-and-lighting-inconsistencies">3. Shader and Lighting
+Inconsistencies</h3>
+<p>Many standard materials and custom shaders perform lighting and
+reflection calculations in view space (camera space). These calculations
+rely on surface normal vectors remaining unit length and orthogonal.
+When a camera is scaled non-uniformly, the view matrix distorts these
+normal vectors, causing broken specular highlights, incorrect normal
+mapping, and erratic shading.</p>
+<h3 id="4-hierarchical-transform-pitfalls">4. Hierarchical Transform
+Pitfalls</h3>
+<p>If a camera is attached as a child to another moving or scaling
+object (such as a vehicle or character mesh), any scale applied to the
+parent object propagates down into the camera's
+<code>matrixWorld</code>. This causes unintentional scaling bugs that
+can be difficult to track down if developers are unaware of how scale
+affects the view matrix.</p>
+<h2 id="the-correct-ways-to-zoom-or-adjust-framing">The Correct Ways to
+Zoom or Adjust Framing</h2>
+<p>Instead of altering the <code>scale</code> property, Three.js
+provides dedicated parameters designed to control camera perspective and
+framing without breaking the underlying transformation math.</p>
+<h3 id="adjusting-field-of-view-fov">Adjusting Field of View (FOV)</h3>
+<p>To create a natural optical zoom (similar to adjusting the focal
+length on a physical camera lens), change the <code>fov</code> property.
+Whenever <code>fov</code> is altered, you must call
+<code>updateProjectionMatrix()</code> to recompute the projection
+parameters:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> <span class="dv">30</span><span class="op">;</span> <span class="co">// Narrower field of view (zoomed in)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="adjusting-the-zoom-property">Adjusting the Zoom Property</h3>
+<p>Three.js also provides a <code>zoom</code> property directly on
+<code>PerspectiveCamera</code>. This applies a uniform factor to the
+projection matrix without touching the view matrix:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">zoom</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span> <span class="co">// 2x magnification</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="translating-the-camera-position">Translating the Camera
+Position</h3>
+<p>To move closer to or further away from a target without changing the
+optical characteristics or perspective lines of the scene, modify the
+camera's <code>position</code> or use dedicated controls like
+<code>OrbitControls</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">-=</span> <span class="dv">5</span><span class="op">;</span> <span class="co">// Move physically closer</span></span></code></pre></div>
+<p>Keeping the camera's scale vector strictly at <code>(1, 1, 1)</code>
+ensures that rendering pipelines, interaction tools, and mathematical
+calculations remain accurate and predictable.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

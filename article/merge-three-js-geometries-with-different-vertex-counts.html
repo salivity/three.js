@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Three.js Geometries With Different Vertex Counts - three.js</title>
+    <meta name="description" content="This guide explains how to merge BufferGeometry instances with different vertex counts in Three.js. In Three.js, a single BufferGeometry requires every attached attribute (such as position, normal, and uv) to share the exact same vertex count. Consequent">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/merge-three-js-geometries-with-different-vertex-counts">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Merge Three.js Geometries With Different Vertex Counts - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/merge-three-js-geometries-with-different-vertex-counts" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to merge BufferGeometry instances with different vertex counts in Three.js. In Three.js, a single BufferGeometry requires every attached attribute (such as position, normal, and uv) to share the exact same vertex count. Consequent" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="merge-threejs-geometries-with-different-vertex-counts">Merge
+Three.js Geometries With Different Vertex Counts</h1>
+<p>This guide explains how to merge <code>BufferGeometry</code>
+instances with different vertex counts in Three.js. In Three.js, a
+single <code>BufferGeometry</code> requires every attached attribute
+(such as <code>position</code>, <code>normal</code>, and
+<code>uv</code>) to share the exact same vertex count. Consequently,
+handling geometries with differing counts depends on whether you are
+concatenating two distinct geometries into a single combined mesh or
+attempting to share attribute data between them.</p>
+<h2 id="the-rule-of-buffergeometry-attributes">The Rule of
+BufferGeometry Attributes</h2>
+<p>Every <code>BufferAttribute</code> attached to a single
+<code>BufferGeometry</code> instance must contain the same number of
+vertices. If your geometry has 100 vertices, its <code>position</code>
+attribute has a count of 100 (300 floats), and its <code>uv</code>
+attribute must also have a count of 100 (200 floats). You cannot
+directly attach an attribute with count <span
+class="math inline">\(A\)</span> and an attribute with count <span
+class="math inline">\(B\)</span> to the same geometry without padding,
+truncating, or interpolating the data.</p>
+<h2
+id="concatenating-geometries-using-buffergeometryutils">Concatenating
+Geometries Using BufferGeometryUtils</h2>
+<p>If your goal is to combine two distinct geometries (Geometry A with
+<span class="math inline">\(N\)</span> vertices and Geometry B with
+<span class="math inline">\(M\)</span> vertices) into a single geometry
+containing <span class="math inline">\(N + M\)</span> vertices, use the
+<code>BufferGeometryUtils.mergeGeometries</code> function.</p>
+<h3 id="1-ensure-matching-attributes">1. Ensure Matching Attributes</h3>
+<p><code>mergeGeometries</code> requires both geometries to share the
+same set of attributes. If Geometry A has <code>position</code>,
+<code>normal</code>, and <code>uv</code>, Geometry B must also possess
+<code>position</code>, <code>normal</code>, and <code>uv</code>.</p>
+<p>If one geometry lacks an attribute, you must generate it or fill it
+with default values prior to merging:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> BufferGeometryUtils <span class="im">from</span> <span class="st">&#39;three/addons/utils/BufferGeometryUtils.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure both geometries have identical attributes</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (geometryA<span class="op">.</span><span class="fu">hasAttribute</span>(<span class="st">&#39;uv&#39;</span>) <span class="op">&amp;&amp;</span> <span class="op">!</span>geometryB<span class="op">.</span><span class="fu">hasAttribute</span>(<span class="st">&#39;uv&#39;</span>)) {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> count <span class="op">=</span> geometryB<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">count</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> emptyUvs <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(count <span class="op">*</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    geometryB<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;uv&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(emptyUvs<span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="2-merge-the-geometries">2. Merge the Geometries</h3>
+<p>Pass the array of geometries into
+<code>BufferGeometryUtils.mergeGeometries</code>. The utility
+automatically handles index offsets and concatenates the attribute
+buffers:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometries <span class="op">=</span> [geometryA<span class="op">,</span> geometryB]<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Merge into a single BufferGeometry</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mergedGeometry <span class="op">=</span> BufferGeometryUtils<span class="op">.</span><span class="fu">mergeGeometries</span>(geometries<span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span>mergedGeometry) {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Failed to merge geometries. Ensure attribute formats match.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Setting the second argument (<code>useGroups</code>) to
+<code>true</code> creates groups within the merged geometry, allowing
+you to apply multiple materials to the resulting mesh.</p>
+<h2 id="merging-geometries-manually">Merging Geometries Manually</h2>
+<p>If you cannot use <code>BufferGeometryUtils</code>, you can manually
+allocate a new <code>Float32Array</code> that sums the counts of both
+geometries:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> countA <span class="op">=</span> geometryA<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">count</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> countB <span class="op">=</span> geometryB<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">count</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> totalCount <span class="op">=</span> countA <span class="op">+</span> countB<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Combine positions</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mergedPositions <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(totalCount <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>mergedPositions<span class="op">.</span><span class="fu">set</span>(geometryA<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">array</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>mergedPositions<span class="op">.</span><span class="fu">set</span>(geometryB<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">array</span><span class="op">,</span> countA <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mergedGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>mergedGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(mergedPositions<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Handle indices if present</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (geometryA<span class="op">.</span><span class="at">index</span> <span class="op">&amp;&amp;</span> geometryB<span class="op">.</span><span class="at">index</span>) {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indexA <span class="op">=</span> geometryA<span class="op">.</span><span class="at">index</span><span class="op">.</span><span class="at">array</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indexB <span class="op">=</span> geometryB<span class="op">.</span><span class="at">index</span><span class="op">.</span><span class="at">array</span><span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> mergedIndices <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint32Array</span>(indexA<span class="op">.</span><span class="at">length</span> <span class="op">+</span> indexB<span class="op">.</span><span class="at">length</span>)<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    mergedIndices<span class="op">.</span><span class="fu">set</span>(indexA<span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> indexB<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        mergedIndices[indexA<span class="op">.</span><span class="at">length</span> <span class="op">+</span> i] <span class="op">=</span> indexB[i] <span class="op">+</span> countA<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    mergedGeometry<span class="op">.</span><span class="fu">setIndex</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(mergedIndices<span class="op">,</span> <span class="dv">1</span>))<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="transferring-attributes-between-different-meshes">Transferring
+Attributes Between Different Meshes</h2>
+<p>If your goal is to transfer attribute values from a mesh with <span
+class="math inline">\(N\)</span> vertices onto an existing mesh with
+<span class="math inline">\(M\)</span> vertices (such as transferring
+vertex colors or UVs), direct assignment is impossible. You must sample
+or interpolate the data:</p>
+<ol type="1">
+<li><strong>Raycasting / Nearest Neighbor:</strong> For every vertex in
+the target geometry, find the nearest vertex or surface point on the
+source geometry and sample the attribute value.</li>
+<li><strong>Padding / Truncating:</strong> If the vertex counts differ
+simply because of unused buffer space, resize the smaller array using
+<code>new Float32Array(targetCount * itemSize)</code> and copy the
+relevant values, populating remainder slots with zero or default
+coordinates.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

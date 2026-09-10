@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaining Bezier Curves in Three.js Shapes - three.js</title>
+    <meta name="description" content="Constructing complex 2D shapes in Three.js often requires chaining multiple cubic Bézier curves together while maintaining smooth transitions across segment boundaries. This article explains the mathematical formulation behind the Path.bezierCurveTo met">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/chaining-bezier-curves-in-three-js-shapes">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Chaining Bezier Curves in Three.js Shapes - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/chaining-bezier-curves-in-three-js-shapes" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Constructing complex 2D shapes in Three.js often requires chaining multiple cubic Bézier curves together while maintaining smooth transitions across segment boundaries. This article explains the mathematical formulation behind the Path.bezierCurveTo met" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="chaining-bezier-curves-in-threejs-shapes">Chaining Bezier Curves
+in Three.js Shapes</h1>
+<p>Constructing complex 2D shapes in Three.js often requires chaining
+multiple cubic Bézier curves together while maintaining smooth
+transitions across segment boundaries. This article explains the
+mathematical formulation behind the <code>Path.bezierCurveTo</code>
+method, details the continuity conditions (<span
+class="math inline">\(C^0\)</span> and <span
+class="math inline">\(C^1\)</span>) required for smooth joins, and
+demonstrates how to assemble these curves into a closed
+<code>THREE.Shape</code> to generate a renderable
+<code>THREE.ShapeGeometry</code>.</p>
+<h3 id="the-cubic-bézier-formulation">The Cubic Bézier Formulation</h3>
+<p>A cubic Bézier curve is defined by four points: an origin <span
+class="math inline">\(P_0\)</span>, two control points <span
+class="math inline">\(P_1\)</span> and <span
+class="math inline">\(P_2\)</span> that dictate curvature and direction,
+and a destination <span class="math inline">\(P_3\)</span>.
+Parametrically, for <span class="math inline">\(t \in [0, 1]\)</span>,
+the curve <span class="math inline">\(B(t)\)</span> is expressed as:</p>
+<p><span class="math display">\[B(t) = (1 - t)^3 P_0 + 3(1 - t)^2 t P_1
++ 3(1 - t) t^2 P_2 + t^3 P_3\]</span></p>
+<p>In Three.js,
+<code>Path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)</code> maps
+directly to this equation:</p>
+<ul>
+<li><span class="math inline">\(P_0\)</span> is implicitly defined by
+the current position of the path (either from a prior
+<code>moveTo</code> or the end point of the preceding segment).</li>
+<li><span class="math inline">\(P_1 = (\text{cp1x},
+\text{cp1y})\)</span> acts as the first handle controlling exit velocity
+from <span class="math inline">\(P_0\)</span>.</li>
+<li><span class="math inline">\(P_2 = (\text{cp2x},
+\text{cp2y})\)</span> acts as the second handle controlling entry
+velocity into <span class="math inline">\(P_3\)</span>.</li>
+<li><span class="math inline">\(P_3 = (x, y)\)</span> is the terminal
+anchor point of the segment.</li>
+</ul>
+<h3 id="mathematical-conditions-for-smooth-chaining">Mathematical
+Conditions for Smooth Chaining</h3>
+<p>When linking segment <span class="math inline">\(A\)</span> to
+segment <span class="math inline">\(B\)</span>, continuity constraints
+determine how seamless the resulting boundary will appear:</p>
+<ol type="1">
+<li><p><strong>Positional Continuity (<span
+class="math inline">\(C^0\)</span>):</strong> The endpoint of segment
+<span class="math inline">\(A\)</span> must equal the start point of
+segment <span class="math inline">\(B\)</span>. In Three.js, this is
+handled automatically because <code>bezierCurveTo</code> starts directly
+from the previous point: <span class="math display">\[P_{0, B} = P_{3,
+A}\]</span></p></li>
+<li><p><strong>Tangential Continuity (<span
+class="math inline">\(C^1\)</span>):</strong> To prevent sharp corners,
+the first derivative of segment <span class="math inline">\(A\)</span>
+at <span class="math inline">\(t = 1\)</span> must equal the first
+derivative of segment <span class="math inline">\(B\)</span> at <span
+class="math inline">\(t = 0\)</span>.</p></li>
+</ol>
+<p>The first derivative of a cubic Bézier curve at its boundaries
+evaluates to: <span class="math display">\[B&#39;(0) = 3(P_1 -
+P_0)\]</span> <span class="math display">\[B&#39;(1) = 3(P_3 -
+P_2)\]</span></p>
+<p>Setting <span class="math inline">\(B&#39;_A(1) =
+B&#39;_B(0)\)</span> gives: <span class="math display">\[3(P_{3, A} -
+P_{2, A}) = 3(P_{1, B} - P_{0, B})\]</span></p>
+<p>Because <span class="math inline">\(P_{0, B} = P_{3, A}\)</span>,
+this simplifies to: <span class="math display">\[P_{1, B} = 2P_{3, A} -
+P_{2, A}\]</span></p>
+<p>Thus, to achieve <span class="math inline">\(C^1\)</span> continuity,
+the first control point of the new segment (<span
+class="math inline">\(P_{1, B}\)</span>) must be the point reflection of
+the prior segment's second control point (<span
+class="math inline">\(P_{2, A}\)</span>) across the shared anchor point
+(<span class="math inline">\(P_{3, A}\)</span>).</p>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>The following code constructs a closed, smooth teardrop-like shape by
+chaining two cubic curves using the reflection formula, and then creates
+a 2D mesh:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize a Shape (which extends THREE.Path)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shape <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Shape</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Segment 1 Definition</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p0 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">60</span><span class="op">,</span> <span class="op">-</span><span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">80</span><span class="op">,</span> <span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p3 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Move to origin of the path</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>shape<span class="op">.</span><span class="fu">moveTo</span>(p0<span class="op">.</span><span class="at">x</span><span class="op">,</span> p0<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Draw the first curve</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>shape<span class="op">.</span><span class="fu">bezierCurveTo</span>(p1<span class="op">.</span><span class="at">x</span><span class="op">,</span> p1<span class="op">.</span><span class="at">y</span><span class="op">,</span> p2<span class="op">.</span><span class="at">x</span><span class="op">,</span> p2<span class="op">.</span><span class="at">y</span><span class="op">,</span> p3<span class="op">.</span><span class="at">x</span><span class="op">,</span> p3<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate Segment 2 Control Points for C1 continuity at p3:</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// p1_next must be collinear with p2 and p3: p1_next = 2 * p3 - p2</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p1_next <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">.</span><span class="fu">copy</span>(p3)<span class="op">.</span><span class="fu">multiplyScalar</span>(<span class="dv">2</span>)<span class="op">.</span><span class="fu">sub</span>(p2)<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">// Choose an arbitrary incoming handle for returning to p0</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> p2_next <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">60</span><span class="op">,</span> <span class="op">-</span><span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co">// For C1 continuity at closure (p0), p2_next should ideally align </span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="co">// with p1 across p0: p2_next = 2 * p0 - p1</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>p2_next<span class="op">.</span><span class="fu">copy</span>(p0)<span class="op">.</span><span class="fu">multiplyScalar</span>(<span class="dv">2</span>)<span class="op">.</span><span class="fu">sub</span>(p1)<span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Draw the second curve back to p0</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>shape<span class="op">.</span><span class="fu">bezierCurveTo</span>(p1_next<span class="op">.</span><span class="at">x</span><span class="op">,</span> p1_next<span class="op">.</span><span class="at">y</span><span class="op">,</span> p2_next<span class="op">.</span><span class="at">x</span><span class="op">,</span> p2_next<span class="op">.</span><span class="at">y</span><span class="op">,</span> p0<span class="op">.</span><span class="at">x</span><span class="op">,</span> p0<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Generate geometry and triangulate the 2D surface</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShapeGeometry</span>(shape<span class="op">,</span> <span class="dv">32</span>)<span class="op">;</span> <span class="co">// 32 curves segments per curve</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x007acc</span><span class="op">,</span> <span class="dt">side</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">DoubleSide</span> })<span class="op">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span></code></pre></div>
+<h3 id="triangulation-and-curve-resolution">Triangulation and Curve
+Resolution</h3>
+<p><code>THREE.ShapeGeometry</code> uses Earcut internally to
+triangulate the enclosed region bounded by the path segments. The second
+parameter of <code>THREE.ShapeGeometry(shape, curveSegments)</code>
+controls the subdivision resolution of the Bézier curves. A higher value
+generates more interpolated linear vertices along the curve parameters
+prior to triangulation, yielding a smoother edge at the expense of a
+higher polygon count.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

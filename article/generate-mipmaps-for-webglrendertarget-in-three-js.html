@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Mipmaps for WebGLRenderTarget in Three.js - three.js</title>
+    <meta name="description" content="Generating mipmaps for an off-screen render target in Three.js ensures that textures rendered to surfaces maintain visual quality without aliasing or shimmering artifacts when scaled down. By configuring the appropriate minification filter on the target'">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/generate-mipmaps-for-webglrendertarget-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Generate Mipmaps for WebGLRenderTarget in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/generate-mipmaps-for-webglrendertarget-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generating mipmaps for an off-screen render target in Three.js ensures that textures rendered to surfaces maintain visual quality without aliasing or shimmering artifacts when scaled down. By configuring the appropriate minification filter on the target'" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="generate-mipmaps-for-webglrendertarget-in-threejs">Generate
+Mipmaps for WebGLRenderTarget in Three.js</h1>
+<p>Generating mipmaps for an off-screen render target in Three.js
+ensures that textures rendered to surfaces maintain visual quality
+without aliasing or shimmering artifacts when scaled down. By
+configuring the appropriate minification filter on the target's
+underlying texture and enabling mipmap generation, Three.js will
+automatically build mipmap chains during your rendering loop, or you can
+force the process on demand using dedicated renderer methods.</p>
+<h3 id="1-configure-the-webglrendertarget-options">1. Configure the
+WebGLRenderTarget Options</h3>
+<p>By default, Three.js often disables mipmap generation for render
+targets to save performance. To enable automatic mipmapping, you must
+explicitly set <code>generateMipmaps</code> to <code>true</code> and
+configure the texture’s <code>minFilter</code> to a mipmap-enabled
+filter.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">generateMipmaps</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearMipmapLinearFilter</span><span class="op">,</span> <span class="co">// Requires mipmaps to work properly</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearFilter</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>If you modify an existing render target after instantiation, update
+the properties directly on its <code>texture</code> object:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>renderTarget<span class="op">.</span><span class="at">texture</span><span class="op">.</span><span class="at">generateMipmaps</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>renderTarget<span class="op">.</span><span class="at">texture</span><span class="op">.</span><span class="at">minFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearMipmapLinearFilter</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>renderTarget<span class="op">.</span><span class="at">texture</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-automatic-generation-during-the-render-loop">2. Automatic
+Generation During the Render Loop</h3>
+<p>Once configured with a mipmap-compatible <code>minFilter</code> and
+<code>generateMipmaps: true</code>, Three.js automatically triggers
+<code>gl.generateMipmap()</code> whenever the render target is rendered
+to via <code>renderer.render()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Switch output to the render target</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(renderTarget)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Draw your scene; Three.js automatically generates mipmaps at the end of the pass</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Reset output back to the default canvas</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(<span class="kw">null</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-forcing-mipmap-generation-manually">3. Forcing Mipmap
+Generation Manually</h3>
+<p>If you are modifying the render target outside the standard
+<code>renderer.render()</code> pass, or using custom shaders that write
+to it directly without automatic updates, you can force the mipmaps to
+recalculate using the
+<code>WebGLRenderer.updateRenderTargetMipmap()</code> method:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">updateRenderTargetMipmap</span>(renderTarget)<span class="op">;</span></span></code></pre></div>
+<p>This command directly forces the underlying WebGL context to
+recalculate all mipmap levels immediately for the texture attached to
+the specified render target.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

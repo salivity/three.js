@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuring outputColorSpace for PBR in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to properly configure the WebGLRenderer.outputColorSpace property in Three.js to achieve accurate, physically based rendering (PBR) colors. You will learn the correct color space settings for modern Three.js versions, how linear">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/configuring-outputcolorspace-for-pbr-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Configuring outputColorSpace for PBR in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/configuring-outputcolorspace-for-pbr-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to properly configure the WebGLRenderer.outputColorSpace property in Three.js to achieve accurate, physically based rendering (PBR) colors. You will learn the correct color space settings for modern Three.js versions, how linear" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="configuring-outputcolorspace-for-pbr-in-threejs">Configuring
+outputColorSpace for PBR in Three.js</h1>
+<p>This article explains how to properly configure the
+<code>WebGLRenderer.outputColorSpace</code> property in Three.js to
+achieve accurate, physically based rendering (PBR) colors. You will
+learn the correct color space settings for modern Three.js versions, how
+linear rendering interacts with sRGB display outputs, and how to
+configure textures to prevent models from appearing washed out or
+excessively dark.</p>
+<h2 id="understanding-color-spaces-in-modern-threejs">Understanding
+Color Spaces in Modern Three.js</h2>
+<p>Physically based rendering calculations must occur in a linear color
+space so that light accumulation, reflections, and material properties
+behave mathematically correctly according to the laws of physics.
+However, computer monitors display colors using the non-linear sRGB
+color space.</p>
+<p>To bridge this gap, Three.js performs all internal shader
+calculations in linear space and must convert the final image to sRGB
+right before presenting it to the screen.</p>
+<h2 id="setting-webglrendereroutputcolorspace">Setting
+WebGLRenderer.outputColorSpace</h2>
+<p>In modern Three.js (r152 and newer), color management is enabled by
+default. To ensure the final rendered image is converted from linear
+space to standard display space, set the renderer's
+<code>outputColorSpace</code> property to
+<code>THREE.SRGBColorSpace</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Configure the output color space for PBR</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span></code></pre></div>
+<p><em>(Note: In versions prior to r152, this was handled by
+<code>renderer.outputEncoding = THREE.sRGBEncoding</code>, which is now
+deprecated.)</em></p>
+<h2 id="aligning-texture-color-spaces">Aligning Texture Color
+Spaces</h2>
+<p>Configuring <code>outputColorSpace</code> on the renderer is only
+half of the workflow. For colors to display correctly, input textures
+must also have their color spaces declared properly:</p>
+<ol type="1">
+<li><strong>Color Data (Albedo / Base Color / Diffuse):</strong>
+Textures that represent visible color are usually authored in sRGB
+space. They must be tagged as <code>THREE.SRGBColorSpace</code> so
+Three.js can convert them to linear space for shader calculations.</li>
+<li><strong>Non-Color Data (Roughness, Metalness, Normal, Ambient
+Occlusion):</strong> Textures containing mathematical data must remain
+in linear space. Set their color space to
+<code>THREE.NoColorSpace</code> (or
+<code>THREE.LinearSRGBColorSpace</code>).</li>
+</ol>
+<h3 id="texture-configuration-example">Texture Configuration
+Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Base color texture (sRGB)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseColorMap <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/albedo.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>baseColorMap<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Normal map / Data texture (Linear)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalMap <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/normal.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>normalMap<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NoColorSpace</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">map</span><span class="op">:</span> baseColorMap<span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">normalMap</span><span class="op">:</span> normalMap<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.5</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When using <code>GLTFLoader</code>, color space settings for textures
+are handled automatically according to the glTF 2.0 specification. As
+long as <code>renderer.outputColorSpace</code> is set to
+<code>THREE.SRGBColorSpace</code>, glTF models will render with
+mathematically correct colors directly out of the box.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Updating Three.js CanvasTexture with needsUpdate - three.js</title>
+    <meta name="description" content="This article explains how to refresh a dynamic CanvasTexture in Three.js when changes are made to an underlying HTML5 2D canvas. By default, Three.js uploads texture data to the GPU once to optimize rendering performance. When you modify the canvas using">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/updating-three-js-canvastexture-with-needsupdate">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Updating Three.js CanvasTexture with needsUpdate - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/updating-three-js-canvastexture-with-needsupdate" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to refresh a dynamic CanvasTexture in Three.js when changes are made to an underlying HTML5 2D canvas. By default, Three.js uploads texture data to the GPU once to optimize rendering performance. When you modify the canvas using" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="updating-threejs-canvastexture-with-needsupdate">Updating
+Three.js CanvasTexture with needsUpdate</h1>
+<p>This article explains how to refresh a dynamic
+<code>CanvasTexture</code> in Three.js when changes are made to an
+underlying HTML5 2D canvas. By default, Three.js uploads texture data to
+the GPU once to optimize rendering performance. When you modify the
+canvas using the 2D rendering context, you must explicitly flag the
+texture with <code>needsUpdate = true</code> so the WebGL renderer
+uploads the newly drawn pixels to the GPU.</p>
+<h3 id="the-problem-with-dynamic-canvas-textures">The Problem with
+Dynamic Canvas Textures</h3>
+<p>When you instantiate a <code>THREE.CanvasTexture</code>, Three.js
+transfers the initial image data from the CPU (the
+<code>&lt;canvas&gt;</code> element) to a WebGL texture buffer on the
+GPU. To maintain high frame rates, Three.js assumes textures are static
+unless instructed otherwise. Consequently, standard 2D canvas drawing
+methods—such as <code>fillRect()</code>, <code>fillText()</code>, or
+<code>drawImage()</code>—will alter the DOM canvas, but the changes will
+not appear on the 3D model automatically.</p>
+<h3 id="the-solution-setting-needsupdate--true">The Solution: Setting
+<code>needsUpdate = true</code></h3>
+<p>To synchronize the canvas changes with the GPU, set the texture's
+<code>needsUpdate</code> property to <code>true</code> immediately after
+finishing your 2D draw operations.</p>
+<p>Here is a complete implementation showing how to create, modify, and
+update a <code>CanvasTexture</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the offscreen or DOM canvas</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canvas <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;canvas&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ctx <span class="op">=</span> canvas<span class="op">.</span><span class="fu">getContext</span>(<span class="st">&#39;2d&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Initial draw</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="at">fillStyle</span> <span class="op">=</span> <span class="st">&#39;#ffffff&#39;</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="fu">fillRect</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">width</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">height</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the CanvasTexture and assign it to a material</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CanvasTexture</span>(canvas)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">map</span><span class="op">:</span> texture })<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Define a function to redraw the canvas and trigger the GPU upload</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateCanvasTexture</span>(text) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Redraw onto the 2D context</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  ctx<span class="op">.</span><span class="at">fillStyle</span> <span class="op">=</span> <span class="st">&#39;#ff0000&#39;</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  ctx<span class="op">.</span><span class="fu">fillRect</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">width</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">height</span>)<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  ctx<span class="op">.</span><span class="at">fillStyle</span> <span class="op">=</span> <span class="st">&#39;#ffffff&#39;</span><span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  ctx<span class="op">.</span><span class="at">font</span> <span class="op">=</span> <span class="st">&#39;48px sans-serif&#39;</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  ctx<span class="op">.</span><span class="fu">fillText</span>(text<span class="op">,</span> <span class="dv">50</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Instruct Three.js to upload the new canvas pixels to the GPU</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  texture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Example usage</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="fu">updateCanvasTexture</span>(<span class="st">&#39;Updated Text&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="how-it-works-internally">How It Works Internally</h3>
+<p>When the render loop executes
+(<code>renderer.render(scene, camera)</code>), Three.js inspects all
+active textures. If <code>texture.needsUpdate</code> evaluates to
+<code>true</code>, the renderer invokes WebGL's
+<code>gl.texSubImage2D()</code> or <code>gl.texImage2D()</code>. This
+operation re-reads the canvas pixel data and overwrites the existing GPU
+texture memory. Once the transfer is complete, Three.js automatically
+resets <code>needsUpdate</code> back to <code>false</code> until you set
+it again for subsequent updates.</p>
+<h3 id="best-practices-for-performance">Best Practices for
+Performance</h3>
+<ul>
+<li><strong>Update Only When Necessary:</strong> Transferring pixel data
+across the CPU-to-GPU bridge is computationally expensive. Avoid setting
+<code>needsUpdate = true</code> inside a continuous animation loop
+unless the canvas content has actually changed that frame.</li>
+<li><strong>Canvas Sizing:</strong> Keep canvas dimensions to powers of
+two (e.g., 256x256, 512x512) to ensure broad compatibility and optimize
+GPU memory layout.</li>
+<li><strong>Batch Drawing:</strong> Complete all 2D context
+modifications first, and then set <code>needsUpdate = true</code> once
+at the very end of your drawing sequence.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

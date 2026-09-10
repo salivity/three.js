@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js WebGLProgram cacheKey and Shader Caching - three.js</title>
+    <meta name="description" content="In Three.js, compiling WebGL shader programs is a performance-heavy task. To optimize rendering, the engine caches compiled shaders using an internal identifier managed through WebGLProgram. This article covers how the shader program caching mechanism wo">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-webglprogram-cachekey-and-shader-caching">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js WebGLProgram cacheKey and Shader Caching - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-webglprogram-cachekey-and-shader-caching" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, compiling WebGL shader programs is a performance-heavy task. To optimize rendering, the engine caches compiled shaders using an internal identifier managed through WebGLProgram. This article covers how the shader program caching mechanism wo" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-webglprogram-cachekey-and-shader-caching">Three.js
+WebGLProgram cacheKey and Shader Caching</h1>
+<p>In Three.js, compiling WebGL shader programs is a performance-heavy
+task. To optimize rendering, the engine caches compiled shaders using an
+internal identifier managed through <code>WebGLProgram</code>. This
+article covers how the shader program caching mechanism works, why
+shader conflicts occur when modifying materials, and how to use the
+<code>customProgramCacheKey</code> property to manually alter the cache
+key and force unique shader compilations.</p>
+<h2 id="what-is-webglprogramcachekey">What is
+WebGLProgram.cacheKey?</h2>
+<p>Every time a material is prepared for rendering, Three.js generates a
+unique string identifier representing the compiled shader: the program's
+cache key. Under the hood, the <code>WebGLPrograms</code> manager
+maintains an internal pool of active <code>WebGLProgram</code>
+instances.</p>
+<p>Instead of compiling a new GLSL program for every mesh or material
+instance, Three.js checks whether a program with the same configuration
+already exists. The generated cache key encapsulates all structural
+shader variables, including:</p>
+<ul>
+<li>Vertex and fragment shader prefixes and defines</li>
+<li>Active lights and shadow configurations</li>
+<li>Enabled texture map channels (roughness, metalness, normal maps,
+etc.)</li>
+<li>Instancing, clipping planes, and fog settings</li>
+</ul>
+<p>If two materials generate the identical cache key, Three.js reuses
+the existing compiled <code>WebGLProgram</code>, bypassing costly WebGL
+API compilation calls (<code>gl.compileShader</code> and
+<code>gl.linkProgram</code>).</p>
+<h2 id="the-shader-sharing-problem-with-onbeforecompile">The Shader
+Sharing Problem with onBeforeCompile</h2>
+<p>A common pitfall arises when customizing built-in materials using
+<code>Material.onBeforeCompile</code>. Because
+<code>onBeforeCompile</code> dynamically modifies the GLSL code directly
+before it is passed to the WebGL compiler, Three.js cannot automatically
+inspect the injected string modifications.</p>
+<p>If you have two instances of <code>MeshStandardMaterial</code> with
+the exact same base properties (e.g., color, roughness, light setup),
+but inject different GLSL logic via <code>onBeforeCompile</code>,
+Three.js will calculate an identical cache key for both. As a result,
+the engine assigns the first compiled shader to both materials, ignoring
+the modifications made to the second material.</p>
+<h2 id="how-to-manually-alter-the-cache-key">How to Manually Alter the
+Cache Key</h2>
+<p>To prevent collisions and force unique shader compilation, Three.js
+provides the <code>customProgramCacheKey</code> method on the base
+<code>Material</code> class.</p>
+<p>By default, <code>material.customProgramCacheKey</code> returns an
+empty string. When implemented, the returned string is appended directly
+into the internal cache key generation logic inside
+<code>WebGLPrograms</code>.</p>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>To force Three.js to compile a unique <code>WebGLProgram</code> for
+customized materials, assign a function returning a distinct identifier
+to <code>customProgramCacheKey</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Customize Material A</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>materialA<span class="op">.</span><span class="at">onBeforeCompile</span> <span class="op">=</span> (shader) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  shader<span class="op">.</span><span class="at">fragmentShader</span> <span class="op">=</span> shader<span class="op">.</span><span class="at">fragmentShader</span><span class="op">.</span><span class="fu">replace</span>(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;#include &lt;dithering_fragment&gt;&#39;</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;#include &lt;dithering_fragment&gt;</span><span class="sc">\n</span><span class="st">gl_FragColor.rgb *= 0.5;&#39;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>materialA<span class="op">.</span><span class="at">customProgramCacheKey</span> <span class="op">=</span> () <span class="kw">=&gt;</span> <span class="st">&#39;custom_darken_effect&#39;</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Customize Material B with different logic</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>materialB<span class="op">.</span><span class="at">onBeforeCompile</span> <span class="op">=</span> (shader) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  shader<span class="op">.</span><span class="at">fragmentShader</span> <span class="op">=</span> shader<span class="op">.</span><span class="at">fragmentShader</span><span class="op">.</span><span class="fu">replace</span>(</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;#include &lt;dithering_fragment&gt;&#39;</span><span class="op">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;#include &lt;dithering_fragment&gt;</span><span class="sc">\n</span><span class="st">gl_FragColor.rgb += vec3(0.2);&#39;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>materialB<span class="op">.</span><span class="at">customProgramCacheKey</span> <span class="op">=</span> () <span class="kw">=&gt;</span> <span class="st">&#39;custom_brighten_effect&#39;</span><span class="op">;</span></span></code></pre></div>
+<p>Because <code>customProgramCacheKey</code> returns different strings
+(<code>custom_darken_effect</code> and
+<code>custom_brighten_effect</code>), Three.js treats them as separate
+entities, compiling two distinct <code>WebGLProgram</code> instances
+despite identical baseline material parameters.</p>
+<h3 id="dynamic-cache-keys">Dynamic Cache Keys</h3>
+<p>If the injected shader depends on specific configuration parameters,
+ensure those parameters are serialized into the cache key string:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">effectIntensity</span> <span class="op">=</span> <span class="fl">2.0</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">customProgramCacheKey</span> <span class="op">=</span> <span class="kw">function</span> () {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="vs">`dissolveEffect_</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">effectIntensity</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">?</span> <span class="st">&#39;enabled&#39;</span> <span class="op">:</span> <span class="st">&#39;disabled&#39;</span><span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>When changing the returned value of
+<code>customProgramCacheKey</code> during runtime, set
+<code>material.needsUpdate = true</code> to inform Three.js that it must
+evaluate the cache and recompile the program for the next frame.</p>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Avoid non-deterministic keys:</strong> Never return random
+numbers (such as <code>Math.random()</code>) or timestamps. Doing so
+causes memory leaks by continually compiling and storing redundant WebGL
+programs in the cache.</li>
+<li><strong>Reuse keys when shaders are identical:</strong> If multiple
+materials use the same injected shader alterations, they should return
+the identical <code>customProgramCacheKey</code>. This ensures that they
+share the compiled program instead of duplicating it.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

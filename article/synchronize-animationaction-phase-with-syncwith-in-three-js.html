@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronize AnimationAction Phase with syncWith in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to precisely align the playback phase of two separate AnimationAction instances in Three.js using the .syncWith() method. You will learn the mechanics behind .syncWith(), how to handle animation clips with identical or differing d">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/synchronize-animationaction-phase-with-syncwith-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Synchronize AnimationAction Phase with syncWith in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/synchronize-animationaction-phase-with-syncwith-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to precisely align the playback phase of two separate AnimationAction instances in Three.js using the .syncWith() method. You will learn the mechanics behind .syncWith(), how to handle animation clips with identical or differing d" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="synchronize-animationaction-phase-with-syncwith-in-threejs">Synchronize
+AnimationAction Phase with syncWith in Three.js</h1>
+<p>This guide explains how to precisely align the playback phase of two
+separate <code>AnimationAction</code> instances in Three.js using the
+<code>.syncWith()</code> method. You will learn the mechanics behind
+<code>.syncWith()</code>, how to handle animation clips with identical
+or differing durations, and how to combine phase synchronization with
+weight crossfading for seamless transitions such as blending a walk
+cycle into a run cycle.</p>
+<h3 id="understanding-syncwith">Understanding <code>syncWith</code></h3>
+<p>In Three.js, an <code>AnimationAction</code> controls the playback of
+an <code>AnimationClip</code>. When transitioning between cyclic
+animations (like locomotion cycles), failing to align the phase causes
+limbs to snap or desynchronize.</p>
+<p>The <code>syncWith(action)</code> method synchronizes the calling
+action to a reference action by copying two internal properties:</p>
+<ul>
+<li><code>time</code>: Sets the current playback position (in seconds)
+to match the target action.</li>
+<li><code>timeScale</code>: Sets the playback speed to match the target
+action.</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>secondaryAction<span class="op">.</span><span class="fu">syncWith</span>(primaryAction)<span class="op">;</span></span></code></pre></div>
+<h3 id="synchronizing-clips-of-equal-duration">Synchronizing Clips of
+Equal Duration</h3>
+<p>When both animation clips share the exact same duration,
+synchronizing the phase requires only a single call to
+<code>.syncWith()</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieve actions from your AnimationMixer</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> walkAction <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(walkClip)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> walkFastAction <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(walkFastClip)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Start the primary action</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>walkAction<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Prepare and synchronize the second action</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>walkFastAction<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>walkFastAction<span class="op">.</span><span class="fu">syncWith</span>(walkAction)<span class="op">;</span></span></code></pre></div>
+<p>Because their durations are identical, matching absolute playback
+time (<code>time</code>) automatically matches the normalized playback
+phase (<span class="math inline">\(0.0\)</span> to <span
+class="math inline">\(1.0\)</span>).</p>
+<h3 id="synchronizing-clips-of-different-durations">Synchronizing Clips
+of Different Durations</h3>
+<p>If two cyclic clips have different durations (for example, a
+1.2-second walk cycle and an 0.8-second run cycle), copying absolute
+time directly will cause phase misalignment. To achieve identical phase
+synchronization, you must adjust the playback speed
+(<code>timeScale</code>) or normalize the time relative to their
+durations.</p>
+<h4 id="method-scale-timescale-to-maintain-proportional-phase">Method:
+Scale <code>timeScale</code> to Maintain Proportional Phase</h4>
+<p>To keep both actions continuously in phase over multiple loops,
+adjust the <code>timeScale</code> of the target action proportionally to
+the ratio of their durations before calling
+<code>.syncWith()</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> walkAction <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(walkClip)<span class="op">;</span> <span class="co">// duration: 1.2s</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> runAction <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(runClip)<span class="op">;</span>   <span class="co">// duration: 0.8s</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the duration ratio</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ratio <span class="op">=</span> runClip<span class="op">.</span><span class="at">duration</span> <span class="op">/</span> walkClip<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Match the phase dynamically</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>runAction<span class="op">.</span><span class="at">time</span> <span class="op">=</span> (walkAction<span class="op">.</span><span class="at">time</span> <span class="op">/</span> walkClip<span class="op">.</span><span class="at">duration</span>) <span class="op">*</span> runClip<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>runAction<span class="op">.</span><span class="at">timeScale</span> <span class="op">=</span> walkAction<span class="op">.</span><span class="at">timeScale</span> <span class="op">*</span> ratio<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Call syncWith to link synchronization</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>runAction<span class="op">.</span><span class="fu">syncWith</span>(walkAction)<span class="op">;</span></span></code></pre></div>
+<p>By factoring the duration ratio into <code>timeScale</code>, both
+clips complete their full cycles in parallel, ensuring that key phase
+events (such as footfalls) occur at the exact same moment.</p>
+<h3 id="seamless-blending-and-crossfading">Seamless Blending and
+Crossfading</h3>
+<p>Synchronizing phase is most commonly used right before crossfading
+between two animations. Synchronize the phase immediately before
+applying the transition to eliminate visual stutter:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">transitionToRun</span>(mixer<span class="op">,</span> walkAction<span class="op">,</span> runAction<span class="op">,</span> duration <span class="op">=</span> <span class="fl">0.5</span>) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Ensure the destination action is enabled and active</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    runAction<span class="op">.</span><span class="fu">reset</span>()<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    runAction<span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Align the phase of the new action to the current action</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    runAction<span class="op">.</span><span class="fu">syncWith</span>(walkAction)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. If durations differ, adjust timeScale relative to duration</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ratio <span class="op">=</span> runAction<span class="op">.</span><span class="fu">getClip</span>()<span class="op">.</span><span class="at">duration</span> <span class="op">/</span> walkAction<span class="op">.</span><span class="fu">getClip</span>()<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    runAction<span class="op">.</span><span class="at">timeScale</span> <span class="op">=</span> walkAction<span class="op">.</span><span class="at">timeScale</span> <span class="op">*</span> ratio<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Crossfade weights smoothly</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    walkAction<span class="op">.</span><span class="fu">crossFadeTo</span>(runAction<span class="op">,</span> duration<span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    runAction<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="essential-rules-for-stable-synchronization">Essential Rules for
+Stable Synchronization</h3>
+<ul>
+<li><strong>Call order matters:</strong> Ensure the primary action is
+already updating or playing so that its <code>time</code> value is valid
+before passing it into <code>syncWith()</code>.</li>
+<li><strong>Loop settings:</strong> Both actions should share the same
+<code>loop</code> configuration (typically
+<code>THREE.LoopRepeat</code>) to prevent one action from stopping while
+the other continues.</li>
+<li><strong>Mixer updates:</strong> Phase synchronization calculations
+should occur outside or prior to <code>mixer.update(deltaTime)</code> in
+your render loop to prevent one-frame synchronization offsets.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

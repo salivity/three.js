@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebuilding Three.js BoxGeometry from Parameters - three.js</title>
+    <meta name="description" content="This article explains how to extract configuration data from the BoxGeometry.parameters object in Three.js to mathematically construct a customized BufferGeometry from scratch. By reading the original width, height, depth, and segment dimensions, you can">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/rebuilding-three-js-boxgeometry-from-parameters">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Rebuilding Three.js BoxGeometry from Parameters - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/rebuilding-three-js-boxgeometry-from-parameters" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to extract configuration data from the BoxGeometry.parameters object in Three.js to mathematically construct a customized BufferGeometry from scratch. By reading the original width, height, depth, and segment dimensions, you can" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="rebuilding-threejs-boxgeometry-from-parameters">Rebuilding
+Three.js BoxGeometry from Parameters</h1>
+<p>This article explains how to extract configuration data from the
+<code>BoxGeometry.parameters</code> object in Three.js to mathematically
+construct a customized <code>BufferGeometry</code> from scratch. By
+reading the original width, height, depth, and segment dimensions, you
+can reconstruct the six faces of a cuboid algorithmically, allowing you
+to inject custom vertex transformations, non-linear deformations, or
+procedural modifications into the raw geometry buffers.</p>
+<h2 id="accessing-boxgeometryparameters">Accessing
+<code>BoxGeometry.parameters</code></h2>
+<p>When you instantiate a <code>THREE.BoxGeometry</code>, Three.js
+attaches a <code>parameters</code> property containing the values used
+during construction:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> originalBox <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">6</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    width<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    height<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    depth<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    widthSegments<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    heightSegments<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    depthSegments</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>} <span class="op">=</span> originalBox<span class="op">.</span><span class="at">parameters</span><span class="op">;</span></span></code></pre></div>
+<p>This metadata provides the foundational measurements required to
+recompute the grid divisions, vertex coordinates, normals, and UV
+layouts across all six cube faces (+X, -X, +Y, -Y, +Z, and -Z).</p>
+<h2 id="mathematical-reconstruction-logic">Mathematical Reconstruction
+Logic</h2>
+<p>A standard box consists of six distinct planar faces. To build the
+geometry mathematically:</p>
+<ol type="1">
+<li><strong>Axes Definition</strong>: Each face is aligned to two
+spatial axes (representing local X and Y for the plane) while a third
+axis remains constant (representing the face depth offset).</li>
+<li><strong>Vertex Generation</strong>: For each face, iterate through
+the row and column segments to calculate vertex coordinates.</li>
+<li><strong>Vertex Modification</strong>: Apply mathematical
+transformations directly to the calculated coordinates (such as
+tapering, rounding, or displacement).</li>
+<li><strong>Topology Generation</strong>: Construct the index array
+using two triangles per grid cell.</li>
+</ol>
+<h2 id="complete-implementation">Complete Implementation</h2>
+<p>The following function extracts parameters from an existing box,
+modifies the vertices during generation (in this example, applying a
+height-based taper), and returns a completely new
+<code>THREE.BufferGeometry</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">rebuildModifiedBox</span>(sourceBox) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> p <span class="op">=</span> sourceBox<span class="op">.</span><span class="at">parameters</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indices <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> positions <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> normals <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> uvs <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> numberOfVertices <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Helper to generate each of the 6 faces</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> <span class="fu">buildPlane</span>(uAxis<span class="op">,</span> vAxis<span class="op">,</span> wAxis<span class="op">,</span> uDir<span class="op">,</span> vDir<span class="op">,</span> width<span class="op">,</span> height<span class="op">,</span> depth<span class="op">,</span> gridX<span class="op">,</span> gridY) {</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> segmentWidth <span class="op">=</span> width <span class="op">/</span> gridX<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> segmentHeight <span class="op">=</span> height <span class="op">/</span> gridY<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> widthHalf <span class="op">=</span> width <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> heightHalf <span class="op">=</span> height <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> depthHalf <span class="op">=</span> depth <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> gridX1 <span class="op">=</span> gridX <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> gridY1 <span class="op">=</span> gridY <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">let</span> vertexCounter <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Generate vertices, normals, and UVs</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="kw">let</span> iy <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> iy <span class="op">&lt;</span> gridY1<span class="op">;</span> iy<span class="op">++</span>) {</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> y <span class="op">=</span> iy <span class="op">*</span> segmentHeight <span class="op">-</span> heightHalf<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> (<span class="kw">let</span> ix <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> ix <span class="op">&lt;</span> gridX1<span class="op">;</span> ix<span class="op">++</span>) {</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> x <span class="op">=</span> ix <span class="op">*</span> segmentWidth <span class="op">-</span> widthHalf<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> vector <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>                vector[uAxis] <span class="op">=</span> x <span class="op">*</span> uDir<span class="op">;</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>                vector[vAxis] <span class="op">=</span> y <span class="op">*</span> vDir<span class="op">;</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>                vector[wAxis] <span class="op">=</span> depthHalf<span class="op">;</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>                <span class="co">// --- Mathematical Modification Zone ---</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Example: Taper vertices inward along the Y axis</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (vector<span class="op">.</span><span class="at">y</span> <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>                    <span class="kw">const</span> taperFactor <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> (vector<span class="op">.</span><span class="at">y</span> <span class="op">/</span> (p<span class="op">.</span><span class="at">height</span> <span class="op">/</span> <span class="dv">2</span>)) <span class="op">*</span> <span class="fl">0.3</span><span class="op">;</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>                    vector<span class="op">.</span><span class="at">x</span> <span class="op">*=</span> taperFactor<span class="op">;</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>                    vector<span class="op">.</span><span class="at">z</span> <span class="op">*=</span> taperFactor<span class="op">;</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>                positions<span class="op">.</span><span class="fu">push</span>(vector<span class="op">.</span><span class="at">x</span><span class="op">,</span> vector<span class="op">.</span><span class="at">y</span><span class="op">,</span> vector<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Normal vector</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>                normal[wAxis] <span class="op">=</span> depthHalf <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">?</span> <span class="dv">1</span> <span class="op">:</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>                normals<span class="op">.</span><span class="fu">push</span>(normal<span class="op">.</span><span class="at">x</span><span class="op">,</span> normal<span class="op">.</span><span class="at">y</span><span class="op">,</span> normal<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>                <span class="co">// UV coordinates</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>                uvs<span class="op">.</span><span class="fu">push</span>(ix <span class="op">/</span> gridX)<span class="op">;</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>                uvs<span class="op">.</span><span class="fu">push</span>(<span class="dv">1</span> <span class="op">-</span> (iy <span class="op">/</span> gridY))<span class="op">;</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>                vertexCounter <span class="op">+=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Generate face indices</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="kw">let</span> iy <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> iy <span class="op">&lt;</span> gridY<span class="op">;</span> iy<span class="op">++</span>) {</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> (<span class="kw">let</span> ix <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> ix <span class="op">&lt;</span> gridX<span class="op">;</span> ix<span class="op">++</span>) {</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> a <span class="op">=</span> numberOfVertices <span class="op">+</span> ix <span class="op">+</span> gridX1 <span class="op">*</span> iy<span class="op">;</span></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> b <span class="op">=</span> numberOfVertices <span class="op">+</span> ix <span class="op">+</span> gridX1 <span class="op">*</span> (iy <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> c <span class="op">=</span> numberOfVertices <span class="op">+</span> (ix <span class="op">+</span> <span class="dv">1</span>) <span class="op">+</span> gridX1 <span class="op">*</span> (iy <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> d <span class="op">=</span> numberOfVertices <span class="op">+</span> (ix <span class="op">+</span> <span class="dv">1</span>) <span class="op">+</span> gridX1 <span class="op">*</span> iy<span class="op">;</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>                indices<span class="op">.</span><span class="fu">push</span>(a<span class="op">,</span> b<span class="op">,</span> d)<span class="op">;</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>                indices<span class="op">.</span><span class="fu">push</span>(b<span class="op">,</span> c<span class="op">,</span> d)<span class="op">;</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>        numberOfVertices <span class="op">+=</span> vertexCounter<span class="op">;</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Build each side using orientation mappings:</span></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>    <span class="co">// +Z, -Z, +X, -X, +Y, -Y</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="st">&#39;z&#39;</span><span class="op">,</span>  <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">height</span><span class="op">,</span>  p<span class="op">.</span><span class="at">depth</span><span class="op">,</span> p<span class="op">.</span><span class="at">widthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">heightSegments</span>)<span class="op">;</span></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="st">&#39;z&#39;</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">height</span><span class="op">,</span> <span class="op">-</span>p<span class="op">.</span><span class="at">depth</span><span class="op">,</span> p<span class="op">.</span><span class="at">widthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">heightSegments</span>)<span class="op">;</span></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;z&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="st">&#39;x&#39;</span><span class="op">,</span>  <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">depth</span><span class="op">,</span> p<span class="op">.</span><span class="at">height</span><span class="op">,</span>  p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">depthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">heightSegments</span>)<span class="op">;</span></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;z&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span> <span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">depth</span><span class="op">,</span> p<span class="op">.</span><span class="at">height</span><span class="op">,</span> <span class="op">-</span>p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">depthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">heightSegments</span>)<span class="op">;</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="st">&#39;z&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span>  <span class="dv">1</span><span class="op">,</span>  <span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">depth</span><span class="op">,</span>   p<span class="op">.</span><span class="at">height</span><span class="op">,</span> p<span class="op">.</span><span class="at">widthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">depthSegments</span>)<span class="op">;</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>    <span class="fu">buildPlane</span>(<span class="st">&#39;x&#39;</span><span class="op">,</span> <span class="st">&#39;z&#39;</span><span class="op">,</span> <span class="st">&#39;y&#39;</span><span class="op">,</span>  <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> p<span class="op">.</span><span class="at">width</span><span class="op">,</span> p<span class="op">.</span><span class="at">depth</span><span class="op">,</span>  <span class="op">-</span>p<span class="op">.</span><span class="at">height</span><span class="op">,</span> p<span class="op">.</span><span class="at">widthSegments</span><span class="op">,</span> p<span class="op">.</span><span class="at">depthSegments</span>)<span class="op">;</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assemble new BufferGeometry</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> newGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>    newGeometry<span class="op">.</span><span class="fu">setIndex</span>(indices)<span class="op">;</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>    newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float32BufferAttribute</span>(positions<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>    newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;normal&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float32BufferAttribute</span>(normals<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>    newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;uv&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float32BufferAttribute</span>(uvs<span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Recompute normals if vertex modifications altered surface angles</span></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>    newGeometry<span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> newGeometry<span class="op">;</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="usage">Usage</h2>
+<p>Pass any parameterized box instance into the function to produce the
+regenerated mesh:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseBox <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">8</span><span class="op">,</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> modifiedGeometry <span class="op">=</span> <span class="fu">rebuildModifiedBox</span>(baseBox)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x2194ce</span><span class="op">,</span> <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(modifiedGeometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<p>This workflow ensures complete programmatic control over vertex
+density, layout, and spatial mapping while relying on initial
+measurements stored within <code>BoxGeometry.parameters</code>.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

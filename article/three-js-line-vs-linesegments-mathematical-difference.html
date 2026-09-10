@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Line vs LineSegments: Mathematical Difference - three.js</title>
+    <meta name="description" content="In Three.js, rendering linear geometry relies on standard WebGL drawing primitives that dictate how the graphics pipeline interprets an ordered buffer of vertices. While both THREE.Line and THREE.LineSegments draw lines from coordinate buffers, they diff">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-line-vs-linesegments-mathematical-difference">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Line vs LineSegments: Mathematical Difference - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-line-vs-linesegments-mathematical-difference" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, rendering linear geometry relies on standard WebGL drawing primitives that dictate how the graphics pipeline interprets an ordered buffer of vertices. While both THREE.Line and THREE.LineSegments draw lines from coordinate buffers, they diff" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-line-vs-linesegments-mathematical-difference">Three.js
+Line vs LineSegments: Mathematical Difference</h1>
+<p>In Three.js, rendering linear geometry relies on standard WebGL
+drawing primitives that dictate how the graphics pipeline interprets an
+ordered buffer of vertices. While both <code>THREE.Line</code> and
+<code>THREE.LineSegments</code> draw lines from coordinate buffers, they
+differ fundamentally in their primitive assembly topology, edge-count
+formulas, and vertex indexing logic. Understanding this mathematical
+distinction clarifies why identical geometry buffers produce vastly
+different visual results depending on the chosen class.</p>
+<h3 id="webgl-primitive-assembly">WebGL Primitive Assembly</h3>
+<p>Under the hood, Three.js maps these two objects directly to distinct
+WebGL primitive modes passed to <code>gl.drawArrays</code> or
+<code>gl.drawElements</code>:</p>
+<ul>
+<li><strong><code>THREE.Line</code></strong> compiles to
+<code>gl.LINE_STRIP</code>.</li>
+<li><strong><code>THREE.LineSegments</code></strong> compiles to
+<code>gl.LINES</code>.</li>
+</ul>
+<p>The GPU rasterizer interprets the sequence of vertex indices
+differently based on these modes.</p>
+<h3 id="index-mapping-and-edge-formulation">Index Mapping and Edge
+Formulation</h3>
+<p>Let the ordered set of vertices defined in a
+<code>BufferGeometry</code> be represented as:</p>
+<p><span class="math display">\[V = \{v_0, v_1, v_2, \dots,
+v_{n-1}\}\]</span></p>
+<p>where <span class="math inline">\(n\)</span> is the total number of
+vertices in the buffer.</p>
+<h4 id="1-continuous-line-threeline">1. Continuous Line
+(<code>THREE.Line</code>)</h4>
+<p>For a continuous line rendered via <code>gl.LINE_STRIP</code>, each
+subsequent vertex connects to the previous one. The set of rendered
+edges <span class="math inline">\(E_{\text{line}}\)</span> is defined
+as:</p>
+<p><span class="math display">\[E_{\text{line}} = \{ (v_i, v_{i+1}) \mid
+0 \le i &lt; n - 1 \}\]</span></p>
+<ul>
+<li><strong>Total Edges Produced:</strong> <span
+class="math inline">\(|E_{\text{line}}| = n - 1\)</span></li>
+<li><strong>Vertex Degree:</strong> The boundary vertices <span
+class="math inline">\(v_0\)</span> and <span
+class="math inline">\(v_{n-1}\)</span> have a degree of 1, while every
+interior vertex <span class="math inline">\(v_i\)</span> (where <span
+class="math inline">\(0 &lt; i &lt; n - 1\)</span>) has a degree of
+2.</li>
+<li><strong>Vertex Reuse:</strong> Vertices are implicitly shared across
+adjacent segments without requiring explicit duplicate index
+definitions.</li>
+</ul>
+<h4 id="2-disjoint-segments-threelinesegments">2. Disjoint Segments
+(<code>THREE.LineSegments</code>)</h4>
+<p>For disconnected segments rendered via <code>gl.LINES</code>, the
+rasterizer groups vertices into disjoint, non-overlapping pairs. The set
+of rendered edges <span
+class="math inline">\(E_{\text{segments}}\)</span> is defined as:</p>
+<p><span class="math display">\[E_{\text{segments}} = \{ (v_{2k},
+v_{2k+1}) \mid 0 \le k &lt; \lfloor n/2 \rfloor \}\]</span></p>
+<ul>
+<li><strong>Total Edges Produced:</strong> <span
+class="math inline">\(|E_{\text{segments}}| = \lfloor n/2
+\rfloor\)</span></li>
+<li><strong>Vertex Degree:</strong> Every vertex belongs to at most one
+edge, meaning the degree of any vertex in the topology is at most
+1.</li>
+<li><strong>Odd Vertex Behavior:</strong> If <span
+class="math inline">\(n\)</span> is odd, the final vertex <span
+class="math inline">\(v_{n-1}\)</span> is ignored during the primitive
+assembly stage.</li>
+</ul>
+<h3 id="mathematical-storage-and-memory-trade-off">Mathematical Storage
+and Memory Trade-Off</h3>
+<p>To draw a connected path consisting of <span
+class="math inline">\(m\)</span> segments:</p>
+<ul>
+<li>Using <code>THREE.Line</code>, the geometry requires <span
+class="math inline">\(m + 1\)</span> vertices in memory.</li>
+<li>Using <code>THREE.LineSegments</code>, the same connected path
+requires explicit endpoint duplication, resulting in <span
+class="math inline">\(2m\)</span> vertices:</li>
+</ul>
+<p><span class="math display">\[(v_0, v_1), (v_1, v_2), (v_2, v_3),
+\dots, (v_{m-1}, v_m)\]</span></p>
+<p>Conversely, representing <span class="math inline">\(m\)</span>
+completely disconnected line segments using <code>THREE.Line</code>
+would require introducing degenerate (zero-length) or transparent
+segments, whereas <code>THREE.LineSegments</code> handles independent
+pairs natively with exactly <span class="math inline">\(2m\)</span>
+vertices.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

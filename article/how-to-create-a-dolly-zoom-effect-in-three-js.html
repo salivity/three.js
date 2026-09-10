@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create a Dolly Zoom Effect in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to implement the classic Vertigo effect (dolly zoom) in Three.js by mathematically synchronizing a PerspectiveCamera's field of view (FOV) with its distance from a target object. By keeping the apparent size of a central subject c">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-create-a-dolly-zoom-effect-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create a Dolly Zoom Effect in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-create-a-dolly-zoom-effect-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to implement the classic Vertigo effect (dolly zoom) in Three.js by mathematically synchronizing a PerspectiveCamera's field of view (FOV) with its distance from a target object. By keeping the apparent size of a central subject c" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-create-a-dolly-zoom-effect-in-threejs">How to Create a
+Dolly Zoom Effect in Three.js</h1>
+<p>This guide explains how to implement the classic Vertigo effect
+(dolly zoom) in Three.js by mathematically synchronizing a
+<code>PerspectiveCamera</code>'s field of view (FOV) with its distance
+from a target object. By keeping the apparent size of a central subject
+constant while transforming the background perspective, you create a
+disorienting visual distortion. Below, you will find the trigonometric
+principles behind the effect, the formulas required for execution, and a
+complete code implementation.</p>
+<hr />
+<h3 id="the-underlying-trigonometry">The Underlying Trigonometry</h3>
+<p>A dolly zoom works by altering the camera's field of view while
+simultaneously moving the camera forward or backward along its viewing
+axis. To keep the target object at an identical visual height on the
+screen, the camera frustum's height at the target's distance must remain
+constant.</p>
+<p>In a perspective projection, the visible vertical height <span
+class="math inline">\(h\)</span> at a distance <span
+class="math inline">\(d\)</span> from the camera is expressed as:</p>
+<p><span class="math display">\[h = 2 \times d \times
+\tan\left(\frac{\text{FOV}}{2}\right)\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(h\)</span> is the visible vertical
+frustum height at the target plane.</li>
+<li><span class="math inline">\(d\)</span> is the distance between the
+camera and the target object.</li>
+<li><span class="math inline">\(\text{FOV}\)</span> is the camera's
+vertical field of view in radians.</li>
+</ul>
+<p>If <span class="math inline">\(h\)</span> remains constant, you can
+derive either parameter based on the other:</p>
+<ol type="1">
+<li><p><strong>Calculate distance from FOV:</strong> <span
+class="math display">\[d = \frac{h}{2 \times \tan\left(\frac{\text{FOV}
+\times \pi}{360}\right)}\]</span></p></li>
+<li><p><strong>Calculate FOV from distance:</strong> <span
+class="math display">\[\text{FOV} = 2 \times \arctan\left(\frac{h}{2
+\times d}\right) \times \left(\frac{180}{\pi}\right)\]</span></p></li>
+</ol>
+<hr />
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-measure-the-initial-target-height">1. Measure the Initial
+Target Height</h4>
+<p>Before animating, capture the target distance and the current
+vertical field of view to lock in the constant frustum height.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume camera and target are initialized</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">45</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Set camera position along the Z-axis looking at the target</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">lookAt</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate initial distance to target</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> initialDistance <span class="op">=</span> camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate and store the constant visible height at the target</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetHeight <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> initialDistance <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(camera<span class="op">.</span><span class="at">fov</span> <span class="op">/</span> <span class="dv">2</span>))<span class="op">;</span></span></code></pre></div>
+<h4 id="2-update-fov-or-distance-during-animation">2. Update FOV or
+Distance During Animation</h4>
+<p>You can drive the effect either by modulating the camera's Z-position
+and updating the FOV, or by modulating the FOV and updating the
+Z-position.</p>
+<h5 id="approach-a-drive-by-distance-update-fov">Approach A: Drive by
+Distance (Update FOV)</h5>
+<p>Moving the camera along the Z-axis and recalculating the camera's FOV
+dynamically:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateDollyZoomByDistance</span>(newDistance) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update camera position along the Z-axis</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> targetPosition<span class="op">.</span><span class="at">z</span> <span class="op">+</span> newDistance<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Recalculate FOV to match the constant target height</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fovInRadians <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan</span>(targetHeight <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> newDistance))<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>(fovInRadians)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Crucial: Update the projection matrix after modifying FOV</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h5 id="approach-b-drive-by-fov-update-distance">Approach B: Drive by
+FOV (Update Distance)</h5>
+<p>Varying the FOV directly (e.g., using a sine wave or scroll offset)
+and matching the camera's position:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateDollyZoomByFov</span>(newFov) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> newFov<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Recalculate distance based on new FOV</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> newDistance <span class="op">=</span> targetHeight <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(newFov <span class="op">/</span> <span class="dv">2</span>)))<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> targetPosition<span class="op">.</span><span class="at">z</span> <span class="op">+</span> newDistance<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Apply changes to the camera projection</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h3 id="complete-render-loop-example">Complete Render Loop Example</h3>
+<p>The following script integrates the dolly zoom into an active
+animation loop using an oscillating function:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Scene Setup</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">60</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Add Target Object and Background Context</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">,</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span><span class="op">,</span> <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span> })</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(targetMesh)<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Add background elements to make the perspective distortion visible</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="op">-</span><span class="dv">5</span><span class="op">;</span> i <span class="op">&lt;=</span> <span class="dv">5</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> bgMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span>)<span class="op">,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x555555</span><span class="op">,</span> <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span> })</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  bgMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(i <span class="op">*</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  scene<span class="op">.</span><span class="fu">add</span>(bgMesh)<span class="op">;</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Initialize Dolly Zoom Parameters</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPosition <span class="op">=</span> targetMesh<span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">lookAt</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> initialDistance <span class="op">=</span> camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> visibleHeight <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> initialDistance <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(camera<span class="op">.</span><span class="at">fov</span> <span class="op">/</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Animation Loop</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>(time) {</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Oscillate camera distance between 2 and 10 units</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> distance <span class="op">=</span> <span class="dv">6</span> <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(time <span class="op">*</span> <span class="fl">0.002</span>) <span class="op">*</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set new camera position</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> targetPosition<span class="op">.</span><span class="at">z</span> <span class="op">+</span> distance<span class="op">;</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate new FOV based on visibleHeight constant</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fovRad <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan</span>(visibleHeight <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> distance))<span class="op">;</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>(fovRad)<span class="op">;</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Apply matrix update</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>(<span class="dv">0</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="critical-rules-to-remember">Critical Rules to Remember</h3>
+<ul>
+<li>Always call <code>camera.updateProjectionMatrix()</code> immediately
+after modifying <code>camera.fov</code>. Three.js caches the projection
+matrix and will not reflect FOV changes without this call.</li>
+<li>Javascript's <code>Math.tan</code> and <code>Math.atan</code> expect
+and return values in radians, while
+<code>THREE.PerspectiveCamera.fov</code> is defined in degrees. Convert
+between the two using <code>THREE.MathUtils.degToRad</code> and
+<code>THREE.MathUtils.radToDeg</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

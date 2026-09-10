@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Simulate Ear Occlusion in Three.js Audio - three.js</title>
+    <meta name="description" content="This article provides a technical guide on configuring spatial audio in Three.js to simulate human ear occlusion and the head-shadow effect. While Web Audio natively provides HRTF (Head-Related Transfer Function) spatialization, achieving realistic direc">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-simulate-ear-occlusion-in-three-js-audio">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Simulate Ear Occlusion in Three.js Audio - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-simulate-ear-occlusion-in-three-js-audio" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a technical guide on configuring spatial audio in Three.js to simulate human ear occlusion and the head-shadow effect. While Web Audio natively provides HRTF (Head-Related Transfer Function) spatialization, achieving realistic direc" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-simulate-ear-occlusion-in-threejs-audio">How to Simulate
+Ear Occlusion in Three.js Audio</h1>
+<p>This article provides a technical guide on configuring spatial audio
+in Three.js to simulate human ear occlusion and the head-shadow effect.
+While Web Audio natively provides HRTF (Head-Related Transfer Function)
+spatialization, achieving realistic directional attenuation requires
+understanding how the <code>AudioListener</code> orientation interacts
+with <code>PositionalAudio</code> directional cones and frequency
+filtering to mimic the way sound is physically muffled by the human head
+and pinnae.</p>
+<h3
+id="the-relationship-between-audiolistener-and-directional-cones">The
+Relationship Between AudioListener and Directional Cones</h3>
+<p>In the Web Audio API and Three.js, directional cone properties
+(<code>coneInnerAngle</code>, <code>coneOuterAngle</code>, and
+<code>coneOuterGain</code>) belong to sound emitters
+(<code>PositionalAudio</code> wrapping a <code>PannerNode</code>),
+rather than the <code>AudioListener</code>. The
+<code>AudioListener</code> represents the virtual ears and defines the
+coordinate space and orientation of the listener in 3D space, typically
+bound to a Three.js <code>Camera</code>.</p>
+<p>To simulate acoustic occlusion caused by the head and ears, you have
+two primary methods:</p>
+<ol type="1">
+<li>Setting the <code>panningModel</code> to <code>'HRTF'</code>, which
+uses built-in head-related impulse response filters.</li>
+<li>Dynamically applying a directional filter (such as a low-pass
+<code>BiquadFilterNode</code>) or reverse cone logic based on the
+relative angle between the listener's forward gaze and the incoming
+audio vector.</li>
+</ol>
+<h3 id="setting-up-the-audiolistener-and-hrtf">Setting Up the
+AudioListener and HRTF</h3>
+<p>The default panning model in Three.js <code>PositionalAudio</code> is
+HRTF, which performs algorithmic ear-filtering. Ensure your
+<code>AudioListener</code> is attached to the camera so that orientation
+updates automatically:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the listener and attach to the camera</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> listener <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioListener</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">add</span>(listener)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the positional audio source</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sound <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PositionalAudio</span>(listener)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure HRTF panning model is active on the underlying PannerNode</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="at">panner</span><span class="op">.</span><span class="at">panningModel</span> <span class="op">=</span> <span class="st">&#39;HRTF&#39;</span><span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="at">panner</span><span class="op">.</span><span class="at">distanceModel</span> <span class="op">=</span> <span class="st">&#39;inverse&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="configuring-directional-cone-properties">Configuring Directional
+Cone Properties</h3>
+<p>To restrict the angle at which sound radiates or to simulate
+directional emission, configure the cone parameters using
+<code>setDirectionalCone()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Arguments: innerAngle, outerAngle, outerGain</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setDirectionalCone</span>(<span class="dv">180</span><span class="op">,</span> <span class="dv">230</span><span class="op">,</span> <span class="fl">0.2</span>)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong>Inner Angle (<code>coneInnerAngle</code>)</strong>: The
+angle (in degrees) within which there is no volume attenuation.</li>
+<li><strong>Outer Angle (<code>coneOuterAngle</code>)</strong>: The
+angle beyond which the sound drops to the minimum gain.</li>
+<li><strong>Outer Gain (<code>coneOuterGain</code>)</strong>: The volume
+multiplier applied when the listener is fully outside the outer angle
+(e.g., <code>0.2</code> represents an 80% reduction in volume).</li>
+</ul>
+<h3
+id="simulating-rear-ear-occlusion-with-a-dynamic-low-pass-filter">Simulating
+Rear-Ear Occlusion with a Dynamic Low-Pass Filter</h3>
+<p>Human ear occlusion primarily dampens higher frequencies when sounds
+originate from behind the head. Because standard cones only attenuate
+overall gain from the emitter's perspective, combining a
+<code>BiquadFilterNode</code> with the <code>AudioListener</code>
+produces an accurate acoustic simulation.</p>
+<p>Insert a low-pass filter into the audio pipeline:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> audioContext <span class="op">=</span> listener<span class="op">.</span><span class="at">context</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> occlusionFilter <span class="op">=</span> audioContext<span class="op">.</span><span class="fu">createBiquadFilter</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>occlusionFilter<span class="op">.</span><span class="at">type</span> <span class="op">=</span> <span class="st">&#39;lowpass&#39;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>occlusionFilter<span class="op">.</span><span class="at">frequency</span><span class="op">.</span><span class="at">value</span> <span class="op">=</span> <span class="dv">22050</span><span class="op">;</span> <span class="co">// Fully open initially</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Connect through filter</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setFilter</span>(occlusionFilter)<span class="op">;</span></span></code></pre></div>
+<p>Update the filter frequency in the animation loop based on the dot
+product between the camera's forward vector and the direction of the
+sound source:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> listenerForward <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> soundDirection <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateEarOcclusion</span>() {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Get camera/listener forward direction</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">getWorldDirection</span>(listenerForward)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Calculate normalized vector from listener to sound</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    soundDirection<span class="op">.</span><span class="fu">subVectors</span>(sound<span class="op">.</span><span class="at">position</span><span class="op">,</span> camera<span class="op">.</span><span class="at">position</span>)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dot product: 1 = directly in front, -1 = directly behind</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> dot <span class="op">=</span> listenerForward<span class="op">.</span><span class="fu">dot</span>(soundDirection)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (dot <span class="op">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sound is behind the listener&#39;s ears; occlude high frequencies</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Scale frequency between 1000Hz (fully behind) and 22050Hz (sides/front)</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> t <span class="op">=</span> (dot <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span> <span class="co">// 0 to 1 range for rear hemisphere</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        occlusionFilter<span class="op">.</span><span class="at">frequency</span><span class="op">.</span><span class="fu">setTargetAtTime</span>(</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            <span class="dv">1000</span> <span class="op">+</span> t <span class="op">*</span> <span class="dv">21050</span><span class="op">,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>            listener<span class="op">.</span><span class="at">context</span><span class="op">.</span><span class="at">currentTime</span><span class="op">,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>            <span class="fl">0.05</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>        )<span class="op">;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Sound is in front of the listener; clear occlusion</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        occlusionFilter<span class="op">.</span><span class="at">frequency</span><span class="op">.</span><span class="fu">setTargetAtTime</span>(</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>            <span class="dv">22050</span><span class="op">,</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>            listener<span class="op">.</span><span class="at">context</span><span class="op">.</span><span class="at">currentTime</span><span class="op">,</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            <span class="fl">0.05</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        )<span class="op">;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Calling <code>updateEarOcclusion()</code> in your render loop
+modulates the frequency cutoff based on the relative angle of the
+listener, effectively simulating the dampening effect the physical head
+creates for sound waves entering the ear canal from behind.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

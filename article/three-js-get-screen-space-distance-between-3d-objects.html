@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js: Get Screen-Space Distance Between 3D Objects - three.js</title>
+    <meta name="description" content="Calculating the screen-space pixel distance between two 3D objects in Three.js requires converting their 3D world coordinates into 2D screen coordinates using the active camera, and then applying standard 2D Euclidean distance formulas. This guide explai">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-get-screen-space-distance-between-3d-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js: Get Screen-Space Distance Between 3D Objects - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-get-screen-space-distance-between-3d-objects" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the screen-space pixel distance between two 3D objects in Three.js requires converting their 3D world coordinates into 2D screen coordinates using the active camera, and then applying standard 2D Euclidean distance formulas. This guide explai" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-get-screen-space-distance-between-3d-objects">Three.js:
+Get Screen-Space Distance Between 3D Objects</h1>
+<p>Calculating the screen-space pixel distance between two 3D objects in
+Three.js requires converting their 3D world coordinates into 2D screen
+coordinates using the active camera, and then applying standard 2D
+Euclidean distance formulas. This guide explains how to extract world
+positions, project them to normalized device coordinates (NDC) via
+<code>Vector3.project()</code>, map those coordinates to viewport
+pixels, and compute the exact distance between them.</p>
+<h2 id="the-core-concept">The Core Concept</h2>
+<p>A 3D object's position exists in local or world space. To find where
+that point renders on a 2D screen, you must:</p>
+<ol type="1">
+<li>Retrieve the absolute world coordinates of both objects.</li>
+<li>Project those 3D world coordinates into Normalized Device
+Coordinates (NDC) where <span class="math inline">\(x\)</span> and <span
+class="math inline">\(y\)</span> range from <code>-1</code> to
+<code>1</code>.</li>
+<li>Map the NDC coordinates to actual pixel coordinates based on the
+renderer's canvas dimensions.</li>
+<li>Calculate the 2D distance between the two pixel points using the
+Pythagorean theorem (<code>Math.hypot</code>).</li>
+</ol>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-retrieve-world-positions">1. Retrieve World Positions</h3>
+<p>Do not use <code>object.position</code> directly if your objects are
+nested within groups or hierarchies, as this only provides local
+coordinates. Use <code>getWorldPosition()</code> instead:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> posA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> posB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>objectA<span class="op">.</span><span class="fu">getWorldPosition</span>(posA)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>objectB<span class="op">.</span><span class="fu">getWorldPosition</span>(posB)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-project-to-normalized-device-coordinates">2. Project to
+Normalized Device Coordinates</h3>
+<p>Pass the camera to <code>Vector3.project()</code>. This multiplies
+the vector by the camera's view and projection matrices:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>posA<span class="op">.</span><span class="fu">project</span>(camera)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>posB<span class="op">.</span><span class="fu">project</span>(camera)<span class="op">;</span></span></code></pre></div>
+<p>After projection:</p>
+<ul>
+<li><code>x = -1</code> corresponds to the left edge of the screen.</li>
+<li><code>x = 1</code> corresponds to the right edge.</li>
+<li><code>y = -1</code> corresponds to the bottom edge.</li>
+<li><code>y = 1</code> corresponds to the top edge.</li>
+<li><code>z &gt; 1</code> indicates the object is behind the camera or
+beyond the far clipping plane.</li>
+</ul>
+<h3 id="3-convert-ndc-to-screen-pixels">3. Convert NDC to Screen
+Pixels</h3>
+<p>Convert the <code>[-1, 1]</code> range to <code>[0, width]</code> and
+<code>[0, height]</code>. Keep in mind that standard 2D screen space has
+its origin <code>(0, 0)</code> at the top-left, whereas NDC has
+<code>(0, 0)</code> at the center:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">ndcToScreen</span>(ndcVector<span class="op">,</span> width<span class="op">,</span> height) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">x</span><span class="op">:</span> (ndcVector<span class="op">.</span><span class="at">x</span> <span class="op">*</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> width<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="dt">y</span><span class="op">:</span> (<span class="op">-</span>(ndcVector<span class="op">.</span><span class="at">y</span> <span class="op">*</span> <span class="fl">0.5</span>) <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> height</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="4-calculate-euclidean-distance">4. Calculate Euclidean
+Distance</h3>
+<p>Use <code>Math.hypot</code> to compute the straight-line distance
+between the two 2D points:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dx <span class="op">=</span> screenPosA<span class="op">.</span><span class="at">x</span> <span class="op">-</span> screenPosB<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dy <span class="op">=</span> screenPosA<span class="op">.</span><span class="at">y</span> <span class="op">-</span> screenPosB<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> distance <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">hypot</span>(dx<span class="op">,</span> dy)<span class="op">;</span></span></code></pre></div>
+<h2 id="complete-reusable-function">Complete Reusable Function</h2>
+<p>Below is an optimized, production-ready function that reuses internal
+vectors to avoid garbage collection overhead during animation loops:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> _vA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> _vB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getScreenSpaceDistance</span>(objectA<span class="op">,</span> objectB<span class="op">,</span> camera<span class="op">,</span> renderer) {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Get world positions</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    objectA<span class="op">.</span><span class="fu">getWorldPosition</span>(_vA)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    objectB<span class="op">.</span><span class="fu">getWorldPosition</span>(_vB)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Project world positions to NDC</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    _vA<span class="op">.</span><span class="fu">project</span>(camera)<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    _vB<span class="op">.</span><span class="fu">project</span>(camera)<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional: Return null or handle cases where objects are behind the camera</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (_vA<span class="op">.</span><span class="at">z</span> <span class="op">&gt;</span> <span class="dv">1</span> <span class="op">||</span> _vB<span class="op">.</span><span class="at">z</span> <span class="op">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Obtain canvas display size (CSS pixels)</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> canvas <span class="op">=</span> renderer<span class="op">.</span><span class="at">domElement</span><span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> width <span class="op">=</span> canvas<span class="op">.</span><span class="at">clientWidth</span><span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> height <span class="op">=</span> canvas<span class="op">.</span><span class="at">clientHeight</span><span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Convert NDC to screen coordinates</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> screenAx <span class="op">=</span> (_vA<span class="op">.</span><span class="at">x</span> <span class="op">*</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> width<span class="op">;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> screenAy <span class="op">=</span> (<span class="op">-</span>(_vA<span class="op">.</span><span class="at">y</span> <span class="op">*</span> <span class="fl">0.5</span>) <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> height<span class="op">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> screenBx <span class="op">=</span> (_vB<span class="op">.</span><span class="at">x</span> <span class="op">*</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> width<span class="op">;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> screenBy <span class="op">=</span> (<span class="op">-</span>(_vB<span class="op">.</span><span class="at">y</span> <span class="op">*</span> <span class="fl">0.5</span>) <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> height<span class="op">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 5. Calculate 2D distance</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">hypot</span>(screenBx <span class="op">-</span> screenAx<span class="op">,</span> screenBy <span class="op">-</span> screenAy)<span class="op">;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>CSS Pixels vs. Render Target Pixels</strong>: Use
+<code>canvas.clientWidth</code> and <code>canvas.clientHeight</code>
+when positioning HTML overlay elements (tooltips, UI markers). Use
+<code>renderer.getSize()</code> if you need distances relative to
+internal buffer pixels.</li>
+<li><strong>Objects Behind the Camera</strong>: If an object sits behind
+the camera's near plane, its projected coordinates will invert across
+the center. Always check if <code>vector.z &lt;= 1</code> before
+performing distance-based interactions or rendering UI labels.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

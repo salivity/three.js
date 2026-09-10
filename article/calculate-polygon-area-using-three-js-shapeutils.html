@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Polygon Area Using Three.js ShapeUtils - three.js</title>
+    <meta name="description" content="Calculating the 2D area of a polygon in Three.js is straightforward thanks to the built-in ShapeUtils utility class. This guide explains how to pass an array of THREE.Vector2 points to the ShapeUtils.area() method to compute the area of a polygon, how wi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/calculate-polygon-area-using-three-js-shapeutils">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Calculate Polygon Area Using Three.js ShapeUtils - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/calculate-polygon-area-using-three-js-shapeutils" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the 2D area of a polygon in Three.js is straightforward thanks to the built-in ShapeUtils utility class. This guide explains how to pass an array of THREE.Vector2 points to the ShapeUtils.area() method to compute the area of a polygon, how wi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="calculate-polygon-area-using-threejs-shapeutils">Calculate
+Polygon Area Using Three.js ShapeUtils</h1>
+<p>Calculating the 2D area of a polygon in Three.js is straightforward
+thanks to the built-in <code>ShapeUtils</code> utility class. This guide
+explains how to pass an array of <code>THREE.Vector2</code> points to
+the <code>ShapeUtils.area()</code> method to compute the area of a
+polygon, how winding order affects the resulting value, and how to
+ensure you always get an absolute positive area.</p>
+<h3 id="using-shapeutilsarea">Using ShapeUtils.area()</h3>
+<p>Three.js provides the static method
+<code>ShapeUtils.area(contour)</code> to compute the area of a 2D closed
+contour. The <code>contour</code> parameter accepts an array of points
+containing <code>x</code> and <code>y</code> properties, such as
+instances of <code>THREE.Vector2</code>.</p>
+<p>Here is a complete code example:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the polygon vertices in order</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">4</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">4</span><span class="op">,</span> <span class="dv">3</span>)<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">3</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the signed area</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> signedArea <span class="op">=</span> THREE<span class="op">.</span><span class="at">ShapeUtils</span><span class="op">.</span><span class="fu">area</span>(points)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the absolute area</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> area <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(signedArea)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Polygon Area: </span><span class="sc">${</span>area<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span> <span class="co">// Output: Polygon Area: 12</span></span></code></pre></div>
+<h3 id="understanding-signed-area-and-winding-order">Understanding
+Signed Area and Winding Order</h3>
+<p>The <code>ShapeUtils.area()</code> function uses the Shoelace formula
+(Gauss's area formula) internally. Because of this, the returned value
+is a signed number:</p>
+<ul>
+<li><strong>Positive value:</strong> The vertices are ordered
+counter-clockwise (CCW).</li>
+<li><strong>Negative value:</strong> The vertices are ordered clockwise
+(CW).</li>
+</ul>
+<p>Because the sign indicates the winding orientation of the polygon,
+you should wrap the output in <code>Math.abs()</code> when you only need
+the geometric surface area.</p>
+<h3 id="handling-holes-and-complex-polygons">Handling Holes and Complex
+Polygons</h3>
+<p>If your shape contains interior holes (such as a donut shape), you
+must calculate the area of the outer contour and subtract the areas of
+any inner hole contours:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> outerPoints <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> holePoints <span class="op">=</span> [</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">8</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">8</span><span class="op">,</span> <span class="dv">8</span>)<span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">8</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> outerArea <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(THREE<span class="op">.</span><span class="at">ShapeUtils</span><span class="op">.</span><span class="fu">area</span>(outerPoints))<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> holeArea <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(THREE<span class="op">.</span><span class="at">ShapeUtils</span><span class="op">.</span><span class="fu">area</span>(holePoints))<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> finalArea <span class="op">=</span> outerArea <span class="op">-</span> holeArea<span class="op">;</span> <span class="co">// 100 - 36 = 64</span></span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Self-Intersecting Polygons:</strong> The Shoelace formula
+assumes a simple, non-self-intersecting polygon. Complex or
+self-crossing shapes will yield incorrect area calculations.</li>
+<li><strong>Vertex Ordering:</strong> The array of
+<code>THREE.Vector2</code> points must be provided sequentially along
+the perimeter of the polygon. Providing points out of order will result
+in an incorrect calculation.</li>
+<li><strong>Automatic Closure:</strong> You do not need to repeat the
+starting point at the end of the array; <code>ShapeUtils.area()</code>
+automatically connects the final vertex back to the first vertex.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

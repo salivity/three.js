@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force ShaderMaterial Recompile in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, shaders are compiled once and cached by the WebGL renderer to optimize rendering performance. This article explains how to explicitly force a ShaderMaterial to recompile at runtime by mutating its defines dictionary and setting the needsUpda">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/force-shadermaterial-recompile-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Force ShaderMaterial Recompile in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/force-shadermaterial-recompile-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, shaders are compiled once and cached by the WebGL renderer to optimize rendering performance. This article explains how to explicitly force a ShaderMaterial to recompile at runtime by mutating its defines dictionary and setting the needsUpda" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="force-shadermaterial-recompile-in-threejs">Force ShaderMaterial
+Recompile in Three.js</h1>
+<p>In Three.js, shaders are compiled once and cached by the WebGL
+renderer to optimize rendering performance. This article explains how to
+explicitly force a <code>ShaderMaterial</code> to recompile at runtime
+by mutating its <code>defines</code> dictionary and setting the
+<code>needsUpdate</code> flag, ensuring updated preprocessor directives
+are properly injected into your GLSL code.</p>
+<h3 id="the-role-of-the-defines-object">The Role of the
+<code>defines</code> Object</h3>
+<p>The <code>defines</code> property in
+<code>THREE.ShaderMaterial</code> is a JavaScript object representing
+GLSL preprocessor macros (e.g., <code>#define FLAG value</code>). When
+Three.js builds the shader program, it prepends these defines to your
+vertex and fragment shader source code.</p>
+<p>Because GLSL macros are evaluated at compile time rather than draw
+time, changing a define requires the WebGL pipeline to completely
+rebuild and recompile the shader program.</p>
+<h3 id="steps-to-force-recompilation">Steps to Force Recompilation</h3>
+<p>Three.js does not actively observe nested mutations inside the
+<code>defines</code> object. Modifying a property within
+<code>defines</code> will not trigger a recompilation on its own. You
+must explicitly mark the material as dirty using the
+<code>needsUpdate</code> flag.</p>
+<p>Here is the standard implementation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Modify, add, or delete the define key</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">defines</span><span class="op">.</span><span class="at">ENABLE_FEATURE</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Alternatively, remove a define completely</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// delete material.defines.ENABLE_FEATURE;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Explicitly notify Three.js that the material needs recompilation</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>On the subsequent render call, the <code>WebGLRenderer</code> detects
+that <code>material.needsUpdate</code> is set to <code>true</code>. It
+evaluates the new state of the material, regenerates the program's cache
+key incorporating the modified <code>defines</code>, compiles the new
+WebGL program, and binds it to the geometry.</p>
+<h3 id="handling-dynamic-values-defines-vs-uniforms">Handling Dynamic
+Values: Defines vs. Uniforms</h3>
+<p>Recompiling a shader is an expensive operation that blocks the main
+thread and can introduce noticeable frame drops (jank). When
+architecting your runtime modifications:</p>
+<ul>
+<li><strong>Use <code>defines</code></strong> when you need structural
+code changes, such as conditionally branching out large code paths,
+toggling loops, or including different lighting algorithms with
+preprocessor directives like <code>#ifdef</code> or
+<code>#if</code>.</li>
+<li><strong>Use uniforms</strong> if you are updating continuous values
+(such as colors, time, positions, or simple toggles that can be
+evaluated via standard <code>if</code> statements in GLSL) to avoid
+triggering a shader recompilation.</li>
+</ul>
+<h3 id="custom-program-cache-keys">Custom Program Cache Keys</h3>
+<p>If you are generating complex custom shaders or using a
+<code>customProgramCacheKey</code>, ensure that your cache key function
+incorporates the values of your dynamic defines:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">customProgramCacheKey</span> <span class="op">=</span> <span class="kw">function</span> () {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> (<span class="kw">this</span><span class="op">.</span><span class="at">defines</span><span class="op">.</span><span class="at">ENABLE_FEATURE</span> <span class="op">?</span> <span class="st">&#39;feat_on&#39;</span> <span class="op">:</span> <span class="st">&#39;feat_off&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>This guarantees that the internal renderer properly distinguishes
+between the different compiled states and correctly retrieves or creates
+the appropriate program.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

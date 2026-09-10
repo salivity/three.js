@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create Metaballs in Three.js with Marching Cubes - three.js</title>
+    <meta name="description" content="This article explains how to implement dynamic, merging metaballs in Three.js using the Marching Cubes algorithm. You will learn how to import and configure the MarchingCubes addon, generate dynamic scalar fields by calculating metaball positions, animat">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-create-metaballs-in-three-js-with-marching-cubes">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create Metaballs in Three.js with Marching Cubes - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-create-metaballs-in-three-js-with-marching-cubes" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to implement dynamic, merging metaballs in Three.js using the Marching Cubes algorithm. You will learn how to import and configure the MarchingCubes addon, generate dynamic scalar fields by calculating metaball positions, animat" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-create-metaballs-in-threejs-with-marching-cubes">How to
+Create Metaballs in Three.js with Marching Cubes</h1>
+<p>This article explains how to implement dynamic, merging metaballs in
+Three.js using the Marching Cubes algorithm. You will learn how to
+import and configure the <code>MarchingCubes</code> addon, generate
+dynamic scalar fields by calculating metaball positions, animate their
+paths to make them fuse organically, and apply appropriate materials and
+lighting for a polished visual result.</p>
+<h2 id="1-import-dependencies">1. Import Dependencies</h2>
+<p>Three.js includes an optimized Marching Cubes implementation in its
+examples repository. You need to import the core Three.js library
+alongside the <code>MarchingCubes</code> addon.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MarchingCubes } <span class="im">from</span> <span class="st">&#39;three/addons/objects/MarchingCubes.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h2 id="2-set-up-the-scene-camera-and-renderer">2. Set Up the Scene,
+Camera, and Renderer</h2>
+<p>Establish the fundamental components of a Three.js project:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dv">45</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.1</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dv">1000</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">30</span>)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setPixelRatio</span>(<span class="bu">window</span><span class="op">.</span><span class="at">devicePixelRatio</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Add lighting to illuminate the metaball surfaces</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ambientLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AmbientLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">0.4</span>)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(ambientLight)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.2</span>)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> <span class="dv">15</span>)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(directionalLight)<span class="op">;</span></span></code></pre></div>
+<h2 id="3-instantiate-the-marchingcubes-object">3. Instantiate the
+MarchingCubes Object</h2>
+<p>The <code>MarchingCubes</code> class creates a volumetric grid (voxel
+space) and evaluates the isosurface according to the scalar field
+generated by the metaballs.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> resolution <span class="op">=</span> <span class="dv">48</span><span class="op">;</span> <span class="co">// Grid resolution; higher values improve detail but reduce performance</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x2194ce</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.1</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.2</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxPolyCount <span class="op">=</span> <span class="dv">100000</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> enableUvs <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> enableColors <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effect <span class="op">=</span> <span class="kw">new</span> <span class="fu">MarchingCubes</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  resolution<span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  material<span class="op">,</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  enableUvs<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  enableColors<span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  maxPolyCount</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Scale the bounding volume in the scene</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>effect<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>effect<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(effect)<span class="op">;</span></span></code></pre></div>
+<h2 id="4-define-and-update-metaball-positions">4. Define and Update
+Metaball Positions</h2>
+<p>To create the merging liquid effect, clear the field on each frame,
+calculate new coordinates for each ball within normalized coordinate
+space (<code>0.0</code> to <code>1.0</code>), and inject them using
+<code>addBall()</code>.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> numBalls <span class="op">=</span> <span class="dv">5</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateCubes</span>(time) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Clear the scalar field</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  effect<span class="op">.</span><span class="fu">reset</span>()<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Define metaball parameters: addBall(x, y, z, strength, subtract)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> strength <span class="op">=</span> <span class="fl">1.2</span> <span class="op">/</span> ((<span class="bu">Math</span><span class="op">.</span><span class="fu">sqrt</span>(numBalls) <span class="op">-</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">4</span> <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> subtract <span class="op">=</span> <span class="dv">12</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> numBalls<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Generate organic motion paths using trigonometric functions</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ballX <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(i <span class="op">+</span> <span class="fl">1.26</span> <span class="op">*</span> time <span class="op">*</span> (<span class="fl">1.03</span> <span class="op">+</span> <span class="fl">0.5</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(<span class="fl">0.21</span> <span class="op">*</span> i))) <span class="op">*</span> <span class="fl">0.27</span> <span class="op">+</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ballY <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(<span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(i <span class="op">+</span> <span class="fl">1.12</span> <span class="op">*</span> time <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(<span class="fl">1.22</span> <span class="op">+</span> <span class="fl">0.1424</span> <span class="op">*</span> i))) <span class="op">*</span> <span class="fl">0.77</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ballZ <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(i <span class="op">+</span> <span class="fl">1.32</span> <span class="op">*</span> time <span class="op">*</span> <span class="fl">0.1</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(<span class="fl">0.92</span> <span class="op">+</span> <span class="fl">0.53</span> <span class="op">*</span> i)) <span class="op">*</span> <span class="fl">0.27</span> <span class="op">+</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    effect<span class="op">.</span><span class="fu">addBall</span>(ballX<span class="op">,</span> ballY<span class="op">,</span> ballZ<span class="op">,</span> strength<span class="op">,</span> subtract)<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update the mesh geometry</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  effect<span class="op">.</span><span class="fu">update</span>()<span class="op">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="parameter-breakdown">Parameter Breakdown</h3>
+<ul>
+<li><strong><code>x, y, z</code></strong>: Normalized positions between
+<code>0</code> and <code>1</code> relative to the local bounding box of
+the <code>MarchingCubes</code> mesh.</li>
+<li><strong><code>strength</code></strong>: Determines the sphere radius
+and influence area of the metaball.</li>
+<li><strong><code>subtract</code></strong>: Influences how quickly the
+scalar value drops off; helps tighten or loosen the merging
+threshold.</li>
+</ul>
+<h2 id="5-implement-the-animation-loop">5. Implement the Animation
+Loop</h2>
+<p>Run the animation loop to evaluate the field at each frame and render
+the scene.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> time <span class="op">=</span> clock<span class="op">.</span><span class="fu">getElapsedTime</span>() <span class="op">*</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">updateCubes</span>(time)<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="6-performance-and-visual-tuning">6. Performance and Visual
+Tuning</h2>
+<ul>
+<li><strong>Resolution vs. Performance</strong>: The first argument in
+<code>MarchingCubes(resolution, ...)</code> dictates the voxel density.
+A resolution between <code>28</code> and <code>64</code> provides a good
+balance between polygon smoothness and frame rates.</li>
+<li><strong>Material Selection</strong>: Dynamic isosurfaces benefit
+strongly from materials using environmental reflections, such as
+<code>MeshPhysicalMaterial</code> with transmission or
+<code>MeshStandardMaterial</code> with an environment map, which
+accentuates the curving organic geometry.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Dark Edges on CanvasTexture Text in Three.js - three.js</title>
+    <meta name="description" content="Dark or muddy borders around transparent text rendered via CanvasTexture occur when semi-transparent edge pixels blend with the canvas's default transparent black background. In Three.js, this artifact is typically caused by improper alpha handling durin">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-dark-edges-on-canvastexture-text-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Dark Edges on CanvasTexture Text in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-dark-edges-on-canvastexture-text-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Dark or muddy borders around transparent text rendered via CanvasTexture occur when semi-transparent edge pixels blend with the canvas's default transparent black background. In Three.js, this artifact is typically caused by improper alpha handling durin" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-dark-edges-on-canvastexture-text-in-threejs">Fix Dark Edges
+on CanvasTexture Text in Three.js</h1>
+<p>Dark or muddy borders around transparent text rendered via
+<code>CanvasTexture</code> occur when semi-transparent edge pixels blend
+with the canvas's default transparent black background. In Three.js,
+this artifact is typically caused by improper alpha handling during
+texture filtering and blending. You can eliminate these dark outlines by
+enabling alpha pre-multiplication on both your
+<code>CanvasTexture</code> and the corresponding material, ensuring that
+color interpolation and WebGL blending calculate transparent edges
+accurately.</p>
+<hr />
+<h3 id="why-dark-edges-appear">Why Dark Edges Appear</h3>
+<p>When you draw text on an HTML5 <code>&lt;canvas&gt;</code>, the
+anti-aliasing produces semi-transparent pixels along the edges of each
+glyph. By default, the untouched areas of the canvas have an RGBA value
+of <code>(0, 0, 0, 0)</code>—completely transparent black.</p>
+<p>When WebGL applies linear filtering to scale the texture, it blends
+the RGB color of your text with the RGB values of adjacent pixels.
+Because the adjacent pixels are black, the edge colors are pulled toward
+black before their transparency is evaluated, creating a noticeable dark
+halo.</p>
+<h3 id="the-solution-enable-alpha-pre-multiplication">The Solution:
+Enable Alpha Pre-Multiplication</h3>
+<p>To fix this issue, you must configure WebGL to premultiply the
+texture’s RGB channels by its alpha channel during the texture upload,
+and instruct your Three.js material to use premultiplied blending.</p>
+<h4 id="1-configure-the-canvastexture">1. Configure the
+<code>CanvasTexture</code></h4>
+<p>Set <code>premultiplyAlpha</code> to <code>true</code> on the
+<code>CanvasTexture</code> instance:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canvas <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;canvas&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> context <span class="op">=</span> canvas<span class="op">.</span><span class="fu">getContext</span>(<span class="st">&#39;2d&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Draw text onto canvas</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="at">font</span> <span class="op">=</span> <span class="st">&#39;Bold 48px Arial&#39;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="at">fillStyle</span> <span class="op">=</span> <span class="st">&#39;white&#39;</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>context<span class="op">.</span><span class="fu">fillText</span>(<span class="st">&#39;Hello World&#39;</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the texture and enable pre-multiplication</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CanvasTexture</span>(canvas)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">premultiplyAlpha</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>When <code>texture.premultiplyAlpha = true</code> is set, Three.js
+calls
+<code>gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)</code>
+under the hood, properly preparing the pixel data for premultiplied
+compositing.</p>
+<h4 id="2-configure-the-material">2. Configure the Material</h4>
+<p>Next, ensure the material receiving the texture is set to handle
+premultiplied alpha:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> texture<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">premultipliedAlpha</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Setting <code>material.premultipliedAlpha = true</code> changes the
+WebGL blending factors to <code>gl.ONE</code> for the source factor and
+<code>gl.ONE_MINUS_SRC_ALPHA</code> for the destination factor. This
+prevents the GPU from multiplying the alpha channel twice and stops edge
+pixels from bleeding into black.</p>
+<h3 id="complete-implementation">Complete Implementation</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Initialize canvas and render text</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canvas <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;canvas&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">256</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ctx <span class="op">=</span> canvas<span class="op">.</span><span class="fu">getContext</span>(<span class="st">&#39;2d&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="fu">clearRect</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">width</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">height</span>)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="at">font</span> <span class="op">=</span> <span class="st">&#39;48px sans-serif&#39;</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="at">fillStyle</span> <span class="op">=</span> <span class="st">&#39;#ffffff&#39;</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="at">textAlign</span> <span class="op">=</span> <span class="st">&#39;center&#39;</span><span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="at">textBaseline</span> <span class="op">=</span> <span class="st">&#39;middle&#39;</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>ctx<span class="op">.</span><span class="fu">fillText</span>(<span class="st">&#39;Sharp Text&#39;</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">width</span> <span class="op">/</span> <span class="dv">2</span><span class="op">,</span> canvas<span class="op">.</span><span class="at">height</span> <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the CanvasTexture with premultiplyAlpha enabled</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textTexture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CanvasTexture</span>(canvas)<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>textTexture<span class="op">.</span><span class="at">premultiplyAlpha</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the material matching the premultiplied setting</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> textTexture<span class="op">,</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="dt">premultipliedAlpha</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Attach to a mesh or sprite</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">4</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> textMaterial)<span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(textMesh)<span class="op">;</span></span></code></pre></div>
+<p>By pairing <code>texture.premultiplyAlpha = true</code> with
+<code>material.premultipliedAlpha = true</code>, Three.js processes the
+anti-aliased edges in premultiplied space, removing all dark borders and
+delivering crisp, clean text rendering over any background.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

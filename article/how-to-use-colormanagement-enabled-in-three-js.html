@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use ColorManagement.enabled in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to use the ColorManagement.enabled setting in Three.js to achieve physically correct color blending and lighting. You will learn what color management does, how to explicitly toggle it in your codebase, and how to configure text">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-colormanagement-enabled-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use ColorManagement.enabled in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-colormanagement-enabled-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to use the ColorManagement.enabled setting in Three.js to achieve physically correct color blending and lighting. You will learn what color management does, how to explicitly toggle it in your codebase, and how to configure text" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-colormanagementenabled-in-threejs">How to Use
+ColorManagement.enabled in Three.js</h1>
+<p>This article explains how to use the
+<code>ColorManagement.enabled</code> setting in Three.js to achieve
+physically correct color blending and lighting. You will learn what
+color management does, how to explicitly toggle it in your codebase, and
+how to configure textures and renderer output settings to ensure colors
+display accurately across your 3D scenes.</p>
+<h2 id="what-is-colormanagement-in-threejs">What is ColorManagement in
+Three.js?</h2>
+<p>In modern Three.js (r152+), <code>THREE.ColorManagement</code>
+manages color space conversions automatically. Physically accurate
+rendering requires lighting calculations, material blending, and shaders
+to operate in a linear color space, while display devices expect an sRGB
+output. Enabling <code>ColorManagement</code> ensures that Three.js
+automatically converts color inputs (like hex codes, CSS colors, and
+sRGB textures) into linear space for processing, and then outputs them
+back to sRGB for screen presentation.</p>
+<h2 id="toggling-colormanagementenabled">Toggling
+ColorManagement.enabled</h2>
+<p>To toggle color management, modify the
+<code>THREE.ColorManagement.enabled</code> boolean flag before
+instantiating materials, textures, or renderers.</p>
+<h3 id="enabling-color-management">Enabling Color Management</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable automatic color conversions for physically correct blending</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">ColorManagement</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>When set to <code>true</code>, Three.js automatically converts colors
+defined on materials and lights (such as
+<code>new THREE.Color('#ff0000')</code>) from sRGB into linear space
+internally.</p>
+<h3 id="disabling-color-management">Disabling Color Management</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Disable color management (legacy behavior)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">ColorManagement</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div>
+<p>Setting this to <code>false</code> reverts Three.js to legacy
+rendering behavior where color values are treated as unmanaged raw
+values. This is generally not recommended unless you are maintaining
+older projects that depend on uncorrected color blending.</p>
+<h2 id="required-supporting-configurations">Required Supporting
+Configurations</h2>
+<p>To achieve fully correct rendering when
+<code>ColorManagement.enabled</code> is active, configure your renderer
+and textures to match.</p>
+<h3 id="1-configure-the-webglrenderer">1. Configure the
+WebGLRenderer</h3>
+<p>Set the renderer's <code>outputColorSpace</code> to
+<code>THREE.SRGBColorSpace</code> so linear computations are correctly
+encoded for display monitors:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-set-texture-color-spaces">2. Set Texture Color Spaces</h3>
+<p>Ensure input textures are tagged with the appropriate color
+space:</p>
+<ul>
+<li><strong>Color textures (albedo, diffuse, emissive, map):</strong>
+Use <code>THREE.SRGBColorSpace</code>.</li>
+<li><strong>Data textures (normal, roughness, metalness,
+displacement):</strong> Use <code>THREE.NoColorSpace</code> or
+<code>THREE.LinearSRGBColorSpace</code>.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Albedo map</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colorMap <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/diffuse.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>colorMap<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Normal map</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalMap <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/normal.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>normalMap<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NoColorSpace</span><span class="op">;</span></span></code></pre></div>
+<h2 id="why-physically-correct-blending-matters">Why Physically Correct
+Blending Matters</h2>
+<p>Without active color management, mixing two colors or applying light
+attenuation happens directly in non-linear sRGB space. This causes dark
+bands at color borders, overly saturated highlights, and inaccurate
+falloff curves. Enabling <code>ColorManagement.enabled</code> ensures
+all mathematical additions and multiplications occur in linear space,
+resulting in natural gradients, realistic light distribution, and
+consistent asset appearance between 3D software (like Blender) and the
+web.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

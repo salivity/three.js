@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js FileLoader setResponseType for Binary Buffers - three.js</title>
+    <meta name="description" content="This article explains the critical role of the FileLoader.setResponseType method in Three.js when fetching binary geometry assets. By default, FileLoader treats requested files as standard strings, which corrupts raw binary streams. Configuring the respo">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-fileloader-setresponsetype-for-binary-buffers">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js FileLoader setResponseType for Binary Buffers - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-fileloader-setresponsetype-for-binary-buffers" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains the critical role of the FileLoader.setResponseType method in Three.js when fetching binary geometry assets. By default, FileLoader treats requested files as standard strings, which corrupts raw binary streams. Configuring the respo" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-fileloader-setresponsetype-for-binary-buffers">Three.js
+FileLoader setResponseType for Binary Buffers</h1>
+<p>This article explains the critical role of the
+<code>FileLoader.setResponseType</code> method in Three.js when fetching
+binary geometry assets. By default, <code>FileLoader</code> treats
+requested files as standard strings, which corrupts raw binary streams.
+Configuring the response type explicitly instructs the browser to retain
+raw byte data, enabling developers to map binary streams directly into
+typed arrays for GPU-accelerated 3D rendering.</p>
+<p>In Three.js, <code>THREE.FileLoader</code> is the foundational
+low-level utility responsible for executing network requests. When
+dealing with binary geometry files—such as custom <code>.bin</code>
+files, binary STL, PLY, or the binary chunks of glTF (<code>.glb</code>)
+containers—the network request must preserve the exact byte sequences
+representing vertex positions, normals, UV coordinates, and index
+buffers.</p>
+<p>The specific purpose of calling
+<code>.setResponseType('arraybuffer')</code> is to configure the
+underlying <code>XMLHttpRequest.responseType</code> or Fetch response
+reader to treat the payload as a generic, fixed-length raw binary data
+buffer. Without this configuration, the browser defaults to treating the
+incoming byte stream as DOMString/text. Attempting to parse raw binary
+data as UTF-8 or ASCII causes character encoding conversions, which
+inevitably corrupts floating-point numbers and integer indices, making
+the geometry unrenderable.</p>
+<p>Once <code>FileLoader.setResponseType('arraybuffer')</code> is set,
+the <code>onLoad</code> callback receives an <code>ArrayBuffer</code>
+instance instead of a string. This <code>ArrayBuffer</code> can be
+interpreted using typed arrays without costly data conversions or string
+parsing:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">FileLoader</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">setResponseType</span>(<span class="st">&#39;arraybuffer&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;models/geometry.bin&#39;</span><span class="op">,</span> (data) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Interpret raw binary data directly</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positionView <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(data<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> vertexCount <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(positionView<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Using <code>setResponseType('arraybuffer')</code> also provides
+significant performance benefits. It minimizes memory allocation and
+garbage collection overhead by eliminating intermediary string
+allocations. The resulting typed array views can be bound directly to a
+<code>THREE.BufferAttribute</code>, allowing Three.js to upload geometry
+buffers directly to the GPU with minimal CPU overhead and zero data
+corruption.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

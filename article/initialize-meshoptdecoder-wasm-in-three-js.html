@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialize MeshoptDecoder WASM in Three.js - three.js</title>
+    <meta name="description" content="When working with glTF models compressed via EXTmeshoptcompression, Three.js requires the MeshoptDecoder utility to decompress geometry on the fly. This article explains how to manually initialize the underlying WebAssembly (WASM) module for MeshoptDecod">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/initialize-meshoptdecoder-wasm-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Initialize MeshoptDecoder WASM in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/initialize-meshoptdecoder-wasm-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When working with glTF models compressed via EXTmeshoptcompression, Three.js requires the MeshoptDecoder utility to decompress geometry on the fly. This article explains how to manually initialize the underlying WebAssembly (WASM) module for MeshoptDecod" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="initialize-meshoptdecoder-wasm-in-threejs">Initialize
+MeshoptDecoder WASM in Three.js</h1>
+<p>When working with glTF models compressed via
+<code>EXT_meshopt_compression</code>, Three.js requires the
+<code>MeshoptDecoder</code> utility to decompress geometry on the fly.
+This article explains how to manually initialize the underlying
+WebAssembly (WASM) module for <code>MeshoptDecoder</code>, ensuring
+assets are properly compiled and ready before passing the decoder to
+<code>GLTFLoader</code>, which is particularly crucial in modern bundler
+environments like Vite or Webpack.</p>
+<h3 id="why-manual-initialization-is-required">Why Manual Initialization
+Is Required</h3>
+<p>By default, WebAssembly binaries must be loaded and compiled
+asynchronously before their exported functions can be called. If a
+<code>GLTFLoader</code> attempts to parse a compressed
+<code>.gltf</code> or <code>.glb</code> file before the
+<code>MeshoptDecoder</code> has finished compiling its WASM payload,
+runtime execution will throw an error. Manually controlling the
+initialization ensures your application waits for the decoder to be
+fully active before processing any 3D models.</p>
+<h3 id="standard-asynchronous-initialization">Standard Asynchronous
+Initialization</h3>
+<p>The official Three.js distribution of <code>MeshoptDecoder</code>
+exports an asynchronous promise named <code>ready</code>. Awaiting this
+promise ensures that the WebAssembly binary has been fetched, compiled,
+and instantiated.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MeshoptDecoder } <span class="im">from</span> <span class="st">&#39;three/addons/libs/meshopt_decoder.module.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">initScene</span>() {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Wait for the WebAssembly module to compile and initialize</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> MeshoptDecoder<span class="op">.</span><span class="at">ready</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Instantiate and configure GLTFLoader</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    loader<span class="op">.</span><span class="fu">setMeshoptDecoder</span>(MeshoptDecoder)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Load the compressed glTF asset safely</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/model.glb&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Proceed with adding the model to your Three.js scene</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">initScene</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="manual-initialization-with-custom-wasm-paths">Manual
+Initialization with Custom WASM Paths</h3>
+<p>In specific production environments, such as content delivery
+networks (CDNs) or bundlers that do not automatically resolve the
+internal WASM URL, you may need to fetch the <code>.wasm</code> file
+manually using the Fetch API and feed it to the decoder.</p>
+<p>If you are using the standalone <code>meshoptimizer</code> npm
+package, you can supply your own compiled WebAssembly instance or
+initialize it using <code>WebAssembly.compile</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MeshoptDecoder } <span class="im">from</span> <span class="st">&#39;meshoptimizer&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">setupMeshoptDecoder</span>() {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fetch the external WASM file directly</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> <span class="fu">fetch</span>(<span class="st">&#39;/path/to/meshopt_decoder.wasm&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> wasmBinary <span class="op">=</span> <span class="cf">await</span> response<span class="op">.</span><span class="fu">arrayBuffer</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Compile and initialize the module manually</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">await</span> MeshoptDecoder<span class="op">.</span><span class="at">ready</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Some custom builds support explicitly passing the buffer:</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="kw">typeof</span> MeshoptDecoder<span class="op">.</span><span class="at">use</span> <span class="op">===</span> <span class="st">&#39;function&#39;</span>) {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> module <span class="op">=</span> <span class="cf">await</span> WebAssembly<span class="op">.</span><span class="fu">compile</span>(wasmBinary)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        MeshoptDecoder<span class="op">.</span><span class="fu">use</span>(module)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    loader<span class="op">.</span><span class="fu">setMeshoptDecoder</span>(MeshoptDecoder)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> loader<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="best-practices">Best Practices</h3>
+<ul>
+<li><strong>Initialize Once:</strong> Call and await
+<code>MeshoptDecoder.ready</code> at application startup. You do not
+need to reinitialize it for every model; a single global initialization
+suffices for the entire runtime.</li>
+<li><strong>Combine with DRACOLoader:</strong> If your application loads
+models with varying compression standards, initialize both
+<code>MeshoptDecoder</code> and <code>DRACOLoader</code> simultaneously
+before beginning file downloads to avoid pipeline bottlenecks.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

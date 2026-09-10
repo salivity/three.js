@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js AnimationObjectGroup: Share AnimationAction - three.js</title>
+    <meta name="description" content="This article explores Three.js's AnimationObjectGroup, an efficient utility class designed to synchronize animations across multiple 3D objects. You will learn what AnimationObjectGroup is, how it enables several meshes to share a single AnimationAction">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-animationobjectgroup-share-animationaction">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js AnimationObjectGroup: Share AnimationAction - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-animationobjectgroup-share-animationaction" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores Three.js's AnimationObjectGroup, an efficient utility class designed to synchronize animations across multiple 3D objects. You will learn what AnimationObjectGroup is, how it enables several meshes to share a single AnimationAction" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-animationobjectgroup-share-animationaction">Three.js
+AnimationObjectGroup: Share AnimationAction</h1>
+<p>This article explores Three.js's <code>AnimationObjectGroup</code>,
+an efficient utility class designed to synchronize animations across
+multiple 3D objects. You will learn what
+<code>AnimationObjectGroup</code> is, how it enables several meshes to
+share a single <code>AnimationAction</code> and
+<code>AnimationMixer</code>, and how to implement it to optimize
+performance in your WebGL scenes.</p>
+<h2 id="what-is-an-animationobjectgroup">What is an
+AnimationObjectGroup?</h2>
+<p>In standard Three.js implementations, an <code>AnimationMixer</code>
+is tied to a single root scene graph object (such as a mesh or a group).
+If you have dozens of identical objects—such as spinning coins, swaying
+trees, or marching units—creating a separate <code>AnimationMixer</code>
+and <code>AnimationAction</code> for each object introduces significant
+CPU overhead and redundant memory usage.</p>
+<p><code>AnimationObjectGroup</code> acts as an intermediary container
+that represents a collection of objects sharing the same animation
+state. Instead of passing an individual mesh to the
+<code>AnimationMixer</code>, you pass an instance of
+<code>AnimationObjectGroup</code>. Any animation applied to the group is
+automatically broadcast and applied to all member objects
+simultaneously.</p>
+<h2 id="how-it-enables-shared-animationactions">How it Enables Shared
+AnimationActions</h2>
+<p>Normally, an <code>AnimationAction</code> controls the playback of an
+<code>AnimationClip</code> on the single root target bound to its mixer.
+When an <code>AnimationObjectGroup</code> is assigned as the root target
+of an <code>AnimationMixer</code>, the mixer's internal bindings map
+track outputs to the corresponding properties across <em>all</em> meshes
+registered inside the group.</p>
+<p>As a result:</p>
+<ol type="1">
+<li>Only one <code>AnimationMixer</code> needs to be updated in your
+render loop via <code>mixer.update(delta)</code>.</li>
+<li>Only one <code>AnimationAction</code> evaluates the keyframe
+tracks.</li>
+<li>The calculated property updates (position, rotation, scale, or morph
+targets) are efficiently applied to every object currently in the
+group.</li>
+</ol>
+<h2 id="implementation-example">Implementation Example</h2>
+<p>Below is a step-by-step example showing how to set up and use
+<code>AnimationObjectGroup</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create your meshes</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ff00</span> })<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>meshA<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>meshB<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(meshA)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(meshB)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Initialize the AnimationObjectGroup and add meshes</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> animationGroup <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationObjectGroup</span>()<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>animationGroup<span class="op">.</span><span class="fu">add</span>(meshA<span class="op">,</span> meshB)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Bind the AnimationMixer to the AnimationObjectGroup</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(animationGroup)<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Create an AnimationClip (e.g., a simple Y-axis rotation)</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> track <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">QuaternionKeyframeTrack</span>(</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;.quaternion&#39;</span><span class="op">,</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  [<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span>]<span class="op">,</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  [</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  ]</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clip <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationClip</span>(<span class="st">&#39;Rotate&#39;</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> [track])<span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Create and play the shared AnimationAction</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> action <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(clip)<span class="op">;</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>action<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co">// 6. Update the mixer in the render loop</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  mixer<span class="op">.</span><span class="fu">update</span>(clock<span class="op">.</span><span class="fu">getDelta</span>())<span class="op">;</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="dynamic-membership-management">Dynamic Membership
+Management</h2>
+<p><code>AnimationObjectGroup</code> supports dynamic addition and
+removal of objects at runtime without disrupting playback:</p>
+<ul>
+<li><strong>Adding an object:</strong> Call
+<code>animationGroup.add(mesh)</code>. The mesh immediately snaps into
+sync with the current animation playback time.</li>
+<li><strong>Removing an object:</strong> Call
+<code>animationGroup.remove(mesh)</code>. The animation ceases updating
+that specific mesh, leaving it at its last animated state.</li>
+</ul>
+<h2 id="best-practices-and-limitations">Best Practices and
+Limitations</h2>
+<ul>
+<li><strong>Uniform Object Structure:</strong> All objects added to an
+<code>AnimationObjectGroup</code> must share the property names and
+hierarchy defined in the <code>AnimationClip</code> tracks. If an
+animated property exists in the clip but not on an object in the group,
+that object will not receive the update.</li>
+<li><strong>Synchronized Playback:</strong> Because all objects share a
+single <code>AnimationAction</code>, they animate completely in sync. If
+you require varied time offsets or independent speeds among meshes, you
+must instantiate individual <code>AnimationMixer</code> objects for each
+mesh instead.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

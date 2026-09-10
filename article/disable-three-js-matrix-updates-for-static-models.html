@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disable Three.js Matrix Updates for Static Models - three.js</title>
+    <meta name="description" content="Rendering a massive static city model in Three.js can severely bottleneck the CPU because the engine recalculates transformation matrices for every object on every frame by default. By explicitly disabling automatic matrix calculations across static obje">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/disable-three-js-matrix-updates-for-static-models">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Disable Three.js Matrix Updates for Static Models - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/disable-three-js-matrix-updates-for-static-models" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering a massive static city model in Three.js can severely bottleneck the CPU because the engine recalculates transformation matrices for every object on every frame by default. By explicitly disabling automatic matrix calculations across static obje" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="disable-threejs-matrix-updates-for-static-models">Disable
+Three.js Matrix Updates for Static Models</h1>
+<p>Rendering a massive static city model in Three.js can severely
+bottleneck the CPU because the engine recalculates transformation
+matrices for every object on every frame by default. By explicitly
+disabling automatic matrix calculations across static objects and
+computing their matrices only once, you can eliminate unnecessary
+scene-graph traversals and drastically reduce per-frame CPU
+overhead.</p>
+<h3 id="the-problem-with-default-matrix-calculations">The Problem with
+Default Matrix Calculations</h3>
+<p>In Three.js, every <code>Object3D</code> (including meshes, groups,
+and cameras) has its <code>matrixAutoUpdate</code> flag set to
+<code>true</code> by default. During the render loop, Three.js traverses
+the entire scene hierarchy and recalculates both local matrices
+(<code>matrix</code>) and world matrices (<code>matrixWorld</code>) for
+each node, accounting for potential changes in position, rotation, or
+scale.</p>
+<p>When dealing with a complex city model comprising thousands of static
+buildings, street furniture, and infrastructure meshes, these redundant
+calculations consume vital CPU cycles that should be reserved for
+physics, animations, or draw-call dispatching.</p>
+<h3 id="disabling-automatic-updates">Disabling Automatic Updates</h3>
+<p>To stop Three.js from recalculating transforms for static assets, set
+<code>matrixAutoUpdate</code> to <code>false</code>. Because the
+transforms will no longer compute automatically, you must manually
+trigger an initial calculation after positioning your objects so their
+final locations register properly.</p>
+<p>Here is how to traverse a loaded city model, apply transformations,
+disable auto-updates, and freeze the matrices:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume &#39;cityModel&#39; is an Object3D or Group containing the static city</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>cityModel<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Apply any required initial transformations</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// child.position.set(...);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// child.rotation.set(...);</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Force an initial matrix calculation</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="fu">updateMatrix</span>()<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Disable future per-frame matrix recalculations</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">matrixAutoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Update the entire hierarchy&#39;s world matrices once</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>cityModel<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="freezing-world-matrix-updates">Freezing World Matrix
+Updates</h3>
+<p>In recent versions of Three.js, the scene renderer also supports
+<code>matrixWorldAutoUpdate</code>. While <code>matrixAutoUpdate</code>
+prevents the object's local matrix from recalculating, setting
+<code>matrixWorldAutoUpdate = false</code> on a static root node ensures
+that Three.js does not attempt to evaluate parent-child transform
+cascades for that subtree during the render phase:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cityModel<span class="op">.</span><span class="at">matrixWorldAutoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div>
+<p>If you set this property, ensure you call
+<code>cityModel.updateMatrixWorld(true)</code> immediately beforehand so
+the initial nested transformations are baked into the world space.</p>
+<h3 id="updating-static-objects-when-needed">Updating Static Objects
+When Needed</h3>
+<p>Freezing matrices does not prevent you from ever moving objects
+again. If a building collapses, moves, or gets replaced dynamically at
+runtime, you can temporarily flag it for an update:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">moveStaticObject</span>(mesh<span class="op">,</span> newPosition) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(newPosition)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Recalculate local and world matrices explicitly</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="fu">updateMatrix</span>()<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By manually orchestrating matrix updates only when transformations
+actually take place, the CPU frame budget remains dedicated to dynamic
+scene elements rather than thousands of unchanging city meshes.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

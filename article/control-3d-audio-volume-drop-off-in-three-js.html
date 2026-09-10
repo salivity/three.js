@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control 3D Audio Volume Drop-Off in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, spatial audio realism depends heavily on how quickly sound attenuates over distance. This guide explains how to use refDistance and rolloffFactor on a THREE.PositionalAudio object to fine-tune volume drop-off, allowing you to create immersiv">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/control-3d-audio-volume-drop-off-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Control 3D Audio Volume Drop-Off in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/control-3d-audio-volume-drop-off-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, spatial audio realism depends heavily on how quickly sound attenuates over distance. This guide explains how to use refDistance and rolloffFactor on a THREE.PositionalAudio object to fine-tune volume drop-off, allowing you to create immersiv" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="control-3d-audio-volume-drop-off-in-threejs">Control 3D Audio
+Volume Drop-Off in Three.js</h1>
+<p>In Three.js, spatial audio realism depends heavily on how quickly
+sound attenuates over distance. This guide explains how to use
+<code>refDistance</code> and <code>rolloffFactor</code> on a
+<code>THREE.PositionalAudio</code> object to fine-tune volume drop-off,
+allowing you to create immersive, natural-sounding acoustic environments
+in your 3D scenes.</p>
+<h3 id="setting-up-positional-audio">Setting Up Positional Audio</h3>
+<p>To use spatial sound attenuation, you must attach a
+<code>THREE.AudioListener</code> to a camera and instantiate a
+<code>THREE.PositionalAudio</code> object attached to a scene mesh.
+Three.js exposes the underlying Web Audio API <code>PannerNode</code>
+properties through dedicated setter methods on the
+<code>PositionalAudio</code> instance.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize listener and positional sound</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> listener <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioListener</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">add</span>(listener)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sound <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PositionalAudio</span>(listener)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Load and set the audio buffer</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> audioLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioLoader</span>()<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>audioLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;sound.mp3&#39;</span><span class="op">,</span> (buffer) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setBuffer</span>(buffer)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="fu">add</span>(sound)<span class="op">;</span></span></code></pre></div>
+<h3 id="understanding-and-defining-refdistance">Understanding and
+Defining refDistance</h3>
+<p>The <code>refDistance</code> property defines the reference distance
+at which the sound volume is at its maximum (100% gain). As long as the
+listener is closer to the audio source than the
+<code>refDistance</code>, no volume reduction occurs. Attenuation begins
+only after the listener moves past this distance.</p>
+<p>To define this value, use the <code>setRefDistance()</code>
+method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setRefDistance</span>(<span class="dv">5</span>)<span class="op">;</span> <span class="co">// Maximum volume within 5 units</span></span></code></pre></div>
+<p>Use smaller values (such as <code>1</code> or <code>2</code>) for
+quiet, localized sounds like a ticking clock, and larger values (such as
+<code>20</code> or <code>50</code>) for louder sources like an explosion
+or a concert speaker.</p>
+<h3 id="understanding-and-defining-rollofffactor">Understanding and
+Defining rolloffFactor</h3>
+<p>The <code>rolloffFactor</code> determines how quickly the sound drops
+off as the listener moves further away from the source beyond the
+<code>refDistance</code>.</p>
+<ul>
+<li>A <code>rolloffFactor</code> of <code>0</code> disables distance
+attenuation entirely (volume remains constant).</li>
+<li>A standard value of <code>1</code> simulates natural real-world
+physical drop-off.</li>
+<li>A value greater than <code>1</code> causes the sound to fade away
+dramatically faster.</li>
+<li>A value between <code>0</code> and <code>1</code> produces a more
+gradual, subtle volume reduction.</li>
+</ul>
+<p>Set this value using the <code>setRolloffFactor()</code> method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setRolloffFactor</span>(<span class="fl">1.5</span>)<span class="op">;</span> <span class="co">// Steeper volume decay</span></span></code></pre></div>
+<h3 id="choosing-the-distance-model">Choosing the Distance Model</h3>
+<p>The behavior of <code>refDistance</code> and
+<code>rolloffFactor</code> depends directly on the distance model
+assigned to the audio source via <code>setDistanceModel()</code>. The
+three supported models are:</p>
+<ul>
+<li><strong><code>'inverse'</code> (Default):</strong> Calculates
+drop-off using the formula:<br />
+<code>1 / (1 + rolloffFactor * (distance - refDistance) / refDistance)</code>.
+This closely models natural acoustic behavior.</li>
+<li><strong><code>'linear'</code>:</strong> Reduces the volume at a
+steady rate until reaching <code>maxDistance</code>, calculated
+as:<br />
+<code>1 - rolloffFactor * (distance - refDistance) / (maxDistance - refDistance)</code>.</li>
+<li><strong><code>'exponential'</code>:</strong> Causes an extreme
+exponential volume drop-off using:<br />
+<code>pow((distance / refDistance), -rolloffFactor)</code>.</li>
+</ul>
+<h3 id="complete-implementation-example">Complete Implementation
+Example</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Configure drop-off settings</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setDistanceModel</span>(<span class="st">&#39;inverse&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setRefDistance</span>(<span class="dv">10</span>)<span class="op">;</span>       <span class="co">// Full volume within 10 units</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setRolloffFactor</span>(<span class="fl">1.2</span>)<span class="op">;</span>    <span class="co">// Drop-off rate</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>sound<span class="op">.</span><span class="fu">setMaxDistance</span>(<span class="dv">500</span>)<span class="op">;</span>      <span class="co">// Distance beyond which volume ceases to change</span></span></code></pre></div>
+<p>By balancing <code>refDistance</code> (the range of maximum clarity)
+and <code>rolloffFactor</code> (the steepness of the fade), you can
+accurately replicate both intimate ambient noises and powerful,
+wide-reaching audio sources.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matching Real-World Camera Lenses in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, accurately matching real-world physical cameras is essential for visual effects, architectural visualization, and augmented reality. By leveraging the filmGauge and filmOffset properties along with the setFocalLength() method on a Perspectiv">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/matching-real-world-camera-lenses-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Matching Real-World Camera Lenses in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/matching-real-world-camera-lenses-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, accurately matching real-world physical cameras is essential for visual effects, architectural visualization, and augmented reality. By leveraging the filmGauge and filmOffset properties along with the setFocalLength() method on a Perspectiv" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="matching-real-world-camera-lenses-in-threejs">Matching
+Real-World Camera Lenses in Three.js</h1>
+<p>In Three.js, accurately matching real-world physical cameras is
+essential for visual effects, architectural visualization, and augmented
+reality. By leveraging the <code>filmGauge</code> and
+<code>filmOffset</code> properties along with the
+<code>setFocalLength()</code> method on a
+<code>PerspectiveCamera</code>, you can mimic specific sensor sizes,
+prime lenses, and physical lens shifts rather than relying on arbitrary
+field-of-view (FOV) values.</p>
+<h3 id="understanding-filmgauge-sensor-size">Understanding
+<code>filmGauge</code> (Sensor Size)</h3>
+<p>In physical photography, the sensor size (or film format) dictates
+how a lens behaves. In Three.js, <code>camera.filmGauge</code>
+represents the width of the film or digital sensor in millimeters.</p>
+<p>By default, Three.js sets <code>filmGauge</code> to <code>35</code>
+(representing the 35mm full-frame standard with an active width of
+35mm). If you are matching a specific physical camera, you must change
+this value to match your hardware's sensor width:</p>
+<ul>
+<li><strong>Full Frame (35mm):</strong> 36 mm (standard 35mm format
+commonly approximated as 35 or 36 mm)</li>
+<li><strong>Super 35:</strong> ~24.89 mm</li>
+<li><strong>APS-C (Canon):</strong> ~22.3 mm</li>
+<li><strong>APS-C (Sony/Nikon):</strong> ~23.5 mm</li>
+<li><strong>Micro Four Thirds:</strong> ~17.3 mm</li>
+</ul>
+<h3 id="setting-the-focal-length">Setting the Focal Length</h3>
+<p>Instead of manually calculating the vertical field of view
+(<code>fov</code>), Three.js provides the
+<code>camera.setFocalLength(focalLength)</code> method. This function
+computes and updates the camera's <code>fov</code> property internally
+using the current <code>filmGauge</code>:</p>
+<p><span class="math display">\[\text{FOV} = 2 \times
+\arctan\left(\frac{\text{filmGauge}}{2 \times
+\text{focalLength}}\right)\]</span></p>
+<p>To configure a camera with a specific real-world lens:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">50</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Set sensor size (e.g., Super 35 sensor width in mm)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">filmGauge</span> <span class="op">=</span> <span class="fl">24.89</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Set the focal length in mm (e.g., a 50mm prime lens)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">setFocalLength</span>(<span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Update the projection matrix to apply changes</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="utilizing-filmoffset-for-optical-axis-shifts">Utilizing
+<code>filmOffset</code> for Optical Axis Shifts</h3>
+<p>The <code>camera.filmOffset</code> property offsets the sensor
+horizontally relative to the optical axis, measured in the same units as
+<code>filmGauge</code> (millimeters).</p>
+<p>In real-world photography, this technique is used with tilt-shift
+lenses or large-format view cameras to achieve shift photography. Moving
+the sensor or lens element off-center alters the perspective without
+rotating the camera, which is standard practice in architectural
+photography to keep vertical lines parallel.</p>
+<p>To offset the frame:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Shift the lens/sensor horizontally by 5mm</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">filmOffset</span> <span class="op">=</span> <span class="fl">5.0</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Apply changes</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<p>If you require vertical lens shifting instead of horizontal shifting,
+Three.js provides the <code>camera.setViewOffset()</code> method, which
+performs a similar asymmetric projection adjustment across both X and Y
+axes using pixel values.</p>
+<h3 id="complete-workflow">Complete Workflow</h3>
+<p>To fully replicate a physical camera setup in a Three.js scene:</p>
+<ol type="1">
+<li>Identify the camera's physical sensor width and set
+<code>camera.filmGauge</code>.</li>
+<li>Determine the lens focal length and call
+<code>camera.setFocalLength(focalLength)</code>.</li>
+<li>If simulating a perspective shift, set
+<code>camera.filmOffset</code>.</li>
+<li>Call <code>camera.updateProjectionMatrix()</code> whenever any of
+these properties are modified to recalculate the projection
+frustum.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

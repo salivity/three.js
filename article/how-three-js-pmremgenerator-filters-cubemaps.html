@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Three.js PMREMGenerator Filters Cubemaps - three.js</title>
+    <meta name="description" content="This article provides an in-depth breakdown of how the PMREMGenerator in Three.js processes, filters, and packages environment maps to deliver physically accurate, roughness-dependent specular reflections. It covers the underlying mathematics of microfac">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-three-js-pmremgenerator-filters-cubemaps">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Three.js PMREMGenerator Filters Cubemaps - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-three-js-pmremgenerator-filters-cubemaps" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an in-depth breakdown of how the PMREMGenerator in Three.js processes, filters, and packages environment maps to deliver physically accurate, roughness-dependent specular reflections. It covers the underlying mathematics of microfac" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-threejs-pmremgenerator-filters-cubemaps">How Three.js
+PMREMGenerator Filters Cubemaps</h1>
+<p>This article provides an in-depth breakdown of how the
+<code>PMREMGenerator</code> in Three.js processes, filters, and packages
+environment maps to deliver physically accurate, roughness-dependent
+specular reflections. It covers the underlying mathematics of microfacet
+BRDFs, the split-sum approximation, the iterative multi-pass convolution
+pipeline, seam-mitigation strategies, and how the final packed atlas is
+consumed by physically based rendering (PBR) materials at runtime.</p>
+<h2 id="the-role-of-pmrem-in-specular-image-based-lighting">The Role of
+PMREM in Specular Image-Based Lighting</h2>
+<p>In physically based rendering, calculating the specular reflection of
+an environment on a rough surface requires solving the rendering
+equation across the specular lobe. For a microfacet model using the
+GGX/Trowbridge-Reitz normal distribution function (NDF), this entails
+integrating the incoming radiance weighted by the BRDF over the
+hemisphere:</p>
+<p><span class="math display">\[L_o(v) = \int_{\Omega} L_i(l) f(l, v) (n
+\cdot l) dl\]</span></p>
+<p>Evaluating this integral per-pixel in real time via Monte Carlo
+integration is computationally prohibitive on modern GPUs. Three.js
+addresses this using the split-sum approximation popularized by Epic
+Games. The split-sum formulation separates the integral into two
+independent components:</p>
+<ol type="1">
+<li><strong>The Pre-Integrated BRDF (Environment BRDF):</strong> A 2D
+lookup table (LUT) parameterized by the cosine of the viewing angle
+(<span class="math inline">\(\cos \theta\)</span>) and surface
+roughness.</li>
+<li><strong>The Filtered Radiance (Pre-filtered Environment
+Map):</strong> The environment map convolved with the GGX NDF across
+various roughness values.</li>
+</ol>
+<p>The <code>PMREMGenerator</code> (Prefiltered Mipmapped Radiance
+Environment Map Generator) is responsible for pre-computing the second
+part of this equation.</p>
+<h2 id="input-ingestion-and-format-standardization">Input Ingestion and
+Format Standardization</h2>
+<p>The <code>PMREMGenerator</code> accepts various input sources,
+including equirectangular textures, cube textures, and dynamic 3D scenes
+rendered from a central viewpoint via a <code>CubeCamera</code>.</p>
+<p>When an input texture is passed to the generator via
+<code>.fromEquirectangular()</code> or <code>.fromCubemap()</code>, the
+generator ensures the data is mapped to a standardized floating-point
+representation. Equirectangular textures are projected onto a standard
+cubemap or internal render targets using a dedicated conversion shader
+that samples the equirectangular projection spherically:</p>
+<p><span class="math display">\[u = \frac{\text{atan2}(z, x)}{2\pi} +
+0.5, \quad v = \frac{\arcsin(y)}{\pi} + 0.5\]</span></p>
+<p>Dynamic ranges are preserved by utilizing HalfFloatType
+(<code>RGBA16F</code>) or FloatType (<code>RGBA32F</code>) render
+buffers, ensuring high-dynamic-range (HDR) data avoids clamping prior to
+convolution.</p>
+<h2 id="iterative-filtering-and-ggx-convolution-pipeline">Iterative
+Filtering and GGX Convolution Pipeline</h2>
+<p>Standard mipmapping applies a simple box or Gaussian filter down the
+mip chain, which averages texels linearly. In contrast, PMREM generation
+requires filtering the environment using an angular distribution defined
+by the GGX microfacet model, where each consecutive level represents an
+increasing roughness value.</p>
+<h3 id="roughness-to-mip-mapping">Roughness-to-Mip Mapping</h3>
+<p>The generator constructs a fixed sequence of mip levels. Rather than
+linearly incrementing roughness with mip levels, Three.js maps the
+perceptual roughness parameter <span class="math inline">\(\alpha =
+\text{roughness}^2\)</span> across the levels:</p>
+<ul>
+<li><strong>Level 0 (Base Resolution):</strong> Near-zero roughness
+(<span class="math inline">\(\alpha \approx 0\)</span>). This captures
+mirror-like reflections and represents the sharpest capture of the
+environment.</li>
+<li><strong>Intermediate Levels:</strong> Successively higher roughness
+values convolved with wider GGX lobes.</li>
+<li><strong>Final Level:</strong> Fully diffuse or maximum specular
+roughness (<span class="math inline">\(\alpha = 1.0\)</span>), capturing
+extremely broad, blurry ambient reflections.</li>
+</ul>
+<h3 id="progressive-filtering">Progressive Filtering</h3>
+<p>Convolving the original highest-resolution map for every individual
+roughness tier using a large sample count is slow. To optimize
+performance, the <code>PMREMGenerator</code> implements a progressive
+downsampling approach.</p>
+<p>For each level <span class="math inline">\(N\)</span>, the shader
+samples from level <span class="math inline">\(N - 1\)</span> rather
+than repeatedly evaluating the raw base texture. Because high roughness
+values act as low-pass filters that remove high-frequency details,
+sampling from an already convolved, lower-resolution representation
+maintains visual accuracy while dramatically reducing the sampling
+radius and texture bandwidth required.</p>
+<h3 id="importance-sampling-and-quasi-monte-carlo-weights">Importance
+Sampling and Quasi-Monte Carlo Weights</h3>
+<p>Within the convolution pass shader, the generator executes an
+approximation of importance sampling over the GGX distribution.
+Direction vectors for reflection samples are calculated using a
+low-discrepancy sequence (typically Hammersley sequences or spherical
+Fibonacci distributions). Each sample direction is evaluated based
+on:</p>
+<ul>
+<li>The half-vector <span class="math inline">\(H\)</span> generated
+from the sequence and the roughness <span
+class="math inline">\(\alpha\)</span>.</li>
+<li>The reflection vector <span class="math inline">\(L = 2(V \cdot H)H
+- V\)</span>.</li>
+<li>The solid angle associated with each sample relative to the texel
+solid angle, which dictates the implicit mip-level to fetch from to
+minimize aliasing.</li>
+</ul>
+<h2 id="the-packed-2d-render-target-layout">The Packed 2D Render Target
+Layout</h2>
+<p>Standard cube-map render targets natively require six distinct faces,
+which can introduce pipeline stalls due to frequent frame buffer binding
+swaps or driver overhead in WebGL. Furthermore, sampling across cube
+seams during blur passes frequently yields visible edge artifacts.</p>
+<p>To overcome these constraints, <code>PMREMGenerator</code> processes
+and packs the entire mip chain into a single 2D atlas texture:</p>
+<ol type="1">
+<li><strong>Octahedral Projection or Face Packing:</strong> The cubemap
+faces are unrolled or packed into a contiguous 2D texture coordinate
+space.</li>
+<li><strong>Mip Strip Arrangement:</strong> The base mip level occupies
+the largest portion of the atlas (e.g., a <span
+class="math inline">\(256 \times 256\)</span> block). Successive mip
+levels are placed alongside or below each other in a structured grid,
+shrinking by a power of two at each step.</li>
+<li><strong>Padding and Edge Clamping:</strong> To prevent bilinear
+filtering and sampling bleeding across adjacent faces or differing mip
+levels, border margins (padding texels) are generated around each
+sub-face. The padding copies the neighboring spherical coordinates from
+adjacent cubemap faces, guaranteeing smooth transitions across 90-degree
+cube boundaries.</li>
+</ol>
+<h2 id="consumption-in-shaders">Consumption in Shaders</h2>
+<p>Once the <code>PMREMGenerator</code> finishes its render passes, it
+returns a <code>WebGLRenderTarget</code> containing the packed radiance
+map.</p>
+<p>When a PBR material such as <code>MeshStandardMaterial</code> or
+<code>MeshPhysicalMaterial</code> renders:</p>
+<ol type="1">
+<li>The material's shader calculates the reflection vector <span
+class="math inline">\(R\)</span> from the surface normal <span
+class="math inline">\(N\)</span> and view vector <span
+class="math inline">\(V\)</span>.</li>
+<li>It reads the surface's perceptual roughness and converts it to the
+matching fractional mip level in the PMREM atlas.</li>
+<li>The shader evaluates the custom coordinate transformations to
+translate the spherical reflection vector <span
+class="math inline">\(R\)</span> into the UV coordinates of the specific
+mip strip in the 2D packed atlas.</li>
+<li>It performs a trilinear fetch (sampling between two adjacent mip
+levels in the atlas and interpolating the results) to obtain the
+prefiltered radiance <span class="math inline">\(L_i\)</span>.</li>
+<li>This radiance is multiplied by the pre-integrated environment BRDF
+term (derived analytically or fetched from an internal LUT) and
+modulated by the Fresnel reflectance to yield the final specular
+contribution.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

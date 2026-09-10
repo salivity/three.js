@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform Vector3 Direction with Matrix4 in Three.js - three.js</title>
+    <meta name="description" content="Transforming a directional vector in Three.js requires a different mathematical approach than transforming a spatial position because directional vectors represent orientation without a fixed origin. Applying a standard 4x4 affine matrix directly via tra">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/transform-vector3-direction-with-matrix4-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Transform Vector3 Direction with Matrix4 in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/transform-vector3-direction-with-matrix4-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Transforming a directional vector in Three.js requires a different mathematical approach than transforming a spatial position because directional vectors represent orientation without a fixed origin. Applying a standard 4x4 affine matrix directly via tra" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="transform-vector3-direction-with-matrix4-in-threejs">Transform
+Vector3 Direction with Matrix4 in Three.js</h1>
+<p>Transforming a directional vector in Three.js requires a different
+mathematical approach than transforming a spatial position because
+directional vectors represent orientation without a fixed origin.
+Applying a standard 4x4 affine matrix directly via translation-aware
+methods will corrupt directional data. This guide explains how to
+correctly apply a <code>Matrix4</code> to a <code>Vector3</code>
+representing a direction using built-in Three.js methods, covering
+standard rotations and handling complex scenarios involving non-uniform
+scaling.</p>
+<h3 id="why-standard-applymatrix4-fails-for-directions">Why Standard
+<code>applyMatrix4</code> Fails for Directions</h3>
+<p>A standard affine transformation matrix (<code>THREE.Matrix4</code>)
+encodes translation, rotation, and scale. When you use
+<code>vector.applyMatrix4(matrix)</code>, Three.js treats the vector as
+a point in 3D space by implicitly setting its homogeneous coordinate
+<span class="math inline">\(w\)</span> to 1:</p>
+<p><span class="math display">\[[x, y, z, 1]\]</span></p>
+<p>This causes any translation components within the matrix to be added
+directly to the vector's components. Because a direction vector has no
+position, translation must be ignored by setting the homogeneous
+coordinate <span class="math inline">\(w\)</span> to 0:</p>
+<p><span class="math display">\[[x, y, z, 0]\]</span></p>
+<h3 id="method-1-using-vector3transformdirection">Method 1: Using
+<code>Vector3.transformDirection()</code></h3>
+<p>For standard transformations where the matrix contains rotations,
+translations, and uniform scaling, Three.js provides the native
+<code>transformDirection()</code> method.</p>
+<p>This method extracts the upper-left 3x3 rotation-scale component of
+the <code>Matrix4</code>, multiplies it by the vector, and automatically
+normalizes the resulting vector to preserve unit length.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define a direction vector (e.g., pointing forward along the Z-axis)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> direction <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume object has undergone complex rotations and translations</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> matrix <span class="op">=</span> object<span class="op">.</span><span class="at">matrixWorld</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Transform the direction</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>direction<span class="op">.</span><span class="fu">transformDirection</span>(matrix)<span class="op">;</span></span></code></pre></div>
+<p><code>transformDirection()</code> ignores the translation column
+entirely, ensuring the vector only rotates and retains a length of
+1.</p>
+<h3
+id="method-2-handling-non-uniform-scaling-with-a-normal-matrix">Method
+2: Handling Non-Uniform Scaling with a Normal Matrix</h3>
+<p>If your transformation matrix contains non-uniform scaling (e.g.,
+scaling by <code>(1, 2, 1)</code>), the upper-left 3x3 submatrix will
+distort the direction, causing surface normals and perpendicular vectors
+to lose their correct orientations.</p>
+<p>To preserve the true orientation under non-uniform scaling, you must
+transform the vector using the inverse transpose of the 3x3
+transformation matrix, commonly known as the <strong>Normal
+Matrix</strong>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> direction <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// e.g., a surface normal</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> matrix4 <span class="op">=</span> object<span class="op">.</span><span class="at">matrixWorld</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create a Matrix3 to store the normal matrix</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix3</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Compute the inverse transpose of the 4x4 matrix</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>normalMatrix<span class="op">.</span><span class="fu">getNormalMatrix</span>(matrix4)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Apply the normal matrix to the direction and re-normalize</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>direction<span class="op">.</span><span class="fu">applyMatrix3</span>(normalMatrix)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="choosing-the-right-method">Choosing the Right Method</h3>
+<ul>
+<li><strong>Use <code>vector.transformDirection(matrix4)</code></strong>
+when working with raycasting directions, camera forward vectors, or
+meshes that only experience translation, rotation, and uniform
+scaling.</li>
+<li><strong>Use <code>normalMatrix.getNormalMatrix(matrix4)</code> with
+<code>vector.applyMatrix3()</code></strong> when transforming surface
+normals or perpendicular vectors for objects subjected to non-uniform
+scaling.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

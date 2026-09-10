@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js WebGLRenderer forceContextLoss Explained - three.js</title>
+    <meta name="description" content="Calling WebGLRenderer.forceContextLoss() in a Three.js application programmatically simulates a GPU crash or driver failure by invalidating the active WebGL rendering context. This article explains the internal mechanics triggered by this method, detaili">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-webglrenderer-forcecontextloss-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js WebGLRenderer forceContextLoss Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-webglrenderer-forcecontextloss-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calling WebGLRenderer.forceContextLoss() in a Three.js application programmatically simulates a GPU crash or driver failure by invalidating the active WebGL rendering context. This article explains the internal mechanics triggered by this method, detaili" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-webglrenderer-forcecontextloss-explained">Three.js
+WebGLRenderer forceContextLoss Explained</h1>
+<p>Calling <code>WebGLRenderer.forceContextLoss()</code> in a Three.js
+application programmatically simulates a GPU crash or driver failure by
+invalidating the active WebGL rendering context. This article explains
+the internal mechanics triggered by this method, detailing how Three.js
+queries browser extensions, clears internal GPU states, dispatches DOM
+events, and halts subsequent rendering commands.</p>
+<h3 id="invocation-of-the-webgl_lose_context-extension">Invocation of
+the WEBGL_lose_context Extension</h3>
+<p>Under the hood, <code>WebGLRenderer.forceContextLoss()</code> does
+not destroy the <code>&lt;canvas&gt;</code> DOM element or execute
+custom garbage collection routines. Instead, it accesses the browser's
+standard <code>WEBGL_lose_context</code> extension via the internal
+<code>WebGLExtensions</code> cache. The internal implementation in
+Three.js executes:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> extension <span class="op">=</span> extensions<span class="op">.</span><span class="fu">get</span>( <span class="st">&#39;WEBGL_lose_context&#39;</span> )<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> ( extension ) extension<span class="op">.</span><span class="fu">loseContext</span>()<span class="op">;</span></span></code></pre></div>
+<p>If the browser supports this debugging extension, calling
+<code>loseContext()</code> tells the underlying graphics driver to
+detach the context from the underlying GPU hardware.</p>
+<h3 id="hardware-resource-invalidation">Hardware Resource
+Invalidation</h3>
+<p>Once <code>loseContext()</code> is triggered, the browser immediately
+purges all native WebGL resources allocated by that context. The GPU
+memory associated with the following resources is invalidated:</p>
+<ul>
+<li>Compiled vertex and fragment shaders (<code>WebGLProgram</code>,
+<code>WebGLShader</code>)</li>
+<li>Texture objects (<code>WebGLTexture</code>)</li>
+<li>Vertex Buffer Objects (VBOs) and Index Buffer Objects (IBOs)</li>
+<li>Framebuffer and Renderbuffer bindings
+(<code>WebGLFramebuffer</code>)</li>
+</ul>
+<p>Subsequent low-level WebGL API calls to this context are treated as
+no-ops or will return <code>gl.CONTEXT_LOST_WEBGL</code>. Any state
+queries made to the context return <code>null</code> or default zero
+values.</p>
+<h3 id="the-webglcontextlost-event-dispatch">The
+<code>webglcontextlost</code> Event Dispatch</h3>
+<p>Immediately after the driver invalidates the context, the browser
+fires the native DOM event <code>webglcontextlost</code> on the canvas
+element.</p>
+<p>Three.js binds an internal listener to this event upon
+initialization. When fired, the renderer flags its internal state to
+prevent further draw calls. If <code>event.preventDefault()</code> is
+called within a listener attached to <code>webglcontextlost</code>, the
+browser is instructed that the application may attempt to restore the
+context later. If not prevented, the context remains permanently lost,
+requiring a full re-instantiation of the <code>WebGLRenderer</code>.</p>
+<h3 id="impact-on-threejs-internal-subsystems">Impact on Three.js
+Internal Subsystems</h3>
+<p>Because Three.js uses centralized managers to track WebGL objects,
+the loss of context impacts several subsystems:</p>
+<ul>
+<li><strong>WebGLState:</strong> The internal state cache, which tracks
+active blend modes, depth functions, and bound textures to minimize
+redundant OpenGL state switches, becomes desynchronized with the actual
+GPU state.</li>
+<li><strong>WebGLTextures &amp; WebGLGeometries:</strong> The internal
+<code>WeakMap</code> caches still hold references to CPU-side
+<code>BufferGeometry</code> and <code>Texture</code> instances, but the
+mapping to GPU-side memory addresses points to dead resource
+handles.</li>
+<li><strong>WebGLPrograms:</strong> The internal shader cache retains
+cached program metadata, meaning shaders must be recompiled from scratch
+if the context is ever restored.</li>
+</ul>
+<h3 id="rendering-pipeline-suspension">Rendering Pipeline
+Suspension</h3>
+<p>If the application continues to call
+<code>renderer.render(scene, camera)</code> in an active
+<code>requestAnimationFrame</code> loop after calling
+<code>forceContextLoss()</code>, Three.js intercepts the cycle. Because
+the context is lost, the renderer skips binding framebuffers and
+suppresses draw operations (<code>gl.drawElements</code> or
+<code>gl.drawArrays</code>), preventing unhandled runtime exceptions
+from crashing the JavaScript execution thread.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

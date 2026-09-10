@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Three.js Alpha Blending with PremultiplyAlpha - three.js</title>
+    <meta name="description" content="Transparent textures in Three.js often produce visible visual defects such as dark halos, dirty fringes, or inaccurate blending around translucent edges. These artifacts occur because standard interpolation blends fully transparent background pixels—ty">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-three-js-alpha-blending-with-premultiplyalpha">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Three.js Alpha Blending with PremultiplyAlpha - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-three-js-alpha-blending-with-premultiplyalpha" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Transparent textures in Three.js often produce visible visual defects such as dark halos, dirty fringes, or inaccurate blending around translucent edges. These artifacts occur because standard interpolation blends fully transparent background pixels—ty" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-threejs-alpha-blending-with-premultiplyalpha">Fix Three.js
+Alpha Blending with PremultiplyAlpha</h1>
+<p>Transparent textures in Three.js often produce visible visual defects
+such as dark halos, dirty fringes, or inaccurate blending around
+translucent edges. These artifacts occur because standard interpolation
+blends fully transparent background pixels—typically stored as
+transparent black—into adjacent edge colors. You can eliminate these
+dark borders and achieve clean transparency by enabling
+<code>premultiplyAlpha</code> on your texture and configuring your
+material to handle premultiplied values correctly.</p>
+<h2 id="understanding-the-dark-fringe-issue">Understanding the Dark
+Fringe Issue</h2>
+<p>Standard straight alpha textures store color (<span
+class="math inline">\(RGB\)</span>) and opacity (<span
+class="math inline">\(A\)</span>) independently. When the GPU performs
+bilinear filtering on a straight alpha texture, it interpolates the
+color values and alpha values separately. If a bright, fully opaque
+pixel sits next to a transparent pixel with an RGB value of <span
+class="math inline">\((0, 0, 0, 0)\)</span>, the interpolated
+intermediate pixels become darker because their color values are being
+averaged toward black.</p>
+<p>When drawn to the screen using standard alpha blending equations,
+this causes a noticeable dark fringe around the silhouette of
+transparent objects.</p>
+<p>Premultiplied alpha solves this by multiplying the RGB components by
+the alpha value before interpolation:</p>
+<p><span class="math display">\[\text{RGB}_{\text{premultiplied}} =
+\text{RGB} \times \text{Alpha}\]</span></p>
+<p>During composition, the graphics hardware uses an additive blend mode
+for the color channels while using the alpha value for background
+attenuation, preventing transparent pixels from pulling edge colors
+toward black.</p>
+<h2 id="enabling-premultiplyalpha-on-a-threejs-texture">Enabling
+premultiplyAlpha on a Three.js Texture</h2>
+<p>To fix transparency artifacts, configure the texture to decode with
+premultiplied alpha and set your material's blending mode
+accordingly.</p>
+<h3 id="1-configure-the-texture">1. Configure the Texture</h3>
+<p>Set the <code>premultiplyAlpha</code> property of the
+<code>THREE.Texture</code> instance to <code>true</code>. This instructs
+WebGL to use the <code>UNPACK_PREMULTIPLY_ALPHA_WEBGL</code> pixel store
+parameter when uploading the texture data to the GPU.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/particle.png&#39;</span><span class="op">,</span> (loadedTexture) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  loadedTexture<span class="op">.</span><span class="at">premultiplyAlpha</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  loadedTexture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-material">2. Configure the Material</h3>
+<p>Once the texture is uploaded as premultiplied, the material rendering
+that texture must be notified so Three.js can adjust the blend function.
+Set <code>premultipliedAlpha: true</code> on the material alongside
+<code>transparent: true</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> texture<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">premultipliedAlpha</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.1</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<p>When <code>premultipliedAlpha</code> is enabled on the material,
+Three.js adjusts the underlying WebGL blend factors:</p>
+<ul>
+<li><strong>Source Factor:</strong> <code>gl.ONE</code> (instead of
+<code>gl.SRC_ALPHA</code>)</li>
+<li><strong>Destination Factor:</strong>
+<code>gl.ONE_MINUS_SRC_ALPHA</code></li>
+</ul>
+<h2 id="handling-webglrenderer-canvas-transparency">Handling
+WebGLRenderer Canvas Transparency</h2>
+<p>If you are rendering transparent Three.js scenes over an HTML
+background, the WebGL canvas itself must also handle alpha
+premultiplication correctly to prevent dark edges where 3D elements
+overlap HTML DOM elements.</p>
+<p>Ensure the <code>WebGLRenderer</code> initializes with matching
+settings:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">alpha</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">premultipliedAlpha</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When both the renderer and canvas context agree on premultiplication,
+the browser compositor properly blends the canvas layer with the
+surrounding web page elements without fringe artifacts.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

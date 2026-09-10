@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual AnimationMixer Stepping with setTime in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, skeletal and morph animations are typically advanced automatically within a requestAnimationFrame loop using mixer.update(deltaTime). However, specific use cases—such as frame-by-frame rendering, animation scrubbing, timeline scrubbing too">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/manual-animationmixer-stepping-with-settime-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Manual AnimationMixer Stepping with setTime in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/manual-animationmixer-stepping-with-settime-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, skeletal and morph animations are typically advanced automatically within a requestAnimationFrame loop using mixer.update(deltaTime). However, specific use cases—such as frame-by-frame rendering, animation scrubbing, timeline scrubbing too" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="manual-animationmixer-stepping-with-settime-in-threejs">Manual
+AnimationMixer Stepping with setTime in Three.js</h1>
+<p>In Three.js, skeletal and morph animations are typically advanced
+automatically within a <code>requestAnimationFrame</code> loop using
+<code>mixer.update(deltaTime)</code>. However, specific use cases—such
+as frame-by-frame rendering, animation scrubbing, timeline scrubbing
+tools, or video exporting—require precise, deterministic control over
+the animation state. This guide demonstrates how to manually advance an
+<code>AnimationMixer</code> by a fixed increment using the absolute
+<code>setTime</code> method.</p>
+<h3 id="understanding-settime-vs-update">Understanding
+<code>setTime</code> vs <code>update</code></h3>
+<p>The standard <code>mixer.update(deltaTime)</code> method receives a
+relative change in time and advances the mixer's internal clock
+automatically.</p>
+<p>In contrast, <code>mixer.setTime(timeInSeconds)</code> forces the
+mixer to evaluate the scene at an absolute point in time. When using
+<code>setTime</code>, the mixer does not automatically increment its
+internal clock based on previous frames; you are entirely responsible
+for tracking the elapsed time and passing the desired absolute
+timestamp.</p>
+<h3 id="implementation">Implementation</h3>
+<p>To step the mixer forward manually:</p>
+<ol type="1">
+<li>Maintain a variable to track the current animation time.</li>
+<li>Define your desired step increment (for example, <code>1 / 60</code>
+for 60 frames per second).</li>
+<li>Increase the current time variable by the increment.</li>
+<li>Pass the new time to <code>mixer.setTime()</code>.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Setup mixer and load your action</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(model)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> action <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(clip)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>action<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Track time and define step size</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> currentTime <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> stepIncrement <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> <span class="dv">30</span><span class="op">;</span> <span class="co">// Step forward by 1/30th of a second (~33.3ms)</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Step function</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">stepForward</span>() {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  currentTime <span class="op">+=</span> stepIncrement<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Handle looping if necessary</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> duration <span class="op">=</span> clip<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (currentTime <span class="op">&gt;</span> duration) {</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    currentTime <span class="op">=</span> currentTime <span class="op">%</span> duration<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set the mixer to the absolute timestamp</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  mixer<span class="op">.</span><span class="fu">setTime</span>(currentTime)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="important-considerations">Important Considerations</h3>
+<ul>
+<li><strong>Clip Duration and Looping:</strong> If your animation is
+meant to loop, wrap <code>currentTime</code> using the modulo operator
+(<code>currentTime % clip.duration</code>) to prevent the time value
+from increasing indefinitely. If the animation should stop at the end,
+use <code>Math.min(currentTime + stepIncrement, clip.duration)</code> to
+clamp the value.</li>
+<li><strong>Rendering Updates:</strong> Calling
+<code>mixer.setTime()</code> updates the transforms of the target 3D
+objects, but you must still trigger
+<code>renderer.render(scene, camera)</code> afterward to visually
+reflect the new frame.</li>
+<li><strong>Root Motion and Events:</strong> When jumping across large
+intervals or stepping backwards with <code>setTime</code>, animation
+events (like loop markers or clip finish triggers) may not fire in the
+same sequential order as they do when using <code>update()</code>. Keep
+increments small and forward-moving if event dispatching is
+required.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

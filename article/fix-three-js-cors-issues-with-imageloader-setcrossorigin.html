@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Three.js CORS Issues With ImageLoader setCrossOrigin - three.js</title>
+    <meta name="description" content="When loading external textures or assets across origins in Three.js, web browsers enforce Cross-Origin Resource Sharing (CORS) policies that can block images or taint the WebGL canvas. This article explains how to use the setCrossOrigin property on Three">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-three-js-cors-issues-with-imageloader-setcrossorigin">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Three.js CORS Issues With ImageLoader setCrossOrigin - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-three-js-cors-issues-with-imageloader-setcrossorigin" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When loading external textures or assets across origins in Three.js, web browsers enforce Cross-Origin Resource Sharing (CORS) policies that can block images or taint the WebGL canvas. This article explains how to use the setCrossOrigin property on Three" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-threejs-cors-issues-with-imageloader-setcrossorigin">Fix
+Three.js CORS Issues With ImageLoader setCrossOrigin</h1>
+<p>When loading external textures or assets across origins in Three.js,
+web browsers enforce Cross-Origin Resource Sharing (CORS) policies that
+can block images or taint the WebGL canvas. This article explains how to
+use the <code>setCrossOrigin</code> property on Three.js's
+<code>ImageLoader</code> to explicitly set the cross-origin attribute on
+requested images, allowing you to bypass strict CORS limitations during
+development when assets are hosted on different ports or remote
+servers.</p>
+<h2 id="understanding-the-problem">Understanding the Problem</h2>
+<p>Browsers prevent WebGL from rendering textures sourced from different
+origins (including different ports on <code>localhost</code>) unless the
+target server explicitly grants permission via HTTP headers, and the
+requesting client explicitly requests cross-origin access. Without
+configuring this request, the browser fails to load the image into the
+WebGL context, resulting in a security error such as:</p>
+<p><code>SecurityError: The operation is insecure.</code> or
+<code>Access to image at '...' from origin '...' has been blocked by CORS policy.</code></p>
+<h2 id="using-setcrossorigin-on-imageloader">Using setCrossOrigin on
+ImageLoader</h2>
+<p>The <code>ImageLoader</code> class in Three.js provides the
+<code>.setCrossOrigin()</code> method, which sets the
+<code>crossOrigin</code> attribute on the underlying HTML
+<code>&lt;img&gt;</code> element before the request is dispatched.</p>
+<p>To request anonymous cross-origin access, pass the string
+<code>'anonymous'</code> to <code>setCrossOrigin()</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Instantiate the ImageLoader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> imageLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ImageLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Configure cross-origin credentials</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>imageLoader<span class="op">.</span><span class="fu">setCrossOrigin</span>(<span class="st">&#39;anonymous&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Load the image asset</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>imageLoader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;http://localhost:8080/textures/my-texture.jpg&#39;</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    (image) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Create a texture from the loaded image</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> texture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CanvasTexture</span>(image)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Apply the texture to a material</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">map</span><span class="op">:</span> texture })<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">undefined</span><span class="op">,</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred while loading the image.&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="values-for-setcrossorigin">Values for setCrossOrigin</h3>
+<ul>
+<li><strong><code>'anonymous'</code></strong>: Requests cross-origin
+access without sending user credentials (such as HTTP cookies or HTTP
+authentication). This is the standard setting for public texture servers
+and local development servers.</li>
+<li><strong><code>'use-credentials'</code></strong>: Requests
+cross-origin access and includes credentials. Use this only if the
+serving origin requires authentication.</li>
+</ul>
+<h2 id="applying-setcrossorigin-to-textureloader">Applying
+setCrossOrigin to TextureLoader</h2>
+<p>In most Three.js workflows, textures are loaded using
+<code>THREE.TextureLoader</code> rather than directly using
+<code>ImageLoader</code>. <code>TextureLoader</code> wraps
+<code>ImageLoader</code> internally and inherits the same method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>textureLoader<span class="op">.</span><span class="fu">setCrossOrigin</span>(<span class="st">&#39;anonymous&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;http://localhost:8080/textures/my-texture.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">map</span><span class="op">:</span> texture })<span class="op">;</span></span></code></pre></div>
+<h2 id="essential-local-development-setup">Essential Local Development
+Setup</h2>
+<p>Setting <code>setCrossOrigin('anonymous')</code> solves the
+client-side configuration, but it requires two additional conditions to
+function correctly:</p>
+<ol type="1">
+<li><strong>Do not use the <code>file://</code> protocol</strong>:
+Browsers automatically block cross-origin requests made via
+<code>file:///path/to/index.html</code>. Always serve your project using
+a local development server such as Vite, <code>npx serve</code>, or
+Python's <code>http.server</code>.</li>
+<li><strong>Enable server headers</strong>: The origin serving the image
+files must respond with the <code>Access-Control-Allow-Origin</code>
+header set to <code>*</code> or your specific local development domain
+(e.g., <code>http://localhost:3000</code>).</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

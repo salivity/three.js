@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Z-Fighting in Three.js with PolygonOffset - three.js</title>
+    <meta name="description" content="Z-fighting occurs in Three.js when two coplanar or nearly coplanar surfaces occupy the same depth space, causing visual flickering as the depth buffer struggles to determine which pixel is closer. This guide explains how to resolve z-fighting using Three">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-z-fighting-in-three-js-with-polygonoffset">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Z-Fighting in Three.js with PolygonOffset - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-z-fighting-in-three-js-with-polygonoffset" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Z-fighting occurs in Three.js when two coplanar or nearly coplanar surfaces occupy the same depth space, causing visual flickering as the depth buffer struggles to determine which pixel is closer. This guide explains how to resolve z-fighting using Three" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-z-fighting-in-threejs-with-polygonoffset">Fix Z-Fighting in
+Three.js with PolygonOffset</h1>
+<p>Z-fighting occurs in Three.js when two coplanar or nearly coplanar
+surfaces occupy the same depth space, causing visual flickering as the
+depth buffer struggles to determine which pixel is closer. This guide
+explains how to resolve z-fighting using Three.js materials by enabling
+<code>polygonOffset</code> and properly setting
+<code>polygonOffsetFactor</code> and <code>polygonOffsetUnits</code> to
+pull decals, outlines, or layered geometry cleanly in front of or behind
+base surfaces.</p>
+<h3 id="understanding-the-z-fighting-problem">Understanding the
+Z-Fighting Problem</h3>
+<p>When two meshes share identical or extremely close world coordinates,
+rasterization floating-point rounding causes alternating pixels to win
+the depth test. Rather than physically translating the geometry in 3D
+space—which can break alignments or scale dependencies—WebGL provides an
+offset mechanism directly within the graphics pipeline to modify depth
+values before the depth test executes.</p>
+<h3 id="enabling-polygon-offset-in-threejs">Enabling Polygon Offset in
+Three.js</h3>
+<p>Three.js exposes the WebGL polygon offset functionality on all
+instances derived from <code>THREE.Material</code>. To activate it, you
+must explicitly set <code>polygonOffset</code> to <code>true</code> and
+supply values for the two offset parameters.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> overlayMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">polygonOffset</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">polygonOffsetFactor</span><span class="op">:</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">polygonOffsetUnits</span><span class="op">:</span> <span class="op">-</span><span class="dv">1</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="how-polygonoffsetfactor-and-polygonoffsetunits-work">How
+<code>polygonOffsetFactor</code> and <code>polygonOffsetUnits</code>
+Work</h3>
+<p>The total depth offset applied to a polygon is calculated via the
+formula:</p>
+<p><span class="math display">\[\text{Total Offset} = (m \times
+\text{factor}) + (r \times \text{units})\]</span></p>
+<ul>
+<li><strong><span class="math inline">\(m\)</span> (Maximum Depth
+Slope):</strong> The rate of depth change relative to screen
+coordinates. Polygons viewed at steep angles have a high slope.</li>
+<li><strong><span class="math inline">\(r\)</span> (Smallest Resolvable
+Value):</strong> A constant representing the smallest measurable
+difference in the depth buffer.</li>
+</ul>
+<h4 id="polygonoffsetfactor"><code>polygonOffsetFactor</code></h4>
+<p>This parameter scales the offset according to the slope of the
+polygon relative to the camera view. A higher slope requires a larger
+offset to avoid clipping. Setting this ensures that surfaces viewed at
+sharp angles do not start z-fighting.</p>
+<h4 id="polygonoffsetunits"><code>polygonOffsetUnits</code></h4>
+<p>This parameter provides a constant minimum offset regardless of the
+surface angle. It moves the entire polygon by a fixed number of
+depth-buffer increments.</p>
+<h3 id="recommended-value-configurations">Recommended Value
+Configurations</h3>
+<p>Depth values range from <code>0.0</code> (near plane) to
+<code>1.0</code> (far plane). Therefore:</p>
+<ul>
+<li><strong>Negative values</strong> push fragments
+<strong>closer</strong> to the camera (ideal for decals, selection
+outlines, and overlays).</li>
+<li><strong>Positive values</strong> push fragments <strong>farther
+away</strong> from the camera (ideal for background panels or
+underlays).</li>
+</ul>
+<h4 id="1-overlays-and-decals-bring-forward">1. Overlays and Decals
+(Bring Forward)</h4>
+<p>To render an overlay directly on top of a base mesh, apply negative
+values to the overlay material:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>decalMaterial<span class="op">.</span><span class="at">polygonOffset</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>decalMaterial<span class="op">.</span><span class="at">polygonOffsetFactor</span> <span class="op">=</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>decalMaterial<span class="op">.</span><span class="at">polygonOffsetUnits</span> <span class="op">=</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<p>If slight z-fighting persists on steep viewing angles, increase the
+factor:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>decalMaterial<span class="op">.</span><span class="at">polygonOffsetFactor</span> <span class="op">=</span> <span class="op">-</span><span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>decalMaterial<span class="op">.</span><span class="at">polygonOffsetUnits</span> <span class="op">=</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-hidden-line--silhouette-rendering-push-backward">2. Hidden
+Line / Silhouette Rendering (Push Backward)</h4>
+<p>When rendering solid geometry inside wireframes or edge geometry,
+push the solid surface back:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>baseMaterial<span class="op">.</span><span class="at">polygonOffset</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>baseMaterial<span class="op">.</span><span class="at">polygonOffsetFactor</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>baseMaterial<span class="op">.</span><span class="at">polygonOffsetUnits</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<h3 id="best-practices">Best Practices</h3>
+<ul>
+<li><strong>Modify only one layer:</strong> Apply the offset to either
+the top layer or the bottom layer, not both, to keep depth relationships
+predictable.</li>
+<li><strong>Keep values small:</strong> Start with <code>-1</code> for
+both properties. Using excessively large numbers (e.g.,
+<code>-100</code>) can cause the polygon to clip through other nearby
+objects that are legitimately in front.</li>
+<li><strong>Camera precision:</strong> If large offsets fail to solve
+the issue, ensure your camera's <code>near</code> plane is not set too
+low (e.g., <code>0.0001</code>), as an overly wide near-to-far ratio
+drastically reduces depth buffer precision across the entire scene.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

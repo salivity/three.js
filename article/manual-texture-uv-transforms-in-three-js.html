@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Texture UV Transforms in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, textures automatically compute their UV transformation matrix every frame based on properties like offset, repeat, rotation, and center. By setting texture.matrixAutoUpdate = false, you disable this automatic calculation, allowing direct man">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/manual-texture-uv-transforms-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Manual Texture UV Transforms in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/manual-texture-uv-transforms-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, textures automatically compute their UV transformation matrix every frame based on properties like offset, repeat, rotation, and center. By setting texture.matrixAutoUpdate = false, you disable this automatic calculation, allowing direct man" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="manual-texture-uv-transforms-in-threejs">Manual Texture UV
+Transforms in Three.js</h1>
+<p>In Three.js, textures automatically compute their UV transformation
+matrix every frame based on properties like <code>offset</code>,
+<code>repeat</code>, <code>rotation</code>, and <code>center</code>. By
+setting <code>texture.matrixAutoUpdate = false</code>, you disable this
+automatic calculation, allowing direct manipulation of the texture's 3x3
+transformation matrix (<code>texture.matrix</code>). This article
+explains how to configure this property and manually control texture UV
+coordinates for advanced transformations, such as shearing or custom
+matrix chains, while optimizing rendering performance.</p>
+<h3 id="disabling-automatic-matrix-updates">Disabling Automatic Matrix
+Updates</h3>
+<p>By default, Three.js synchronizes <code>texture.matrix</code> with
+its individual transform properties inside the internal render loop. To
+take manual control, set the <code>matrixAutoUpdate</code> flag to
+<code>false</code> immediately after creating or loading the
+texture:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/texture.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Disable automatic recalculation</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">matrixAutoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div>
+<p>Once <code>matrixAutoUpdate</code> is set to <code>false</code>,
+changing <code>texture.offset</code>, <code>texture.repeat</code>,
+<code>texture.rotation</code>, or <code>texture.center</code> will have
+no effect on how the texture is rendered.</p>
+<h3 id="controlling-the-uv-matrix-directly">Controlling the UV Matrix
+Directly</h3>
+<p>The texture coordinate transformation is stored in
+<code>texture.matrix</code>, which is an instance of
+<code>THREE.Matrix3</code>. UV coordinates in Three.js are 2D
+homogeneous coordinates:</p>
+<p><span class="math display">\[\begin{bmatrix} U&#39; \\ V&#39; \\ 1
+\end{bmatrix} = \mathbf{M} \begin{bmatrix} U \\ V \\ 1
+\end{bmatrix}\]</span></p>
+<p>You can manipulate this matrix using built-in <code>Matrix3</code>
+methods or by setting its elements directly.</p>
+<h4 id="method-1-using-setuvtransform">Method 1: Using
+<code>setUvTransform</code></h4>
+<p>If you want to manually trigger the standard UV calculation without
+enabling per-frame auto-updates, use the <code>setUvTransform</code>
+helper:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Arguments: tx, ty, sx, sy, rotation, cx, cy</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// (translateX, translateY, scaleX, scaleY, rotation, centerX, centerY)</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">setUvTransform</span>(<span class="fl">0.1</span><span class="op">,</span> <span class="fl">0.2</span><span class="op">,</span> <span class="fl">2.0</span><span class="op">,</span> <span class="fl">2.0</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">4</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span>)<span class="op">;</span></span></code></pre></div>
+<p>This method calculates the proper translation, rotation around a
+center point, and scale, applying the result directly to
+<code>texture.matrix</code>.</p>
+<h4 id="method-2-manual-matrix-construction-and-shearing">Method 2:
+Manual Matrix Construction and Shearing</h4>
+<p>Direct matrix access allows you to apply transformations that
+Three.js does not support natively through standard properties, such as
+shearing/skewing:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Define custom scale, shear, and translation</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sx <span class="op">=</span> <span class="fl">1.0</span><span class="op">;</span>   <span class="co">// Scale X</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sy <span class="op">=</span> <span class="fl">1.0</span><span class="op">;</span>   <span class="co">// Scale Y</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> kx <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span>   <span class="co">// Shear along X</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ky <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span>   <span class="co">// Shear along Y</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tx <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span>   <span class="co">// Translate X</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ty <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span>   <span class="co">// Translate Y</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Matrix elements are stored in column-major order:</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// [ sx, ky, 0 ]</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// [ kx, sy, 0 ]</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">// [ tx, ty, 1 ]</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">set</span>(</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    sx<span class="op">,</span> kx<span class="op">,</span> tx<span class="op">,</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    ky<span class="op">,</span> sy<span class="op">,</span> ty<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span>  <span class="dv">0</span><span class="op">,</span>  <span class="dv">1</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="animating-the-uv-transform-manually">Animating the UV Transform
+Manually</h3>
+<p>When animating UVs in a render loop with
+<code>matrixAutoUpdate = false</code>, update the matrix directly inside
+your animation cycle.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> offset <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    offset <span class="op">+=</span> <span class="fl">0.005</span><span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Manually translate UVs along the X-axis</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">identity</span>()<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">translate</span>(offset<span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<p>Because <code>matrixAutoUpdate</code> is disabled, the GPU uniform
+for the texture matrix will still receive your manual matrix updates via
+<code>texture.matrix</code>, avoiding redundant calculations on the CPU
+while giving you precise mathematical control over your coordinates.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

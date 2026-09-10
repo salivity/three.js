@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js SAOPass vs SSAOPass Ambient Occlusion - three.js</title>
+    <meta name="description" content="In Three.js, ambient occlusion post-processing passes enhance scene depth by darkening creases, crevices, and intersecting surfaces. While both SSAOPass (Screen Space Ambient Occlusion) and SAOPass (Scalable Ambient Obscurance) serve this purpose, they p">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-saopass-vs-ssaopass-ambient-occlusion">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js SAOPass vs SSAOPass Ambient Occlusion - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-saopass-vs-ssaopass-ambient-occlusion" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, ambient occlusion post-processing passes enhance scene depth by darkening creases, crevices, and intersecting surfaces. While both SSAOPass (Screen Space Ambient Occlusion) and SAOPass (Scalable Ambient Obscurance) serve this purpose, they p" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-saopass-vs-ssaopass-ambient-occlusion">Three.js SAOPass
+vs SSAOPass Ambient Occlusion</h1>
+<p>In Three.js, ambient occlusion post-processing passes enhance scene
+depth by darkening creases, crevices, and intersecting surfaces. While
+both <code>SSAOPass</code> (Screen Space Ambient Occlusion) and
+<code>SAOPass</code> (Scalable Ambient Obscurance) serve this purpose,
+they produce distinctly different visual results: standard
+<code>SSAOPass</code> produces higher-contrast, granular contact
+shadows, whereas <code>SAOPass</code> generates smoother, broader, and
+more diffuse shadowing with fewer noisy artifacts.</p>
+<h3 id="shadow-softness-and-falloff">Shadow Softness and Falloff</h3>
+<p>The most noticeable visual difference lies in how ambient shadows
+transition into lit surfaces.</p>
+<ul>
+<li><strong>SSAOPass:</strong> Employs a fixed-radius spherical or
+hemispherical sampling method. This yields high-contrast, tight, and
+harsh shadows concentrated in immediate corners and creases. The falloff
+can feel sudden, often giving the scene a gritty, high-contrast
+look.</li>
+<li><strong>SAOPass:</strong> Implements McGuire et al.’s Scalable
+Ambient Obscurance algorithm, which replaces binary occlusion tests with
+continuous obscurance falloff functions. Visually, this creates soft,
+gradient-rich shadows that spread across wider radii without losing
+geometric definition.</li>
+</ul>
+<h3 id="noise-and-grain-patterns">Noise and Grain Patterns</h3>
+<p>Because screen-space algorithms rely on randomized sample vectors to
+maintain performance, they inherently introduce visual noise that must
+be filtered out.</p>
+<ul>
+<li><strong>SSAOPass:</strong> Relies on a tiled noise texture paired
+with a post-blur pass. In complex geometry or high-frequency normal
+maps, this often leaves a noticeable dithered, stippled, or grainy
+pattern, particularly at medium distances.</li>
+<li><strong>SAOPass:</strong> Uses depth-aware filtering and spiral
+sampling patterns designed to eliminate high-frequency noise prior to
+the bilateral blur pass. The resulting occlusion appears uniformly
+smooth and paint-like, avoiding the static grain commonly visible when
+the camera moves in an SSAO-shaded scene.</li>
+</ul>
+<h3 id="silhouette-halos-and-depth-discontinuities">Silhouette Halos and
+Depth Discontinuities</h3>
+<p>When an object in the foreground stands against a distant background,
+screen-space techniques struggle to distinguish between a valid crevice
+and an open spatial gap.</p>
+<ul>
+<li><strong>SSAOPass:</strong> Often creates dark halos or over-darkened
+"shadow bleed" around the silhouette edges of foreground meshes against
+distant geometry.</li>
+<li><strong>SAOPass:</strong> Evaluates surface normals and distance
+thresholds more progressively. As a result, it drastically reduces dark
+edge bleeding around silhouettes, leaving cleaner object borders against
+open space.</li>
+</ul>
+<h3 id="visual-aesthetic-comparison">Visual Aesthetic Comparison</h3>
+<p>Choosing between the two passes visually depends on the desired art
+style:</p>
+<ul>
+<li><strong>Use SSAOPass</strong> when a stylized, dramatic, or
+high-contrast visual style is required where tight crevice accents
+(contact shadowing) matter more than broad, soft light transport.</li>
+<li><strong>Use SAOPass</strong> when striving for photorealism, soft
+indirect lighting, and clean, flicker-free rendering on smooth surfaces
+like architecture, product designs, or expansive terrain.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

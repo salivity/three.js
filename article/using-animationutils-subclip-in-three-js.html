@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using AnimationUtils.subclip in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to extract specific segments from an existing AnimationClip in Three.js using the AnimationUtils.subclip method. You will learn the method's parameter requirements, how frame-to-time conversions work, and how to implement the resu">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-animationutils-subclip-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using AnimationUtils.subclip in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-animationutils-subclip-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to extract specific segments from an existing AnimationClip in Three.js using the AnimationUtils.subclip method. You will learn the method's parameter requirements, how frame-to-time conversions work, and how to implement the resu" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-animationutilssubclip-in-threejs">Using
+AnimationUtils.subclip in Three.js</h1>
+<p>This guide explains how to extract specific segments from an existing
+<code>AnimationClip</code> in Three.js using the
+<code>AnimationUtils.subclip</code> method. You will learn the method's
+parameter requirements, how frame-to-time conversions work, and how to
+implement the resulting subclip within an <code>AnimationMixer</code>
+workflow.</p>
+<h3 id="understanding-animationutilssubclip">Understanding
+AnimationUtils.subclip</h3>
+<p>In Three.js, complex models often come with multiple animations
+combined into a single timeline (such as an idle, walk, and run sequence
+packed into one continuous track). The
+<code>THREE.AnimationUtils.subclip</code> method allows you to cut this
+single clip into smaller, targeted clips without modifying the original
+asset file.</p>
+<h3 id="method-syntax-and-parameters">Method Syntax and Parameters</h3>
+<p>The method accepts five arguments:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">AnimationUtils</span><span class="op">.</span><span class="fu">subclip</span>( sourceClip<span class="op">,</span> name<span class="op">,</span> startFrame<span class="op">,</span> endFrame<span class="op">,</span> fps )<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>sourceClip</code></strong>
+(<em>THREE.AnimationClip</em>): The original animation clip you want to
+slice.</li>
+<li><strong><code>name</code></strong> (<em>String</em>): The unique
+identifier name assigned to the newly created subclip.</li>
+<li><strong><code>startFrame</code></strong> (<em>Number</em>): The
+frame index where the new clip begins.</li>
+<li><strong><code>endFrame</code></strong> (<em>Number</em>): The frame
+index where the new clip ends.</li>
+<li><strong><code>fps</code></strong> (<em>Number</em>, optional): The
+frame rate used to calculate the timeline. The default value is
+<code>30</code>.</li>
+</ul>
+<p>The method calculates the actual time boundaries by dividing the
+frame numbers by the specified <code>fps</code> value
+(<code>startTime = startFrame / fps</code> and
+<code>endTime = endFrame / fps</code>).</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<ol type="1">
+<li><strong>Load or obtain your source clip:</strong> Retrieve the main
+<code>AnimationClip</code> from your loaded 3D asset (such as a GLTF
+model).</li>
+<li><strong>Define frame ranges:</strong> Identify the start and end
+frame numbers for the specific action you wish to extract.</li>
+<li><strong>Generate the subclip:</strong> Call
+<code>THREE.AnimationUtils.subclip</code>.</li>
+<li><strong>Play via AnimationMixer:</strong> Pass the new clip to an
+<code>AnimationMixer</code> instance to play it.</li>
+</ol>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;character.glb&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> fullClip <span class="op">=</span> gltf<span class="op">.</span><span class="at">animations</span>[<span class="dv">0</span>]<span class="op">;</span> <span class="co">// The combined timeline clip</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> fps <span class="op">=</span> <span class="dv">30</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Extract a &quot;Walk&quot; animation spanning frames 0 to 30</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> walkClip <span class="op">=</span> THREE<span class="op">.</span><span class="at">AnimationUtils</span><span class="op">.</span><span class="fu">subclip</span>(fullClip<span class="op">,</span> <span class="st">&#39;Walk&#39;</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">30</span><span class="op">,</span> fps)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Extract a &quot;Run&quot; animation spanning frames 31 to 60</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> runClip <span class="op">=</span> THREE<span class="op">.</span><span class="at">AnimationUtils</span><span class="op">.</span><span class="fu">subclip</span>(fullClip<span class="op">,</span> <span class="st">&#39;Run&#39;</span><span class="op">,</span> <span class="dv">31</span><span class="op">,</span> <span class="dv">60</span><span class="op">,</span> fps)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Set up the AnimationMixer</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> mixer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AnimationMixer</span>(model)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Play the extracted walk clip</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> walkAction <span class="op">=</span> mixer<span class="op">.</span><span class="fu">clipAction</span>(walkClip)<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    walkAction<span class="op">.</span><span class="fu">setLoop</span>(THREE<span class="op">.</span><span class="at">LoopRepeat</span>)<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    walkAction<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="important-considerations">Important Considerations</h3>
+<ul>
+<li><strong>Keyframe Interpolation:</strong> <code>subclip</code> copies
+keyframe data falling within the time window. If a keyframe does not
+land precisely on the start or end frame, Three.js interpolates the
+track values to ensure smooth looping.</li>
+<li><strong>FPS Consistency:</strong> Ensure the <code>fps</code>
+parameter matches the frame rate used when the animation was authored in
+your 3D software (e.g., Blender or Maya) to avoid mismatched clip start
+and end points.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Manually Update Shadows in Three.js - three.js</title>
+    <meta name="description" content="Rendering dynamic shadows every frame can cause significant performance overhead in Three.js, especially in scenes with complex geometry or static lighting. This guide explains how to boost rendering efficiency by disabling automatic shadow map updates w">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-manually-update-shadows-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Manually Update Shadows in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-manually-update-shadows-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering dynamic shadows every frame can cause significant performance overhead in Three.js, especially in scenes with complex geometry or static lighting. This guide explains how to boost rendering efficiency by disabling automatic shadow map updates w" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-manually-update-shadows-in-threejs">How to Manually
+Update Shadows in Three.js</h1>
+<p>Rendering dynamic shadows every frame can cause significant
+performance overhead in Three.js, especially in scenes with complex
+geometry or static lighting. This guide explains how to boost rendering
+efficiency by disabling automatic shadow map updates with
+<code>shadowMap.autoUpdate = false</code> and manually triggering shadow
+recomputations with <code>shadowMap.needsUpdate = true</code> strictly
+when an object's position, rotation, or scale changes.</p>
+<h2 id="why-disable-automatic-shadow-updates">Why Disable Automatic
+Shadow Updates</h2>
+<p>By default, Three.js re-renders the shadow map for every
+shadow-casting light during every frame of the render loop. If the scene
+is mostly static or objects only move intermittently, continuously
+recalculating shadow maps wastes GPU cycles. Disabling automatic updates
+frees up GPU resources, maintaining a higher frame rate.</p>
+<h2 id="disabling-autoupdate-on-the-renderer">Disabling
+<code>autoUpdate</code> on the Renderer</h2>
+<p>To take control of the shadow update pipeline, enable shadow maps on
+your <code>WebGLRenderer</code> instance and set <code>autoUpdate</code>
+to <code>false</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable shadows and disable automatic updates</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">autoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span></code></pre></div>
+<p>Because <code>autoUpdate</code> is disabled, Three.js will not
+calculate shadows until you explicitly request an update.</p>
+<h2 id="triggering-an-initial-shadow-pass">Triggering an Initial Shadow
+Pass</h2>
+<p>When the scene loads, the shadow map is empty. You must request an
+initial update so the base shadows are drawn:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Render the initial shadows once the scene is set up</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>Once rendered, the shadows remain permanently cached in the texture
+buffer until you flag <code>needsUpdate</code> again.</p>
+<h2 id="updating-shadows-on-object-movement">Updating Shadows on Object
+Movement</h2>
+<p>Whenever a mesh, light, or camera moves, you must flag
+<code>renderer.shadowMap.needsUpdate = true</code> before the next
+render call. Once the render pass completes, Three.js automatically
+resets <code>needsUpdate</code> back to <code>false</code>.</p>
+<h3 id="example-movement-function">Example: Movement Function</h3>
+<p>Create a centralized update function to handle moving the mesh and
+triggering the shadow map update:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">moveObject</span>(mesh<span class="op">,</span> newPosition) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(newPosition)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Flag that shadows need to recalculate</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="example-animation-loop-with-conditional-updates">Example:
+Animation Loop with Conditional Updates</h3>
+<p>If an object's movement is managed within the render loop (such as
+through user input, animation curves, or physics), you can evaluate
+state changes and trigger updates conditionally:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> objectMoved <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">onUserInteraction</span>() {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  cube<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">+=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  objectMoved <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (objectMoved) {</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    objectMoved <span class="op">=</span> <span class="kw">false</span><span class="op">;</span> <span class="co">// Reset the movement flag</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Update on Light Changes:</strong> If a light source moves,
+changes intensity, or alters its shadow camera properties (such as
+<code>near</code>, <code>far</code>, or <code>bias</code>), remember to
+also set <code>renderer.shadowMap.needsUpdate = true</code>.</li>
+<li><strong>Transform Controls:</strong> When using utilities like
+<code>TransformControls</code> for interactive editors, attach an event
+listener to the <code>'change'</code> event to trigger shadow map
+updates during drag interactions.</li>
+<li><strong>Animated Objects:</strong> For scenes with continuous
+animation, leave <code>autoUpdate</code> enabled only during active
+animations, then toggle it off once the movement stops to conserve
+performance.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

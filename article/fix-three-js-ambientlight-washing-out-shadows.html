@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Three.js AmbientLight Washing Out Shadows - three.js</title>
+    <meta name="description" content="In Three.js, AmbientLight illuminates all surfaces uniformly without direction or occlusion, which can quickly overpower the contrast created by a DirectionalLight and make shadows appear faint or washed out. To maintain crisp, realistic shadows while pr">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-three-js-ambientlight-washing-out-shadows">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Three.js AmbientLight Washing Out Shadows - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-three-js-ambientlight-washing-out-shadows" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, AmbientLight illuminates all surfaces uniformly without direction or occlusion, which can quickly overpower the contrast created by a DirectionalLight and make shadows appear faint or washed out. To maintain crisp, realistic shadows while pr" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-threejs-ambientlight-washing-out-shadows">Fix Three.js
+AmbientLight Washing Out Shadows</h1>
+<p>In Three.js, <code>AmbientLight</code> illuminates all surfaces
+uniformly without direction or occlusion, which can quickly overpower
+the contrast created by a <code>DirectionalLight</code> and make shadows
+appear faint or washed out. To maintain crisp, realistic shadows while
+preserving visibility in unlit areas, you must properly balance the
+intensity ratio between the lights, consider color contrast, and
+configure the renderer's tone mapping to maintain dynamic range.</p>
+<h3 id="1-maintain-a-proper-intensity-ratio">1. Maintain a Proper
+Intensity Ratio</h3>
+<p>The primary reason shadows wash out is an excessively high
+<code>AmbientLight.intensity</code>. Ambient light is meant only to
+simulate subtle, indirect bounced light, not to act as a primary light
+source.</p>
+<ul>
+<li>Keep <code>AmbientLight</code> intensity between <strong>0.05 and
+0.25</strong>.</li>
+<li>Set <code>DirectionalLight</code> intensity significantly higher,
+typically between <strong>1.0 and 3.0</strong> (or higher depending on
+your renderer's tone mapping and physical light settings).</li>
+<li>A general rule of thumb is an intensity ratio of roughly <strong>1:5
+to 1:10</strong> (Ambient to Directional).</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Weak ambient light to lift pure black values slightly</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ambientLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AmbientLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">0.15</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(ambientLight)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Strong primary light to produce defined shadows</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dirLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.5</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">7</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(dirLight)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-use-contrasting-color-temperatures">2. Use Contrasting Color
+Temperatures</h3>
+<p>Using pure white (<code>0xffffff</code>) for both lights often
+reduces visual depth. Shifting the ambient light toward a darker, cooler
+tone (such as slate gray or deep blue) simulates natural sky bounce and
+deepens shadows without making them completely black:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Cool, muted ambient tone</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ambientLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AmbientLight</span>(<span class="bn">0x334455</span><span class="op">,</span> <span class="fl">0.2</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(ambientLight)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Warm directional sunlight</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dirLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xfffaed</span><span class="op">,</span> <span class="fl">1.8</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(dirLight)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-consider-using-hemispherelight-instead">3. Consider Using
+<code>HemisphereLight</code> Instead</h3>
+<p>A flat <code>AmbientLight</code> illuminates the undersides of
+objects with the exact same strength as the sides facing the sky. A
+<code>THREE.HemisphereLight</code> provides a gradient between a sky
+color and a ground color, creating natural environmental occlusion that
+preserves shadow contrast much better than standard ambient light:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Sky color, ground color, intensity</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hemiLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">HemisphereLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="bn">0x222222</span><span class="op">,</span> <span class="fl">0.2</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hemiLight)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-enable-tone-mapping-on-the-webglrenderer">4. Enable Tone
+Mapping on the WebGLRenderer</h3>
+<p>Without tone mapping, high-intensity lights clip to pure white,
+compressing midtones and making shadows look artificially faded relative
+to the rest of the scene. Configuring modern tone mapping preserves
+dynamic range across both dark and bright areas:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">toneMapping</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ACESFilmicToneMapping</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">toneMappingExposure</span> <span class="op">=</span> <span class="fl">1.0</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">PCFSoftShadowMap</span><span class="op">;</span></span></code></pre></div>
+<h3 id="5-tighten-the-shadow-camera-bounds">5. Tighten the Shadow Camera
+Bounds</h3>
+<p>If shadow borders appear faint or blurry, the directional light's
+shadow camera frustum might be too large, diluting shadow map
+resolution:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Keep the shadow camera frustum as close to your scene bounds as possible</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="dv">50</span><span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">left</span> <span class="op">=</span> <span class="op">-</span><span class="dv">10</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">right</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> <span class="op">-</span><span class="dv">10</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.0005</span><span class="op">;</span></span></code></pre></div>
+<p>By constraining the ambient light's intensity and color while letting
+the directional light handle the primary illumination, shadows will
+retain high contrast without falling into absolute black.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

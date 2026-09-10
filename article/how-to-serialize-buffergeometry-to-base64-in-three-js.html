@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Serialize BufferGeometry to Base64 in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to serialize a procedurally generated Three.js BufferGeometry object into a Base64-encoded string using native Three.js serialization utilities. By converting your geometry data into a portable string format, you can easily stor">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-serialize-buffergeometry-to-base64-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Serialize BufferGeometry to Base64 in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-serialize-buffergeometry-to-base64-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to serialize a procedurally generated Three.js BufferGeometry object into a Base64-encoded string using native Three.js serialization utilities. By converting your geometry data into a portable string format, you can easily stor" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-serialize-buffergeometry-to-base64-in-threejs">How to
+Serialize BufferGeometry to Base64 in Three.js</h1>
+<p>This article explains how to serialize a procedurally generated
+Three.js <code>BufferGeometry</code> object into a Base64-encoded string
+using native Three.js serialization utilities. By converting your
+geometry data into a portable string format, you can easily store
+procedurally created 3D meshes in standard databases, embed them into
+JSON payloads, or transfer them over WebSockets without handling raw
+binary streams.</p>
+<h3 id="method-1-using-buffergeometrytojson-and-btoa">Method 1: Using
+<code>BufferGeometry.toJSON()</code> and <code>btoa</code></h3>
+<p>The most direct native approach relies on the <code>toJSON()</code>
+method available on every <code>BufferGeometry</code> instance. This
+method serializes the internal attributes—such as <code>position</code>,
+<code>normal</code>, and <code>uv</code>—into a standard JSON object
+compatible with Three.js's native <code>BufferGeometryLoader</code>.</p>
+<h4 id="1-generate-the-geometry-and-serialize-to-base64">1. Generate the
+Geometry and Serialize to Base64</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create a procedurally generated BufferGeometry</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertices <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>([</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>   <span class="fl">1.0</span><span class="op">,</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>   <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>   <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(vertices<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Serialize to native Three.js JSON format</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> serializedJson <span class="op">=</span> geometry<span class="op">.</span><span class="fu">toJSON</span>()<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Convert JSON object to a string</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> jsonString <span class="op">=</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>(serializedJson)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Encode the string to Base64</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> base64String <span class="op">=</span> <span class="fu">btoa</span>(jsonString)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(base64String)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-reconstructing-the-buffergeometry">2. Reconstructing the
+BufferGeometry</h4>
+<p>To restore the geometry from the Base64 string, decode the string
+back into JSON and load it with <code>BufferGeometryLoader</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Decode from Base64 to JSON string</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> decodedString <span class="op">=</span> <span class="fu">atob</span>(base64String)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Parse the JSON string into an object</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> parsedJson <span class="op">=</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(decodedString)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Rebuild the geometry using Three.js BufferGeometryLoader</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometryLoader</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> restoredGeometry <span class="op">=</span> loader<span class="op">.</span><span class="fu">parse</span>(parsedJson)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// The restored geometry is ready for use in a Mesh</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(restoredGeometry<span class="op">,</span> material)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="method-2-using-gltfexporter-for-compact-binary-base64">Method 2:
+Using <code>GLTFExporter</code> for Compact Binary Base64</h3>
+<p>For complex procedural geometries with thousands of vertices, the
+<code>toJSON()</code> method produces large JSON strings. You can
+produce a much smaller Base64 payload by serializing the geometry as a
+binary GLTF (<code>.glb</code>) buffer using the native
+<code>GLTFExporter</code> add-on.</p>
+<h4 id="1-exporting-to-a-binary-base64-string">1. Exporting to a Binary
+Base64 String</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFExporter } <span class="im">from</span> <span class="st">&#39;three/addons/exporters/GLTFExporter.js&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>())<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> exporter <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFExporter</span>()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>exporter<span class="op">.</span><span class="fu">parse</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  (gltfArrayBuffer) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Convert ArrayBuffer to binary string</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> bytes <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(gltfArrayBuffer)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> binary <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> bytes<span class="op">.</span><span class="at">byteLength</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>      binary <span class="op">+=</span> <span class="bu">String</span><span class="op">.</span><span class="fu">fromCharCode</span>(bytes[i])<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Convert binary string to Base64</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> base64GLB <span class="op">=</span> <span class="fu">btoa</span>(binary)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(base64GLB)<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred during serialization:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">binary</span><span class="op">:</span> <span class="kw">true</span> } <span class="co">// Export as binary GLB format</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-reconstructing-from-binary-base64">2. Reconstructing from
+Binary Base64</h4>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Convert Base64 back to an ArrayBuffer</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> binaryString <span class="op">=</span> <span class="fu">atob</span>(base64GLB)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> bytes <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(binaryString<span class="op">.</span><span class="at">length</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> binaryString<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  bytes[i] <span class="op">=</span> binaryString<span class="op">.</span><span class="fu">charCodeAt</span>(i)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Parse ArrayBuffer with GLTFLoader</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">parse</span>(bytes<span class="op">.</span><span class="at">buffer</span><span class="op">,</span> <span class="st">&#39;&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> extractedMesh <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">.</span><span class="at">children</span>[<span class="dv">0</span>]<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> extractedGeometry <span class="op">=</span> extractedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="choosing-the-right-approach">Choosing the Right Approach</h3>
+<ul>
+<li>Use <strong><code>BufferGeometry.toJSON()</code></strong> when
+working strictly within Three.js workflows where dependency overhead
+must be minimized, as it requires no extra modules outside the Three.js
+core.</li>
+<li>Use <strong><code>GLTFExporter</code></strong> when payload size is
+critical, as the binary format significantly reduces the character
+length of the generated Base64 output.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

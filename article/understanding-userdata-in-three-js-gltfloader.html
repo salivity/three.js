@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding userData in Three.js GLTFLoader - three.js</title>
+    <meta name="description" content="In Three.js, loading 3D assets via GLTFLoader constructs a scene graph that reflects the structural and geometric hierarchy of the original asset while preserving application-specific metadata. This article explores the role of the userData object within">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/understanding-userdata-in-three-js-gltfloader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding userData in Three.js GLTFLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/understanding-userdata-in-three-js-gltfloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, loading 3D assets via GLTFLoader constructs a scene graph that reflects the structural and geometric hierarchy of the original asset while preserving application-specific metadata. This article explores the role of the userData object within" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="understanding-userdata-in-threejs-gltfloader">Understanding
+userData in Three.js GLTFLoader</h1>
+<p>In Three.js, loading 3D assets via <code>GLTFLoader</code> constructs
+a scene graph that reflects the structural and geometric hierarchy of
+the original asset while preserving application-specific metadata. This
+article explores the role of the <code>userData</code> object within the
+parsed glTF node hierarchy, explaining how it directly maps from the
+glTF specification's <code>extras</code> property, bridges the gap
+between 3D modeling software and the JavaScript runtime, and facilitates
+custom application logic such as collision handling, interactivity, and
+gameplay behaviors.</p>
+<p>The glTF 2.0 specification reserves the <code>extras</code> field on
+nodes, materials, meshes, and scenes specifically for custom,
+user-defined data. When <code>GLTFLoader</code> parses a glTF file and
+creates the corresponding Three.js object hierarchy—composed of
+instances of <code>Object3D</code>, <code>Group</code>,
+<code>Mesh</code>, or <code>Bone</code>—it automatically assigns the
+contents of each node's <code>extras</code> block directly to that
+object's <code>userData</code> property.</p>
+<p>The primary purpose of this mapping is to transport custom metadata
+from Digital Content Creation (DCC) tools like Blender, Maya, or 3ds Max
+directly into the WebGL runtime environment. In tools like Blender,
+artists and developers can attach custom properties to individual
+objects, such as mass, physics types, or interaction triggers. When
+exported as <code>.gltf</code> or <code>.glb</code>, these properties
+are bundled into the file's JSON payload. Upon load in Three.js,
+developers can access these values instantly via
+<code>mesh.userData</code> without needing external configuration files
+or fragile object-naming conventions.</p>
+<p>Within the parsed scene hierarchy, <code>userData</code> functions as
+the foundation for state management and scene graph processing.
+Developers commonly traverse the parsed hierarchy using
+<code>scene.traverse()</code> or <code>gltf.scene.traverse()</code> to
+search for specific flags stored in <code>userData</code>. Typical
+implementations include:</p>
+<ul>
+<li><strong>Physics and Collision:</strong> Storing collision boundary
+types (e.g., <code>userData.collider = "convex"</code>) or physics body
+properties such as mass, friction, and restitution for consumption by
+physics engines like Rapier or Cannon.js.</li>
+<li><strong>Interactivity and Raycasting:</strong> Designating specific
+meshes as interactive targets (e.g.,
+<code>userData.isClickable = true</code>) or storing localized tooltip
+strings and UI identifiers.</li>
+<li><strong>Scene Architecture and Logic:</strong> Marking spatial
+anchor points, such as player spawn locations, audio emission nodes,
+camera paths, or dynamic light sources.</li>
+<li><strong>Material and Shader Customization:</strong> Providing
+parameters that guide custom runtime shaders, such as procedural tint
+variations or custom texture layering flags.</li>
+</ul>
+<p>By confining custom metadata to <code>userData</code>, Three.js keeps
+engine-level properties (such as matrices, geometry buffers, and draw
+calls) distinct from domain-specific data. This guarantees that
+importing complex glTF assets into Three.js will not inadvertently
+overwrite core engine properties while still providing full programmatic
+access to the structural context created during the modeling phase.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

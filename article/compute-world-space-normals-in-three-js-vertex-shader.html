@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compute World-Space Normals in Three.js Vertex Shader - three.js</title>
+    <meta name="description" content="Calculating accurate world-space normal vectors inside a custom Three.js vertex shader requires transforming the mesh's local normal attribute using the appropriate transformation matrix. While standard position vectors transform directly via the model m">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/compute-world-space-normals-in-three-js-vertex-shader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Compute World-Space Normals in Three.js Vertex Shader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/compute-world-space-normals-in-three-js-vertex-shader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating accurate world-space normal vectors inside a custom Three.js vertex shader requires transforming the mesh's local normal attribute using the appropriate transformation matrix. While standard position vectors transform directly via the model m" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="compute-world-space-normals-in-threejs-vertex-shader">Compute
+World-Space Normals in Three.js Vertex Shader</h1>
+<p>Calculating accurate world-space normal vectors inside a custom
+Three.js vertex shader requires transforming the mesh's local normal
+attribute using the appropriate transformation matrix. While standard
+position vectors transform directly via the model matrix, normal vectors
+require specific handling to prevent distortion when meshes undergo
+non-uniform scaling. This guide explains how to properly compute
+world-space normals using default Three.js matrices for both uniform and
+non-uniform scale scenarios.</p>
+<h2 id="uniform-scaling-direct-model-matrix-transformation">Uniform
+Scaling: Direct Model Matrix Transformation</h2>
+<p>When an object undergoes translation, rotation, and uniform scaling
+(where the X, Y, and Z scale factors are identical), transforming the
+normal vector into world space is straightforward. You can cast the 4x4
+<code>modelMatrix</code> to a 3x3 matrix to discard the translation
+component and multiply it by the incoming <code>normal</code>
+attribute:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec3</span> vWorldNormal<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Extract rotation and uniform scale from the modelMatrix</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    vWorldNormal <span class="op">=</span> <span class="bu">normalize</span><span class="op">(</span><span class="dt">mat3</span><span class="op">(</span>modelMatrix<span class="op">)</span> <span class="op">*</span> normal<span class="op">);</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">gl_Position</span> <span class="op">=</span> projectionMatrix <span class="op">*</span> modelViewMatrix <span class="op">*</span> <span class="dt">vec4</span><span class="op">(</span>position<span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>Normalizing the result ensures that any uniform scaling applied by
+the <code>modelMatrix</code> does not alter the unit length of the
+normal vector.</p>
+<h2 id="non-uniform-scaling-the-inverse-transpose">Non-Uniform Scaling:
+The Inverse Transpose</h2>
+<p>If a mesh is scaled non-uniformly (for example, scaled by
+<code>(1.0, 2.0, 1.0)</code>), using <code>mat3(modelMatrix)</code>
+distorts the normal vector, causing it to lose orthogonality to the
+surface. To maintain perpendicularity, a normal vector must be
+multiplied by the transpose of the inverse of the transformation
+matrix.</p>
+<p>Three.js automatically supplies a <code>normalMatrix</code> uniform,
+but this matrix transforms normals from object space directly into
+<strong>view (camera) space</strong>, defined as:</p>
+<p><span class="math display">\[\text{normalMatrix} =
+(\text{modelViewMatrix}^{-1})^T\]</span></p>
+<p>To obtain true <strong>world-space</strong> normals under non-uniform
+scaling, you have two primary methods using Three.js default
+uniforms.</p>
+<h3
+id="method-1-computing-the-world-normal-matrix-in-glsl-webgl-2">Method
+1: Computing the World Normal Matrix in GLSL (WebGL 2)</h3>
+<p>If your project targets WebGL 2 (the default in modern Three.js
+releases), the GLSL functions <code>inverse()</code> and
+<code>transpose()</code> are available natively:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec3</span> vWorldNormal<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Invert and transpose the 3x3 model matrix to handle non-uniform scale</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">mat3</span> worldNormalMatrix <span class="op">=</span> <span class="bu">transpose</span><span class="op">(</span><span class="bu">inverse</span><span class="op">(</span><span class="dt">mat3</span><span class="op">(</span>modelMatrix<span class="op">)));</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    vWorldNormal <span class="op">=</span> <span class="bu">normalize</span><span class="op">(</span>worldNormalMatrix <span class="op">*</span> normal<span class="op">);</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">gl_Position</span> <span class="op">=</span> projectionMatrix <span class="op">*</span> modelViewMatrix <span class="op">*</span> <span class="dt">vec4</span><span class="op">(</span>position<span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3
+id="method-2-transforming-view-space-normals-back-to-world-space">Method
+2: Transforming View-Space Normals Back to World Space</h3>
+<p>If you prefer to avoid computing matrix inversions inside the shader
+per-vertex, you can use the built-in <code>normalMatrix</code> to first
+transform the normal into view space, and then rotate it back into world
+space using the <code>viewMatrix</code>.</p>
+<p>Because camera matrices generally do not have non-uniform scaling,
+the inverse of the view rotation matrix is simply its transpose:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec3</span> vWorldNormal<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Transform object-space normal to view space using the built-in normalMatrix</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> viewNormal <span class="op">=</span> <span class="bu">normalize</span><span class="op">(</span>normalMatrix <span class="op">*</span> normal<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Un-rotate from view space back to world space using the transpose of mat3(viewMatrix)</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// For an orthogonal matrix, transpose(M) == inverse(M)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">mat3</span> viewToWorld <span class="op">=</span> <span class="bu">transpose</span><span class="op">(</span><span class="dt">mat3</span><span class="op">(</span>viewMatrix<span class="op">));</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    vWorldNormal <span class="op">=</span> <span class="bu">normalize</span><span class="op">(</span>viewToWorld <span class="op">*</span> viewNormal<span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">gl_Position</span> <span class="op">=</span> projectionMatrix <span class="op">*</span> modelViewMatrix <span class="op">*</span> <span class="dt">vec4</span><span class="op">(</span>position<span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h2 id="passing-to-the-fragment-shader">Passing to the Fragment
+Shader</h2>
+<p>Ensure that the resulting <code>vWorldNormal</code> is normalized
+again inside the fragment shader, as linear interpolation between
+vertices can cause slight deviations from unit length:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec3</span> vWorldNormal<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> normal <span class="op">=</span> <span class="bu">normalize</span><span class="op">(</span>vWorldNormal<span class="op">);</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Use the normalized world normal for lighting, reflections, or environment mapping</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span>normal <span class="op">*</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

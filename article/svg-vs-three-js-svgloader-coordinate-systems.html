@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG vs Three.js SVGLoader Coordinate Systems - three.js</title>
+    <meta name="description" content="When importing vector graphics into a 3D scene using the Three.js SVGLoader, paths often appear inverted or displaced. This article provides a clear overview of the differences between the 2D SVG coordinate space and the 3D Three.js coordinate system, ex">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/svg-vs-three-js-svgloader-coordinate-systems">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SVG vs Three.js SVGLoader Coordinate Systems - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/svg-vs-three-js-svgloader-coordinate-systems" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When importing vector graphics into a 3D scene using the Three.js SVGLoader, paths often appear inverted or displaced. This article provides a clear overview of the differences between the 2D SVG coordinate space and the 3D Three.js coordinate system, ex" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="svg-vs-threejs-svgloader-coordinate-systems">SVG vs Three.js
+SVGLoader Coordinate Systems</h1>
+<p>When importing vector graphics into a 3D scene using the Three.js
+<code>SVGLoader</code>, paths often appear inverted or displaced. This
+article provides a clear overview of the differences between the 2D SVG
+coordinate space and the 3D Three.js coordinate system, explaining why
+imported paths render upside down and how to correctly reorient, scale,
+and center the resulting geometries in 3D space.</p>
+<h2 id="the-svg-coordinate-system">The SVG Coordinate System</h2>
+<p>Scalable Vector Graphics (SVG) use a 2D screen-based coordinate
+system:</p>
+<ul>
+<li><strong>Origin (0, 0):</strong> Located at the
+<strong>top-left</strong> corner of the viewport or bounding box.</li>
+<li><strong>X-axis:</strong> Extends horizontally to the
+<strong>right</strong> (positive values).</li>
+<li><strong>Y-axis:</strong> Extends vertically
+<strong>downward</strong> (positive values).</li>
+<li><strong>Z-axis:</strong> None; it is strictly a two-dimensional
+format.</li>
+</ul>
+<h2 id="the-threejs-coordinate-system">The Three.js Coordinate
+System</h2>
+<p>Three.js uses a standard right-handed 3D Cartesian coordinate
+system:</p>
+<ul>
+<li><strong>Origin (0, 0, 0):</strong> Located at the center of the
+local coordinate space or world space.</li>
+<li><strong>X-axis:</strong> Extends horizontally to the
+<strong>right</strong> (positive values).</li>
+<li><strong>Y-axis:</strong> Extends vertically <strong>upward</strong>
+(positive values).</li>
+<li><strong>Z-axis:</strong> Extends outward from the screen toward the
+viewer (positive values).</li>
+</ul>
+<h2 id="key-differences-when-using-svgloader">Key Differences When Using
+SVGLoader</h2>
+<p>When <code>SVGLoader</code> parses SVG path data, it reads
+coordinates directly from the vector definitions and maps them onto 2D
+Three.js shapes (<code>ShapeGeometry</code> or
+<code>ExtrudeGeometry</code>):</p>
+<ol type="1">
+<li><strong>Y-Axis Inversion:</strong> Because <code>SVGLoader</code>
+directly maps the SVG's downward Y coordinates to Three.js Y coordinates
+without altering their sign, shapes appear upside down. A point at
+<code>(0, 100)</code> in an SVG is located downward, but in Three.js, it
+is placed 100 units upward.</li>
+<li><strong>Anchor Point Offset:</strong> In an SVG, elements are drawn
+relative to the top-left corner of the canvas. In Three.js, objects
+typically rotate and transform around their center. Without adjustment,
+the anchor point of an SVG-generated geometry remains at its top-left
+rather than its visual center.</li>
+<li><strong>Scale Discrepancy:</strong> SVG coordinates are measured in
+pixels or arbitrary units defined by the <code>viewBox</code>. In
+Three.js, units are arbitrary world units (often treated as meters). An
+SVG that is 800 pixels wide will generate a geometry 800 units wide,
+which is often significantly larger than the camera's default view
+frustum.</li>
+</ol>
+<h2 id="correcting-the-discrepancies">Correcting the Discrepancies</h2>
+<p>To align SVG geometries with the standard Three.js space, apply the
+following adjustments after parsing:</p>
+<h3 id="1-invert-the-y-axis">1. Invert the Y-Axis</h3>
+<p>Rotate the parent mesh or group 180 degrees around the X-axis, or
+invert the Y-scale:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Method A: Rotate around the X-axis (recommended to preserve front-facing normals)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Method B: Negative scale</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-center-the-geometry">2. Center the Geometry</h3>
+<p>To move the local origin from the top-left corner to the center of
+the shape:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">center</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-normalize-scale">3. Normalize Scale</h3>
+<p>Scale the mesh down to fit your scene's unit scale:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaleFactor <span class="op">=</span> <span class="fl">0.01</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">multiplyScalar</span>(scaleFactor)<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

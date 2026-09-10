@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why flipY is True for Images but False for glTF in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the flipY property determines whether a texture is vertically inverted upon being uploaded to the GPU. Standard image textures default to flipY = true to bridge the gap between traditional HTML/2D image coordinates (origin at top-left) and W">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/why-flipy-is-true-for-images-but-false-for-gltf-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why flipY is True for Images but False for glTF in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/why-flipy-is-true-for-images-but-false-for-gltf-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the flipY property determines whether a texture is vertically inverted upon being uploaded to the GPU. Standard image textures default to flipY = true to bridge the gap between traditional HTML/2D image coordinates (origin at top-left) and W" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="why-flipy-is-true-for-images-but-false-for-gltf-in-threejs">Why
+flipY is True for Images but False for glTF in Three.js</h1>
+<p>In Three.js, the <code>flipY</code> property determines whether a
+texture is vertically inverted upon being uploaded to the GPU. Standard
+image textures default to <code>flipY = true</code> to bridge the gap
+between traditional HTML/2D image coordinates (origin at top-left) and
+WebGL's native texture coordinates (origin at bottom-left). Conversely,
+textures loaded via glTF models default to <code>flipY = false</code>
+because the glTF specification explicitly standardizes texture
+coordinates with a top-left origin, matching modern graphics APIs and
+eliminating the need for runtime inversion.</p>
+<h3 id="the-webgl-vs-image-coordinate-mismatch">The WebGL vs. Image
+Coordinate Mismatch</h3>
+<p>Standard 2D raster formats (PNG, JPEG) and web APIs (HTML Canvas, DOM
+images) place the coordinate origin <code>(0, 0)</code> at the top-left
+corner, with the Y-axis increasing downward.</p>
+<p>OpenGL and WebGL, by default, expect texture coordinates (UVs) to
+originate at the bottom-left corner <code>(0, 0)</code>, with the V-axis
+increasing upward. When an image is directly mapped onto a 3D surface
+using traditional OpenGL UV mapping, the image appears upside down.</p>
+<p>To make loading standard textures intuitive for web developers,
+Three.js defaults <code>Texture.flipY</code> to <code>true</code>. Under
+the hood, this triggers the WebGL pixel storage parameter
+<code>gl.UNPACK_FLIP_Y_WEBGL = true</code>, inverting the pixel rows
+vertically during texture upload so the image displays right-side up on
+standard Three.js geometries.</p>
+<h3 id="the-gltf-standard-specification">The glTF Standard
+Specification</h3>
+<p>The glTF (GL Transmission Format) standard, maintained by the Khronos
+Group, intentionally departed from legacy OpenGL conventions to achieve
+broad compatibility with modern graphics APIs such as Vulkan, Metal, and
+DirectX.</p>
+<p>Under the glTF specification, texture coordinates are explicitly
+defined with <code>(0, 0)</code> at the top-left corner. 3D authoring
+tools (such as Blender or Maya) export glTF models with UV coordinates
+already calibrated for this top-left origin.</p>
+<p>If Three.js were to flip a glTF texture vertically
+(<code>flipY = true</code>), the texture coordinates authored in the 3D
+tool would no longer align with the image data, resulting in inverted
+textures on the model. To adhere to the specification,
+<code>GLTFLoader</code> explicitly overrides the Three.js default and
+sets <code>texture.flipY = false</code>.</p>
+<h3 id="performance-and-modern-browser-pipelines">Performance and Modern
+Browser Pipelines</h3>
+<p>Setting <code>flipY = false</code> also provides technical and
+performance benefits:</p>
+<ul>
+<li><strong>ImageBitmap Compatibility:</strong> Modern Three.js loaders
+utilize <code>createImageBitmap()</code> to decode image data
+asynchronously off the main thread. While
+<code>createImageBitmap()</code> supports vertical flipping via options,
+avoiding the flip operation reduces CPU processing overhead and memory
+copies.</li>
+<li><strong>Render Targets and Compressed Textures:</strong> Compressed
+texture formats (such as KTX2/Basis Universal) and certain framebuffers
+cannot easily be flipped during upload via
+<code>gl.UNPACK_FLIP_Y_WEBGL</code>. Standardizing on
+<code>flipY = false</code> ensures consistency across both uncompressed
+textures and modern GPU-compressed asset pipelines.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

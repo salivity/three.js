@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Physical Camera Aperture and Focal Length - three.js</title>
+    <meta name="description" content="Simulating a physical camera inside Three.js requires pairing its physically correct lighting pipeline with realistic lens parameters. While modern versions of Three.js utilize physically based lighting by default, achieving physical camera behavior—su">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-physical-camera-aperture-and-focal-length">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Physical Camera Aperture and Focal Length - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-physical-camera-aperture-and-focal-length" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Simulating a physical camera inside Three.js requires pairing its physically correct lighting pipeline with realistic lens parameters. While modern versions of Three.js utilize physically based lighting by default, achieving physical camera behavior—su" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-physical-camera-aperture-and-focal-length">Three.js
+Physical Camera Aperture and Focal Length</h1>
+<p>Simulating a physical camera inside Three.js requires pairing its
+physically correct lighting pipeline with realistic lens parameters.
+While modern versions of Three.js utilize physically based lighting by
+default, achieving physical camera behavior—such as accurate field of
+view via focal length and optical blur via lens aperture—involves
+configuring the native <code>PerspectiveCamera</code> settings alongside
+post-processing passes. This guide explains how to calculate and adjust
+focal length, aperture, and depth of field to match real-world camera
+optics.</p>
+<h2 id="setting-up-the-physical-environment">Setting Up the Physical
+Environment</h2>
+<p>In modern Three.js (r150+), the rendering pipeline uses physical
+lighting units by default
+(<code>renderer.useLegacyLights = false</code>). Photometric lights
+(measured in lumens or candelas) interact with physically based
+materials (<code>MeshStandardMaterial</code> or
+<code>MeshPhysicalMaterial</code>).</p>
+<p>To match camera optics to this setup, you must configure your
+camera's sensor dimensions and lens focal length.</p>
+<h2 id="adjusting-focal-length">Adjusting Focal Length</h2>
+<p>By default, Three.js defines a camera's view using a vertical field
+of view (<code>fov</code>) in degrees. In real-world cinematography and
+photography, cameras are configured by sensor size
+(<code>filmGauge</code>) and lens focal length in millimeters.</p>
+<p>Three.js includes built-in methods on <code>PerspectiveCamera</code>
+to translate millimeters into the internal FOV calculation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Define a standard 35mm full-frame camera</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">45</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">filmGauge</span> <span class="op">=</span> <span class="dv">35</span><span class="op">;</span> <span class="co">// Sensor width in millimeters (default is 35mm)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Set focal length to a 50mm standard prime lens</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">setFocalLength</span>(<span class="dv">50</span>)<span class="op">;</span></span></code></pre></div>
+<p>Whenever you alter the focal length using
+<code>.setFocalLength()</code>, Three.js recalculates
+<code>camera.fov</code> automatically based on the
+<code>filmGauge</code>. Remember to call
+<code>camera.updateProjectionMatrix()</code> if you modify related
+camera bounds directly.</p>
+<p>Common real-world focal lengths include:</p>
+<ul>
+<li><strong>24mm:</strong> Wide-angle (landscape, architecture)</li>
+<li><strong>50mm:</strong> Standard view (closest to human eye
+perception)</li>
+<li><strong>85mm / 105mm:</strong> Portrait lenses with tighter framing
+and flatter perspective</li>
+</ul>
+<h2 id="adjusting-aperture-and-depth-of-field">Adjusting Aperture and
+Depth of Field</h2>
+<p>Real-world aperture (often expressed as an f-stop like f/1.8 or f/8)
+controls two things: exposure (how much light enters the lens) and depth
+of field (the amount of background/foreground blur).</p>
+<p>Standard WebGL rasterization renders every pixel sharply in focus
+regardless of lighting or camera settings. To physically simulate lens
+aperture, you must use post-processing—typically the
+<code>BokehPass</code> provided by the Three.js addon library.</p>
+<h3 id="configuring-aperture-via-bokehpass">Configuring Aperture via
+BokehPass</h3>
+<p>To implement aperture-based optical blur, attach a
+<code>BokehPass</code> to an <code>EffectComposer</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { BokehPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/BokehPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(<span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera))<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> bokehPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">BokehPass</span>(scene<span class="op">,</span> camera<span class="op">,</span> {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">focus</span><span class="op">:</span> <span class="fl">10.0</span><span class="op">,</span>       <span class="co">// Distance to the focused subject in scene units</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">aperture</span><span class="op">:</span> <span class="fl">0.025</span><span class="op">,</span>   <span class="co">// Lens aperture size (higher creates shallower depth of field)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">maxblur</span><span class="op">:</span> <span class="fl">0.01</span>      <span class="co">// Maximum blur intensity clamp</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(bokehPass)<span class="op">;</span></span></code></pre></div>
+<h3 id="controlling-physical-aperture-variables-dynamically">Controlling
+Physical Aperture Variables Dynamically</h3>
+<p>To update focus and aperture during runtime:</p>
+<ol type="1">
+<li><strong>Focus Distance:</strong> Adjust
+<code>bokehPass.uniforms['focus'].value</code> to match the distance
+from the camera to the target object.</li>
+<li><strong>Aperture Size:</strong> Adjust
+<code>bokehPass.uniforms['aperture'].value</code>. A higher value mimics
+a wide lens opening (e.g., f/1.4), which yields a thin focal plane and
+heavy background bokeh. A lower value mimics a narrow aperture (e.g.,
+f/16), bringing more of the scene into focus.</li>
+</ol>
+<h2 id="complete-implementation-example">Complete Implementation
+Example</h2>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { BokehPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/BokehPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Renderer setup</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">toneMapping</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ACESFilmicToneMapping</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">toneMappingExposure</span> <span class="op">=</span> <span class="fl">1.0</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Camera setup with physical sensor and lens</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">45</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">100</span>)<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">filmGauge</span> <span class="op">=</span> <span class="dv">35</span><span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">setFocalLength</span>(<span class="dv">85</span>)<span class="op">;</span> <span class="co">// 85mm portrait focal length</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="fl">1.5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Depth of field post-processing (physical aperture simulation)</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(<span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera))<span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> bokehPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">BokehPass</span>(scene<span class="op">,</span> camera<span class="op">,</span> {</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="dt">focus</span><span class="op">:</span> <span class="fl">5.0</span><span class="op">,</span>        <span class="co">// Target is 5 units away</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="dt">aperture</span><span class="op">:</span> <span class="fl">0.005</span><span class="op">,</span>   <span class="co">// Simulated f-stop scale</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="dt">maxblur</span><span class="op">:</span> <span class="fl">0.015</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(bokehPass)<span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a><span class="co">// Render loop using the composer instead of the default renderer</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>    composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<p>By standardizing <code>filmGauge</code> and using
+<code>camera.setFocalLength()</code> alongside depth-of-field passes,
+the visual output aligns directly with real-world optical measurements
+and physical lighting behavior.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

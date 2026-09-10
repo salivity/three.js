@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>alphaTest vs Discard Performance in Three.js - three.js</title>
+    <meta name="description" content="When rendering partially transparent surfaces in Three.js, developers often wonder whether to rely on the built-in alphaTest property or implement a manual discard call inside a custom fragment shader. In terms of low-level GPU execution, alphaTest and m">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/alphatest-vs-discard-performance-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="alphaTest vs Discard Performance in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/alphatest-vs-discard-performance-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When rendering partially transparent surfaces in Three.js, developers often wonder whether to rely on the built-in alphaTest property or implement a manual discard call inside a custom fragment shader. In terms of low-level GPU execution, alphaTest and m" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="alphatest-vs-discard-performance-in-threejs">alphaTest vs
+Discard Performance in Three.js</h1>
+<p>When rendering partially transparent surfaces in Three.js, developers
+often wonder whether to rely on the built-in <code>alphaTest</code>
+property or implement a manual <code>discard</code> call inside a custom
+fragment shader. In terms of low-level GPU execution,
+<code>alphaTest</code> and manual <code>discard</code> are fundamentally
+the same, as Three.js implements <code>alphaTest</code> by injecting a
+conditional <code>discard</code> statement directly into its internal
+shaders. However, noticeable performance differences can still arise
+depending on GPU Early-Z behavior, shadow map passes, uniform
+evaluation, and pipeline integration.</p>
+<h3 id="how-threejs-implements-alphatest">How Three.js Implements
+alphaTest</h3>
+<p>In standard Three.js materials (such as
+<code>MeshStandardMaterial</code> or <code>MeshBasicMaterial</code>),
+defining an <code>alphaTest</code> value (e.g.,
+<code>material.alphaTest = 0.5</code>) injects a specific shader chunk
+(<code>alphatest_fragment.glsl.js</code>) during shader compilation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef USE_ALPHATEST</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">if</span> <span class="op">(</span> diffuseColor<span class="op">.</span><span class="fu">a</span> <span class="op">&lt;</span> alphaTest <span class="op">)</span> <span class="kw">discard</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif</span></span></code></pre></div>
+<p>Because of this direct translation, assigning <code>alphaTest</code>
+generates the exact same underlying GPU instruction as writing a
+conditional <code>discard</code> manually within a
+<code>ShaderMaterial</code> or <code>RawShaderMaterial</code>.</p>
+<h3 id="hardware-level-gpu-impact-disabling-early-z">Hardware-Level GPU
+Impact: Disabling Early-Z</h3>
+<p>Both <code>alphaTest</code> and explicit <code>discard</code>
+operations carry identical hardware-level performance penalties on
+modern GPUs. Normally, the GPU performs Early-Z (early depth testing)
+before running the fragment shader, immediately rejecting obscured
+fragments to save compute power.</p>
+<p>When a fragment shader contains a <code>discard</code>
+statement—whether injected by <code>alphaTest</code> or written
+manually—the GPU must disable or alter its Early-Z optimization for that
+draw call. The hardware cannot know whether a pixel will be discarded
+until the fragment shader finishes computing the alpha value. As a
+result:</p>
+<ul>
+<li>Fragment shaders execute for occluded fragments that would otherwise
+have been discarded earlier.</li>
+<li>Fill rate and memory bandwidth consumption increase on high-overdraw
+scenes.</li>
+<li>The GPU must calculate derivative footprints across 2x2 fragment
+quads even if individual pixels within the quad end up being
+discarded.</li>
+</ul>
+<h3 id="pipeline-integration-and-depth-passes">Pipeline Integration and
+Depth Passes</h3>
+<p>While raw execution speed inside the shader core is identical,
+real-world engine performance diverges in how Three.js handles depth and
+shadow passes.</p>
+<ol type="1">
+<li><strong>Automatic Depth/Shadow Synchronization:</strong> When using
+<code>alphaTest</code> on standard Three.js materials, the engine
+automatically propagates the threshold to internal depth and shadow map
+materials. This guarantees that shadows and depth pre-passes also
+execute the necessary <code>discard</code> logic seamlessly.</li>
+<li><strong>Custom Shader Overhead:</strong> When writing a manual
+<code>discard</code> inside a custom <code>ShaderMaterial</code>,
+Three.js does not automatically apply that logic to shadow casting or
+depth-prepass buffers. To get correct shadows and depth testing, you
+must manually supply a matching <code>customDepthMaterial</code> and
+<code>customDistanceMaterial</code>. Forgetting to do so results in
+performance bugs (rendering incorrect full-geometry shadows) or extra
+CPU overhead from improperly managed fallback materials.</li>
+</ol>
+<h3 id="uniform-lookup-vs-hardcoded-constants">Uniform Lookup vs.
+Hardcoded Constants</h3>
+<p>A minor performance difference can occur based on how the threshold
+is evaluated:</p>
+<ul>
+<li><strong>Three.js <code>alphaTest</code>:</strong> Passes the
+threshold as a dynamic uniform (<code>uniform float alphaTest;</code>).
+This allows runtime alterations without triggering expensive shader
+recompilations, though it incurs a trivial uniform register read per
+fragment.</li>
+<li><strong>Hardcoded Custom <code>discard</code>:</strong> If you write
+<code>if (color.a &lt; 0.5) discard;</code>, the value is hardcoded as a
+constant. The compiler may optimize constant comparisons slightly more
+aggressively on constrained mobile chipsets, though this benefit is
+negligible on modern hardware.</li>
+</ul>
+<h3 id="summary">Summary</h3>
+<p>There is no hardware execution speed advantage to manually writing
+<code>discard</code> over setting <code>alphaTest</code> in Three.js, as
+both evaluate to the exact same GPU operations and impose the same
+Early-Z pipeline restrictions. Using the built-in <code>alphaTest</code>
+property is generally superior because it integrates automatically with
+depth, shadow, and deferred passes throughout the Three.js rendering
+pipeline without the maintenance and synchronization overhead of custom
+depth shaders.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

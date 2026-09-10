@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Angle Between Vector2 and X-Axis in Three.js - three.js</title>
+    <meta name="description" content="Calculating the angle between a 2D vector and the positive X-axis in Three.js is an essential task for handling orientation, trajectories, and directional sprites. This guide explains how to compute this precise angle using the native THREE.Vector2 math">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/get-angle-between-vector2-and-x-axis-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Get Angle Between Vector2 and X-Axis in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/get-angle-between-vector2-and-x-axis-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the angle between a 2D vector and the positive X-axis in Three.js is an essential task for handling orientation, trajectories, and directional sprites. This guide explains how to compute this precise angle using the native THREE.Vector2 math" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="get-angle-between-vector2-and-x-axis-in-threejs">Get Angle
+Between Vector2 and X-Axis in Three.js</h1>
+<p>Calculating the angle between a 2D vector and the positive X-axis in
+Three.js is an essential task for handling orientation, trajectories,
+and directional sprites. This guide explains how to compute this precise
+angle using the native <code>THREE.Vector2</code> math methods, how to
+interpret the resulting radian measurement, and how to convert the value
+into degrees or signed angle ranges.</p>
+<h3 id="using-the-built-in-angle-method">Using the Built-In
+<code>.angle()</code> Method</h3>
+<p>The standard Three.js math library includes a built-in method on the
+<code>Vector2</code> class named <code>.angle()</code>. This method
+calculates the counter-clockwise angle in radians between the vector and
+the positive X-axis:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dir <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> angleInRadians <span class="op">=</span> dir<span class="op">.</span><span class="fu">angle</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(angleInRadians)<span class="op">;</span> <span class="co">// ~0.785398 (PI / 4)</span></span></code></pre></div>
+<p>The <code>.angle()</code> method handles positive and negative
+components automatically by internally using
+<code>Math.atan2(-y, -x) + Math.PI</code>. It returns a normalized value
+ranging from <code>0</code> to <code>2 * Math.PI</code> radians (0° to
+360°).</p>
+<h3 id="converting-radians-to-degrees">Converting Radians to
+Degrees</h3>
+<p>Three.js outputs angles in radians by default. To convert the radian
+output to standard degrees, use the
+<code>THREE.MathUtils.radToDeg()</code> utility method:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> angleInDegrees <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>(dir<span class="op">.</span><span class="fu">angle</span>())<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(angleInDegrees)<span class="op">;</span> <span class="co">// 45</span></span></code></pre></div>
+<h3 id="getting-a-signed-angle-range--π-to-π">Getting a Signed Angle
+Range (-π to π)</h3>
+<p>If your implementation requires a signed angle range between
+<code>-Math.PI</code> and <code>Math.PI</code> (-180° to 180°) instead
+of <code>0</code> to <code>2 * Math.PI</code>, you can calculate the
+angle using <code>Math.atan2</code> directly with the vector
+components:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> signedAngleInRadians <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan2</span>(dir<span class="op">.</span><span class="at">y</span><span class="op">,</span> dir<span class="op">.</span><span class="at">x</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> signedAngleInDegrees <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">radToDeg</span>(signedAngleInRadians)<span class="op">;</span></span></code></pre></div>
+<p>This returns <code>0</code> along the positive X-axis, positive
+values turning counter-clockwise toward the positive Y-axis, and
+negative values turning clockwise toward the negative Y-axis.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

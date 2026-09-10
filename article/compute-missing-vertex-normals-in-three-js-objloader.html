@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compute Missing Vertex Normals in Three.js OBJLoader - three.js</title>
+    <meta name="description" content="This article explains how to handle 3D models with missing vertex normals when importing them using the Three.js OBJLoader. Because OBJLoader does not feature a built-in configuration flag to automatically compute missing normals during the parsing phase">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/compute-missing-vertex-normals-in-three-js-objloader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Compute Missing Vertex Normals in Three.js OBJLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/compute-missing-vertex-normals-in-three-js-objloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to handle 3D models with missing vertex normals when importing them using the Three.js OBJLoader. Because OBJLoader does not feature a built-in configuration flag to automatically compute missing normals during the parsing phase" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="compute-missing-vertex-normals-in-threejs-objloader">Compute
+Missing Vertex Normals in Three.js OBJLoader</h1>
+<p>This article explains how to handle 3D models with missing vertex
+normals when importing them using the Three.js <code>OBJLoader</code>.
+Because <code>OBJLoader</code> does not feature a built-in configuration
+flag to automatically compute missing normals during the parsing phase,
+developers must calculate them post-load. Below is a concise guide
+demonstrating how to traverse the loaded model hierarchy and generate
+smooth vertex normals for every mesh using the native
+<code>BufferGeometry.computeVertexNormals()</code> method.</p>
+<h3 id="why-missing-normals-matter">Why Missing Normals Matter</h3>
+<p>In Three.js, lighting and shading algorithms rely heavily on vertex
+normals to determine how light reflects off surfaces. If an OBJ file
+lacks normal definitions (designated by <code>vn</code> records in the
+raw file), standard materials such as <code>MeshStandardMaterial</code>
+or <code>MeshPhongMaterial</code> will appear black, incorrectly shaded,
+or unlit.</p>
+<h3 id="automating-normal-calculation-upon-import">Automating Normal
+Calculation Upon Import</h3>
+<p>While <code>OBJLoader</code> does not offer an option like
+<code>loader.setComputeNormals(true)</code>, you can achieve automated
+calculation by traversing the loaded object tree directly inside the
+<code>onLoad</code> callback.</p>
+<p>Here is the implementation:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { OBJLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/OBJLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">OBJLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;path/to/model.obj&#39;</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    (object) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Traverse the loaded object hierarchy</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        object<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span> <span class="op">&amp;&amp;</span> child<span class="op">.</span><span class="at">geometry</span>) {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Check if normals are missing</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (<span class="op">!</span>child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">normal</span>) {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>                    child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        })<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Add the configured object to the scene</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="fu">add</span>(object)<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    (xhr) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>((xhr<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> xhr<span class="op">.</span><span class="at">total</span> <span class="op">*</span> <span class="dv">100</span>) <span class="op">+</span> <span class="st">&#39;% loaded&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred loading the OBJ model:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="wrapping-objloader-for-reusable-automatic-generation">Wrapping
+OBJLoader for Reusable Automatic Generation</h3>
+<p>If your application loads multiple OBJ assets, you can wrap
+<code>OBJLoader.load</code> into a custom helper function or extend the
+class to ensure normals are calculated automatically every time without
+repeating code:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> AutoNormalOBJLoader <span class="kw">extends</span> OBJLoader {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">load</span>(url<span class="op">,</span> onLoad<span class="op">,</span> onProgress<span class="op">,</span> onError) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>        <span class="kw">super</span><span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>            url<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>            (object) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                object<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span> <span class="op">&amp;&amp;</span> child<span class="op">.</span><span class="at">geometry</span> <span class="op">&amp;&amp;</span> <span class="op">!</span>child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">normal</span>) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                        child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>                    }</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>                })<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (onLoad) <span class="fu">onLoad</span>(object)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            }<span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            onProgress<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            onError</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        )<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> autoLoader <span class="op">=</span> <span class="kw">new</span> <span class="fu">AutoNormalOBJLoader</span>()<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>autoLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/model.obj&#39;</span><span class="op">,</span> (obj) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(obj)<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Indexed vs. Non-Indexed Geometries</strong>:
+<code>computeVertexNormals()</code> works on both indexed and
+non-indexed <code>BufferGeometry</code>. For non-indexed geometries,
+shared vertices across adjacent faces will not average their normals,
+resulting in faceted (flat) shading. If smooth shading is required on a
+non-indexed geometry, merge identical vertices first using
+<code>BufferGeometryUtils.toCreasedNormals()</code> or
+<code>BufferGeometryUtils.mergeVertices()</code> prior to computing
+normals.</li>
+<li><strong>Performance</strong>: Calling
+<code>computeVertexNormals()</code> executes on the CPU during load
+time. For complex models with millions of polygons, this operation may
+cause a momentary frame rate dip. Consider computing normals
+asynchronously via Web Workers for extremely large meshes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sRGBEncoding vs colorSpace in Three.js - three.js</title>
+    <meta name="description" content="This article provides an overview of the transition in Three.js from the legacy sRGBEncoding system to the modern colorSpace property. Introduced around release r152, this update fundamentally changed how the library handles color management, moving away">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/srgbencoding-vs-colorspace-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="sRGBEncoding vs colorSpace in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/srgbencoding-vs-colorspace-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the transition in Three.js from the legacy sRGBEncoding system to the modern colorSpace property. Introduced around release r152, this update fundamentally changed how the library handles color management, moving away" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="srgbencoding-vs-colorspace-in-threejs">sRGBEncoding vs
+colorSpace in Three.js</h1>
+<p>This article provides an overview of the transition in Three.js from
+the legacy <code>sRGBEncoding</code> system to the modern
+<code>colorSpace</code> property. Introduced around release r152, this
+update fundamentally changed how the library handles color management,
+moving away from numeric encoding constants to standardized,
+string-based color space definitions. Below is a direct breakdown of the
+technical differences, underlying motivations, and practical
+implications of this shift.</p>
+<h3 id="numeric-constants-vs-standard-string-identifiers">Numeric
+Constants vs. Standard String Identifiers</h3>
+<p>The most immediate difference is the data type and naming
+convention:</p>
+<ul>
+<li><strong>Legacy (<code>sRGBEncoding</code>):</strong> Represented as
+an integer constant (internally evaluated as <code>3001</code>). It was
+set on properties such as <code>renderer.outputEncoding</code> and
+<code>texture.encoding</code>.</li>
+<li><strong>Modern (<code>colorSpace</code>):</strong> Represented as a
+standardized string literal, defined via constants such as
+<code>THREE.SRGBColorSpace</code> (evaluating to <code>'srgb'</code>)
+and <code>THREE.LinearSRGBColorSpace</code> (evaluating to
+<code>'srgb-linear'</code>). It is set on
+<code>renderer.outputColorSpace</code> and
+<code>texture.colorSpace</code>.</li>
+</ul>
+<h3 id="semantic-scope-encodings-vs-full-color-spaces">Semantic Scope:
+Encodings vs. Full Color Spaces</h3>
+<p>The shift in terminology addresses a technical limitation in how
+Three.js previously described color data:</p>
+<ul>
+<li><strong>Encoding</strong> strictly refers to a transfer function
+(the electro-optical transfer function or gamma curve) applied to color
+values to compress them efficiently for storage or display.</li>
+<li><strong>Color Space</strong> encompasses both the color gamut (the
+chromaticity coordinates of the red, green, and blue primaries plus the
+white point) and the transfer function.</li>
+</ul>
+<p>By upgrading to <code>colorSpace</code>, Three.js aligned itself with
+modern web standards (such as CSS Color Module 4 and WebGPU) and glTF
+specifications, paving the way for wider gamuts (like Display P3) rather
+than being architecturally limited to sRGB gamma curves.</p>
+<h3 id="integration-with-the-colormanagement-api">Integration with the
+ColorManagement API</h3>
+<p>Under the old <code>sRGBEncoding</code> paradigm, color management
+was fragmented. Developers often had to manually manage whether color
+conversions occurred in shaders, hex color instantiations, or textures,
+which frequently led to "double-gamma" correction or washed-out
+renders.</p>
+<p>Under the modern system:</p>
+<ul>
+<li>Color management is globally centralized and enabled by default
+(<code>THREE.ColorManagement.enabled = true</code>).</li>
+<li>Color values defined in materials (e.g.,
+<code>new THREE.Color(0xff0000)</code>) are automatically accounted for
+in working linear color space.</li>
+<li>Setting <code>texture.colorSpace = THREE.SRGBColorSpace</code>
+explicitly informs Three.js of the input's source gamut and transfer
+curve so it can accurately linearize the texture before lighting
+calculations occur.</li>
+<li>Setting
+<code>renderer.outputColorSpace = THREE.SRGBColorSpace</code> handles
+the final conversion from linear working space to the target display
+space during the final render pass.</li>
+</ul>
+<h3 id="migration-summary">Migration Summary</h3>
+<p>To modernize code using the deprecated properties:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Old (Deprecated)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputEncoding</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">sRGBEncoding</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">encoding</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">sRGBEncoding</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Modern</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span></code></pre></div>
+<p>For uncompressed data textures or normal/roughness maps where values
+represent raw mathematical vectors rather than visible color:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Old (Deprecated)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">encoding</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearEncoding</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Modern</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NoColorSpace</span><span class="op">;</span> <span class="co">// or THREE.LinearSRGBColorSpace where appropriate</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Opacity vs Transmission for Glass - three.js</title>
+    <meta name="description" content="When rendering glass in Three.js, developers must choose between Material.opacity and Material.transmission. While opacity uniformly fades an object into the background using standard alpha blending, transmission physically simulates light passing throug">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-opacity-vs-transmission-for-glass">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Opacity vs Transmission for Glass - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-opacity-vs-transmission-for-glass" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When rendering glass in Three.js, developers must choose between Material.opacity and Material.transmission. While opacity uniformly fades an object into the background using standard alpha blending, transmission physically simulates light passing throug" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-opacity-vs-transmission-for-glass">Three.js Opacity vs
+Transmission for Glass</h1>
+<p>When rendering glass in Three.js, developers must choose between
+<code>Material.opacity</code> and <code>Material.transmission</code>.
+While <code>opacity</code> uniformly fades an object into the background
+using standard alpha blending, <code>transmission</code> physically
+simulates light passing through a solid transparent volume, enabling
+realistic refraction, surface scattering, and Fresnel reflections.
+Understanding the operational and visual differences between these two
+properties is critical for achieving authentic glass shaders without
+unnecessary performance costs.</p>
+<h3 id="what-is-materialopacity">What is Material.opacity?</h3>
+<p><code>Material.opacity</code> controls traditional alpha blending.
+When you lower an object's opacity (with
+<code>transparent: true</code>), Three.js renders the surface by
+blending the fragment's output color with the colors of the objects
+already drawn behind it in the frame buffer.</p>
+<p>Key characteristics of <code>opacity</code>:</p>
+<ul>
+<li><strong>No Refraction:</strong> Light travels straight through the
+surface without bending. Objects behind the glass appear in their exact
+physical positions without distortion.</li>
+<li><strong>Surface-Level Fading:</strong> Both the diffuse light and
+the specular highlights (reflections) fade equally as opacity decreases.
+Real glass maintains bright, crisp reflections even when the body of the
+material is completely clear.</li>
+<li><strong>Depth Sorting Issues:</strong> Standard transparency
+requires Three.js to sort objects from back to front before rendering.
+Complex overlapping transparent geometries often suffer from sorting
+artifacts, missing faces, or incorrect draw orders.</li>
+</ul>
+<h3 id="what-is-materialtransmission">What is
+Material.transmission?</h3>
+<p><code>Material.transmission</code> is exclusive to
+<code>MeshPhysicalMaterial</code> (an extension of
+<code>MeshStandardMaterial</code>). It represents the percentage of
+light that penetrates the surface and travels through the medium rather
+than being reflected or absorbed.</p>
+<p>Key characteristics of <code>transmission</code>:</p>
+<ul>
+<li><strong>Physical Refraction:</strong> Transmissive materials use an
+Index of Refraction (<code>ior</code>, typically set to 1.5 for standard
+glass) to bend the light rays passing through the mesh, distorting the
+scene behind it based on the geometry’s thickness and curvature.</li>
+<li><strong>Independent Specular Reflection:</strong> Even when
+<code>transmission</code> is set to <code>1.0</code> (fully
+transmissive), the surface retains strong Fresnel reflections at
+glancing angles. The reflections remain opaque while the transmitted
+light shows the refracted background.</li>
+<li><strong>Roughness Scattering:</strong> The material’s
+<code>roughness</code> property directly blurs the refracted background,
+effortlessly creating frosted glass or frosted acrylic effects. With
+<code>opacity</code>, roughness only affects surface highlights, leaving
+the background perfectly sharp.</li>
+<li><strong>Thickness and Attenuation:</strong> Used in conjunction with
+properties like <code>thickness</code>, <code>attenuationColor</code>,
+and <code>attenuationDistance</code>, <code>transmission</code>
+simulates colored or dense glass by absorbing light as it travels deeper
+through the object.</li>
+</ul>
+<h3 id="performance-and-pipeline-differences">Performance and Pipeline
+Differences</h3>
+<p>The visual realism of <code>transmission</code> comes with a
+rendering cost:</p>
+<ol type="1">
+<li><strong>Render Targets:</strong> To bend and blur the background,
+Three.js must first render the opaque background objects to an internal
+texture, then pass that texture to the transmissive material's shader to
+sample it. This extra render pass can impact performance on low-end or
+mobile devices.</li>
+<li><strong>Double-Sided Limitations:</strong> Transmissive objects
+primarily calculate refraction using a screen-space approximation based
+on the surface facing the camera. Rendering thick, complex interiors or
+nested glass meshes can sometimes exhibit visual inaccuracies compared
+to true ray-traced glass.</li>
+</ol>
+<h3 id="summary-when-to-use-which">Summary: When to Use Which</h3>
+<ul>
+<li>Use <strong><code>opacity</code></strong> for transparent UI
+elements, simple colored plastics, fading objects in and out, or
+performance-critical scenes on low-power devices where refraction is not
+required.</li>
+<li>Use <strong><code>transmission</code></strong> whenever you need to
+simulate realistic glass, water, crystals, or gems where physical light
+bending, realistic Fresnel reflections, and blurred background
+transmissions are essential.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disable updateMatrixWorld on Static Three.js Objects - three.js</title>
+    <meta name="description" content="This article explains how to stop Three.js from recursively computing transformation matrices for large, non-moving branches of a scene graph. By default, the render loop traverses every descendant node to recalculate its world matrix, causing measurable">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/disable-updatematrixworld-on-static-three-js-objects">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Disable updateMatrixWorld on Static Three.js Objects - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/disable-updatematrixworld-on-static-three-js-objects" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to stop Three.js from recursively computing transformation matrices for large, non-moving branches of a scene graph. By default, the render loop traverses every descendant node to recalculate its world matrix, causing measurable" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="disable-updatematrixworld-on-static-threejs-objects">Disable
+updateMatrixWorld on Static Three.js Objects</h1>
+<p>This article explains how to stop Three.js from recursively computing
+transformation matrices for large, non-moving branches of a scene graph.
+By default, the render loop traverses every descendant node to
+recalculate its world matrix, causing measurable CPU overhead in dense
+scenes. You will learn the most effective techniques to pause this
+traversal, how to ensure the initial transform is properly applied
+before pausing, and how to safely resume or force updates when
+needed.</p>
+<h2 id="the-problem-with-default-matrix-traversal">The Problem with
+Default Matrix Traversal</h2>
+<p>Every frame, Three.js calls <code>scene.updateMatrixWorld()</code>.
+This function recursively walks down every node in the scene graph. Even
+if a mesh does not change position, rotation, or scale, Three.js still
+checks properties and traverses its children. For static branches
+containing thousands of objects—such as architectural CAD data, city
+blocks, or dense foliage—this recursive check creates a significant CPU
+bottleneck.</p>
+<h2 id="method-1-override-the-updatematrixworld-method">Method 1:
+Override the <code>updateMatrixWorld</code> Method</h2>
+<p>The fastest and most direct way to halt traversal down an entire
+static subtree is to overwrite the root node's
+<code>updateMatrixWorld</code> function with an empty function. This
+prevents Three.js from stepping into the branch entirely.</p>
+<h3 id="1-compute-the-initial-transformation">1. Compute the Initial
+Transformation</h3>
+<p>Before muting the method, ensure the branch and its descendants
+calculate their initial world matrices at least once:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure local and world transforms are up to date</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="fu">updateMatrix</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-disable-recursion">2. Disable Recursion</h3>
+<p>Replace the method on the parent container:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Pause all recursive matrix checks for this branch</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="at">updateMatrixWorld</span> <span class="op">=</span> <span class="kw">function</span>() {}<span class="op">;</span></span></code></pre></div>
+<p>Because the render loop calls <code>updateMatrixWorld</code> on the
+root of this branch and encounters an empty function, traversal stops
+immediately, bypassing all nested children.</p>
+<h3 id="3-re-enabling-or-forcing-an-update">3. Re-enabling or Forcing an
+Update</h3>
+<p>If objects within the branch move or are rearranged later, restore
+the prototype method or manually invoke the prototype function:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Force a one-time update</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">Object3D</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">updateMatrixWorld</span><span class="op">.</span><span class="fu">call</span>(staticBranchRoot<span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Or restore automatic updates permanently</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="at">updateMatrixWorld</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">Object3D</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">updateMatrixWorld</span><span class="op">;</span></span></code></pre></div>
+<h2 id="method-2-use-matrixworldautoupdate-threejs-r144">Method 2: Use
+<code>matrixWorldAutoUpdate</code> (Three.js r144+)</h2>
+<p>Modern versions of Three.js include a built-in property designed to
+stop world matrix calculations without method overriding:
+<code>matrixWorldAutoUpdate</code>.</p>
+<p>When <code>matrixWorldAutoUpdate</code> is set to <code>false</code>,
+Three.js avoids recalculating the object's world matrix unless a forced
+update propagates down from an ancestor.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Recursively disable auto updates on the static branch</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">matrixAutoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">matrixWorldAutoUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the world matrices once</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>staticBranchRoot<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="important-distinction">Important Distinction</h3>
+<p>Setting <code>matrixWorldAutoUpdate = false</code> on only the parent
+does not always prevent Three.js from traversing nested children if
+child objects still have <code>matrixWorldAutoUpdate = true</code>.
+Therefore, you must traverse the branch once to set both
+<code>matrixAutoUpdate = false</code> and
+<code>matrixWorldAutoUpdate = false</code> on every descendant.</p>
+<h2 id="which-approach-to-choose">Which Approach to Choose?</h2>
+<ul>
+<li>Use <strong>Method 1 (Method Override)</strong> if you have an
+extremely deep hierarchy (thousands of nodes) and want zero
+function-call overhead for the entire branch.</li>
+<li>Use <strong>Method 2
+(<code>matrixWorldAutoUpdate = false</code>)</strong> if you want to
+adhere to the idiomatic Three.js API without monkey-patching methods on
+runtime objects.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

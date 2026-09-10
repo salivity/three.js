@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Pause Three.js Clock on Tab Switch - three.js</title>
+    <meta name="description" content="When a user switches browser tabs, requestAnimationFrame pauses, but the internal THREE.Clock continues tracking real-world time. Once the tab becomes active again, the next call to clock.getDelta() returns a massive elapsed time value, causing physics s">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-pause-three-js-clock-on-tab-switch">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Pause Three.js Clock on Tab Switch - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-pause-three-js-clock-on-tab-switch" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When a user switches browser tabs, requestAnimationFrame pauses, but the internal THREE.Clock continues tracking real-world time. Once the tab becomes active again, the next call to clock.getDelta() returns a massive elapsed time value, causing physics s" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-pause-threejs-clock-on-tab-switch">How to Pause Three.js
+Clock on Tab Switch</h1>
+<p>When a user switches browser tabs, <code>requestAnimationFrame</code>
+pauses, but the internal <code>THREE.Clock</code> continues tracking
+real-world time. Once the tab becomes active again, the next call to
+<code>clock.getDelta()</code> returns a massive elapsed time value,
+causing physics simulations to explode, animations to skip, and camera
+controls to teleport. This article explains how to prevent these delta
+spikes using the browser's Page Visibility API to automatically stop and
+resume the Three.js clock.</p>
+<hr />
+<h3 id="why-delta-jumps-happen">Why Delta Jumps Happen</h3>
+<p>The <code>THREE.Clock.getDelta()</code> method calculates the
+difference in seconds between the current call and the previous call. In
+a normal animation loop running at 60 FPS, this value is approximately
+<code>0.016</code> seconds.</p>
+<p>Browsers throttle or completely halt
+<code>requestAnimationFrame</code> in inactive background tabs to
+conserve CPU, GPU, and battery usage. If a user backgrounds the tab for
+15 seconds, the render loop halts. When the user returns, the render
+loop resumes, and <code>clock.getDelta()</code> calculates an elapsed
+time of 15 seconds. If that delta is passed directly into a physics
+engine or positional updates, objects will leap across the scene
+instantaneously.</p>
+<hr />
+<h3 id="the-solution-page-visibility-api">The Solution: Page Visibility
+API</h3>
+<p>To fix this, use the native <code>visibilitychange</code> event
+provided by the Page Visibility API. By pairing this event with the
+<code>clock.stop()</code> and <code>clock.start()</code> methods, you
+halt the internal timer while the tab is hidden and reset the delta
+baseline when it regains focus.</p>
+<h4 id="implementation">Implementation</h4>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Handle tab switching</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;visibilitychange&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="bu">document</span><span class="op">.</span><span class="at">hidden</span>) {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Pauses the clock and stops internal time accumulation</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        clock<span class="op">.</span><span class="fu">stop</span>()<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Resets the internal previous time baseline and resumes tracking</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        clock<span class="op">.</span><span class="fu">start</span>()<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// If the clock is stopped, getDelta() safely returns 0</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update animations, physics, and scene logic</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">updateScene</span>(delta)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="how-clockstop-and-clockstart-work-internally">How
+<code>clock.stop()</code> and <code>clock.start()</code> Work
+Internally</h3>
+<ol type="1">
+<li><strong><code>clock.stop()</code></strong>: Sets
+<code>clock.running</code> to <code>false</code> and records the total
+elapsed time up to that moment. If <code>getDelta()</code> is called
+while the clock is stopped, it returns <code>0</code>.</li>
+<li><strong><code>clock.start()</code></strong>: Sets
+<code>clock.running</code> to <code>true</code>, marks the current
+performance timestamp as the <code>oldTime</code>, and resets the
+baseline for the next <code>getDelta()</code> invocation. Because
+<code>oldTime</code> is updated to the moment the tab becomes visible,
+the subsequent <code>getDelta()</code> call only measures the fraction
+of a second between tab reactivation and the first resumed frame.</li>
+</ol>
+<hr />
+<h3 id="recommended-safety-measure-clamping-delta">Recommended Safety
+Measure: Clamping Delta</h3>
+<p>While the Page Visibility API handles tab switches, temporary freezes
+caused by heavy garbage collection or system lag can still cause smaller
+delta spikes (e.g., 200–500ms). To ensure complete stability, combine
+the visibility listener with delta clamping:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> MAX_DELTA <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span> <span class="co">// Maximum allowed frame step (100ms)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Clamp delta to prevent unexpected jumps during frame drops</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> delta <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">,</span> MAX_DELTA)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">updateScene</span>(delta)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By combining <code>clock.stop()</code> / <code>clock.start()</code>
+on visibility changes with a maximum delta threshold, your Three.js
+application remains stable across tab switches, window minimizes, and
+system-level performance hiccups.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

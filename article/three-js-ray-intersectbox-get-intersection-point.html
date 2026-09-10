@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Ray.intersectBox: Get Intersection Point - three.js</title>
+    <meta name="description" content="In Three.js, determining where a ray strikes an axis-aligned bounding box (AABB) is a core task for collision detection, selection, and physics. The THREE.Ray.intersectBox() method calculates the exact point of contact along the ray's path. This article">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-ray-intersectbox-get-intersection-point">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Ray.intersectBox: Get Intersection Point - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-ray-intersectbox-get-intersection-point" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, determining where a ray strikes an axis-aligned bounding box (AABB) is a core task for collision detection, selection, and physics. The THREE.Ray.intersectBox() method calculates the exact point of contact along the ray's path. This article" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-rayintersectbox-get-intersection-point">Three.js
+Ray.intersectBox: Get Intersection Point</h1>
+<p>In Three.js, determining where a ray strikes an axis-aligned bounding
+box (AABB) is a core task for collision detection, selection, and
+physics. The <code>THREE.Ray.intersectBox()</code> method calculates the
+exact point of contact along the ray's path. This article explains how
+to configure an AABB using <code>THREE.Box3</code>, cast a
+<code>THREE.Ray</code>, and use a target <code>THREE.Vector3</code> to
+extract the precise 3D coordinates of the intersection.</p>
+<h3 id="the-method-signature">The Method Signature</h3>
+<p>The <code>intersectBox</code> method is called directly on an
+instance of <code>THREE.Ray</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>ray<span class="op">.</span><span class="fu">intersectBox</span>( box<span class="op">,</span> target )<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>box</code> (<code>THREE.Box3</code>)</strong>: The
+axis-aligned bounding box to test against.</li>
+<li><strong><code>target</code> (<code>THREE.Vector3</code>)</strong>:
+The vector that receives the resulting intersection coordinates if a hit
+occurs.</li>
+<li><strong>Return Value</strong>: Returns the <code>target</code>
+vector populated with the intersection point coordinates, or
+<code>null</code> if the ray does not intersect the box.</li>
+</ul>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To calculate the intersection coordinate:</p>
+<ol type="1">
+<li><strong>Define the Bounding Box</strong>: Create or obtain a
+<code>THREE.Box3</code>. You can define custom minimum and maximum
+bounds or compute them from an existing mesh using
+<code>box.setFromObject(mesh)</code>.</li>
+<li><strong>Define the Ray</strong>: Create a <code>THREE.Ray</code>,
+defining its origin vector and a normalized direction vector.</li>
+<li><strong>Create the Target Vector</strong>: Instantiate a
+<code>THREE.Vector3</code> to hold the result. This prevents unnecessary
+memory allocation during repeated tests.</li>
+<li><strong>Execute the Intersection</strong>: Call
+<code>ray.intersectBox(box, target)</code> and verify whether the output
+is non-null.</li>
+</ol>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the AABB (Box3)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boxMin <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boxMax <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> aabb <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Box3</span>(boxMin<span class="op">,</span> boxMax)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the Ray</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> rayOrigin <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> rayDirection <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ray <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Ray</span>(rayOrigin<span class="op">,</span> rayDirection)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Prepare the target vector</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> intersectionPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Extract the intersection coordinate</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hit <span class="op">=</span> ray<span class="op">.</span><span class="fu">intersectBox</span>(aabb<span class="op">,</span> intersectionPoint)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (hit <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Intersection found at: X: </span><span class="sc">${</span>hit<span class="op">.</span><span class="at">x</span><span class="sc">}</span><span class="vs">, Y: </span><span class="sc">${</span>hit<span class="op">.</span><span class="at">y</span><span class="sc">}</span><span class="vs">, Z: </span><span class="sc">${</span>hit<span class="op">.</span><span class="at">z</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Output: Intersection found at: X: 0, Y: 0, Z: 1</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;The ray missed the bounding box.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Coordinate Space</strong>: The <code>THREE.Ray</code> and
+<code>THREE.Box3</code> must share the same coordinate space. If your
+mesh has world transformations, compute the box using
+<code>box.setFromObject(mesh)</code> to ensure the bounds are in world
+coordinates, and match them with a world-space ray.</li>
+<li><strong>Ray Origin Inside the Box</strong>: If the ray originates
+inside the <code>Box3</code>, <code>intersectBox</code> treats the ray's
+origin as the intersection point and writes the origin coordinates to
+the target vector.</li>
+<li><strong>Performance</strong>: Reusing a single
+<code>THREE.Vector3</code> instance as the <code>target</code> argument
+across multiple ray checks avoids frequent garbage collection cycles,
+which is critical in real-time animation loops.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

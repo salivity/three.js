@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Peter Panning with Three.js Shadow Bias - three.js</title>
+    <meta name="description" content="This article explains how to eliminate "Peter Panning"—a visual artifact where shadows appear detached from their casting objects—when using a DirectionalLight in Three.js. You will learn how shadow bias works, why high bias values detach shadows on">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-peter-panning-with-three-js-shadow-bias">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Peter Panning with Three.js Shadow Bias - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-peter-panning-with-three-js-shadow-bias" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to eliminate "Peter Panning"—a visual artifact where shadows appear detached from their casting objects—when using a DirectionalLight in Three.js. You will learn how shadow bias works, why high bias values detach shadows on" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-peter-panning-with-threejs-shadow-bias">Fix Peter Panning
+with Three.js Shadow Bias</h1>
+<p>This article explains how to eliminate "Peter Panning"—a visual
+artifact where shadows appear detached from their casting objects—when
+using a <code>DirectionalLight</code> in Three.js. You will learn how
+shadow bias works, why high bias values detach shadows on floating
+geometry, and how to combine <code>bias</code>, <code>normalBias</code>,
+and shadow frustum adjustments to produce grounded, accurate shadows
+without introducing shadow acne.</p>
+<h3 id="understanding-peter-panning">Understanding Peter Panning</h3>
+<p>Peter Panning occurs when the shadow map depth comparison is pushed
+too far away from the surface casting the shadow. In Three.js,
+developers frequently increase <code>light.shadow.bias</code> to
+eliminate "shadow acne" (false self-shadowing moiré patterns). However,
+setting <code>light.shadow.bias</code> too high creates a gap between
+the base of an object and where its shadow begins. For floating
+geometry, this creates unnatural gaps or distorts intended contact
+shadows on surrounding surfaces.</p>
+<h3 id="step-1-use-normalbias-instead-of-high-bias">Step 1: Use
+<code>normalBias</code> Instead of High <code>bias</code></h3>
+<p>The most effective way to prevent Peter Panning without reintroducing
+shadow acne is to prioritize <code>light.shadow.normalBias</code> over
+standard <code>light.shadow.bias</code>.</p>
+<ul>
+<li><strong><code>light.shadow.bias</code></strong> offsets depth along
+the light direction. High values directly cause shadow detachment.</li>
+<li><strong><code>light.shadow.normalBias</code></strong> offsets
+geometry along surface normals during the shadow pass, effectively
+solving self-shadowing on curved or angled surfaces without pushing the
+shadow away from the base.</li>
+</ul>
+<p>Set your standard <code>bias</code> to a very low value (or zero),
+and dial in a small positive <code>normalBias</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Keep depth bias minimal</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.0001</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Use normalBias to resolve shadow acne without causing Peter Panning</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">normalBias</span> <span class="op">=</span> <span class="fl">0.02</span><span class="op">;</span></span></code></pre></div>
+<p>Depending on the scale of your scene, <code>normalBias</code>
+typically works best between <code>0.01</code> and
+<code>0.05</code>.</p>
+<h3 id="step-2-tighten-the-shadow-camera-frustum">Step 2: Tighten the
+Shadow Camera Frustum</h3>
+<p>Shadow map texels that cover too much world space exacerbate
+depth-precision issues. A <code>DirectionalLight</code> uses an
+orthographic camera for shadows. If this bounding box is excessively
+large, depth resolution drops, forcing you to use larger bias
+values.</p>
+<p>Fit the shadow camera tightly around the playable or visible
+scene:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="dv">50</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">left</span> <span class="op">=</span> <span class="op">-</span><span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">right</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> <span class="op">-</span><span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Update the projection matrix after changes</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<p>Keep the <code>near</code> plane as far forward as possible and the
+<code>far</code> plane as close as possible to maximize 24-bit depth
+buffer precision.</p>
+<h3 id="step-3-increase-shadow-map-resolution">Step 3: Increase Shadow
+Map Resolution</h3>
+<p>If fine details on floating meshes continue to show gaps, increase
+the shadow map resolution to increase texel density:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span></code></pre></div>
+<p>Higher resolution allows you to reduce both <code>bias</code> and
+<code>normalBias</code> to microscopic values without triggering
+acne.</p>
+<h3 id="recommended-configuration-template">Recommended Configuration
+Template</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.5</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">15</span><span class="op">,</span> <span class="dv">25</span><span class="op">,</span> <span class="dv">15</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Shadow Map Resolution</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">2048</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Frustum Bounds</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="dv">60</span><span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">left</span> <span class="op">=</span> <span class="op">-</span><span class="dv">15</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">right</span> <span class="op">=</span> <span class="dv">15</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> <span class="dv">15</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> <span class="op">-</span><span class="dv">15</span><span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Bias Settings</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.00005</span><span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">normalBias</span> <span class="op">=</span> <span class="fl">0.03</span><span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(directionalLight)<span class="op">;</span></span></code></pre></div>
+<p>Using a slight negative <code>bias</code> paired with a modest
+<code>normalBias</code> ensures that shadows stay tightly anchored to
+the geometry, eliminating Peter Panning while keeping surface rendering
+free of artifacts.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

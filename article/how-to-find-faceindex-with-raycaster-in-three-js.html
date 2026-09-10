@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Find faceIndex with Raycaster in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, determining the exact faceIndex of an intersected 3D mesh is essential for tasks like selecting individual polygons, face-specific coloring, or mesh editing. When a THREE.Raycaster intersects a mesh, it returns an array of intersection objec">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-find-faceindex-with-raycaster-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Find faceIndex with Raycaster in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-find-faceindex-with-raycaster-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, determining the exact faceIndex of an intersected 3D mesh is essential for tasks like selecting individual polygons, face-specific coloring, or mesh editing. When a THREE.Raycaster intersects a mesh, it returns an array of intersection objec" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-find-faceindex-with-raycaster-in-threejs">How to Find
+faceIndex with Raycaster in Three.js</h1>
+<p>In Three.js, determining the exact <code>faceIndex</code> of an
+intersected 3D mesh is essential for tasks like selecting individual
+polygons, face-specific coloring, or mesh editing. When a
+<code>THREE.Raycaster</code> intersects a mesh, it returns an array of
+intersection objects, each containing a <code>faceIndex</code> property
+that indicates the exact index of the triangular face that was struck.
+This guide explains how to set up the raycaster to capture this value,
+how <code>faceIndex</code> maps to both indexed and non-indexed
+geometries, and how to extract the corresponding vertex data.</p>
+<h2 id="1-capturing-the-intersection">1. Capturing the Intersection</h2>
+<p>To retrieve the <code>faceIndex</code>, cast a ray from the camera
+through the mouse coordinates and check for intersections against your
+target mesh.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> raycaster <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Raycaster</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mouse <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">onPointerDown</span>(<span class="bu">event</span>) {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Normalize mouse coordinates to [-1, 1]</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  mouse<span class="op">.</span><span class="at">x</span> <span class="op">=</span> (<span class="bu">event</span><span class="op">.</span><span class="at">clientX</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span>) <span class="op">*</span> <span class="dv">2</span> <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  mouse<span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="op">-</span>(<span class="bu">event</span><span class="op">.</span><span class="at">clientY</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>) <span class="op">*</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  raycaster<span class="op">.</span><span class="fu">setFromCamera</span>(mouse<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> intersects <span class="op">=</span> raycaster<span class="op">.</span><span class="fu">intersectObject</span>(targetMesh<span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (intersects<span class="op">.</span><span class="at">length</span> <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> hit <span class="op">=</span> intersects[<span class="dv">0</span>]<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> faceIndex <span class="op">=</span> hit<span class="op">.</span><span class="at">faceIndex</span><span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Hit Face Index: </span><span class="sc">${</span>faceIndex<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">getFaceVertices</span>(targetMesh<span class="op">.</span><span class="at">geometry</span><span class="op">,</span> faceIndex)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If an intersection occurs, <code>hit.faceIndex</code> returns an
+integer representing the zero-based index of the intersected
+triangle.</p>
+<hr />
+<h2 id="2-resolving-vertices-from-faceindex">2. Resolving Vertices from
+<code>faceIndex</code></h2>
+<p>Modern Three.js meshes use <code>THREE.BufferGeometry</code>, which
+stores vertex data in flat typed arrays. Depending on whether the
+geometry is indexed or non-indexed, the calculation required to access
+the vertex positions of the face varies.</p>
+<h3 id="indexed-buffergeometry">Indexed BufferGeometry</h3>
+<p>If <code>geometry.index !== null</code>, the geometry reuses vertices
+via an index buffer. The <code>faceIndex</code> maps to three
+consecutive indices in <code>geometry.index</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> index <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Each face consists of 3 indices</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> a <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> b <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> c <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> b)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> c)<span class="op">;</span></span></code></pre></div>
+<h3 id="non-indexed-buffergeometry">Non-Indexed BufferGeometry</h3>
+<p>If <code>geometry.index === null</code>, every triangle consists of
+three unique, sequential vertices in the <code>position</code>
+attribute.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> a <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> b <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> c <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> b)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> c)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="3-universal-function-to-retrieve-face-vertices">3. Universal
+Function to Retrieve Face Vertices</h2>
+<p>To handle both geometry types reliably, use the following unified
+function:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getFaceVertices</span>(geometry<span class="op">,</span> faceIndex) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> position <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> index <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> a<span class="op">,</span> b<span class="op">,</span> c<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (index <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> index<span class="op">.</span><span class="fu">getX</span>(faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    b <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    c <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vertexA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(position<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vertexB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(position<span class="op">,</span> b)<span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vertexC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">fromBufferAttribute</span>(position<span class="op">,</span> c)<span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> { vertexA<span class="op">,</span> vertexB<span class="op">,</span> vertexC }<span class="op">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>Transformations:</strong> Vertices retrieved using
+<code>fromBufferAttribute</code> are in <strong>local object
+space</strong>. To convert them to world coordinates, apply the mesh’s
+world matrix: <code>vertexA.applyMatrix4(mesh.matrixWorld)</code>.</li>
+<li><strong>Undefined <code>faceIndex</code>:</strong> The
+<code>faceIndex</code> property is only valid for meshes
+(<code>THREE.Mesh</code>). It is undefined for ray intersections with
+<code>THREE.Points</code> or <code>THREE.LineSegments</code>.</li>
+<li><strong>InstancedMesh:</strong> When using
+<code>THREE.InstancedMesh</code>, <code>hit.instanceId</code> must be
+used in conjunction with <code>hit.faceIndex</code> to determine both
+the instance and the specific face within that instance.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

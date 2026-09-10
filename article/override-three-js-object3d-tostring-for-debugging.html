@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Override Three.js Object3D toString for Debugging - three.js</title>
+    <meta name="description" content="Debugging complex 3D scenes in Three.js often becomes tedious when inspecting instances of THREE.Object3D, as standard string interpolations and logs produce the ambiguous [object Object]. Safely overriding the toString method—or implementing modern Ja">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/override-three-js-object3d-tostring-for-debugging">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Override Three.js Object3D toString for Debugging - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/override-three-js-object3d-tostring-for-debugging" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Debugging complex 3D scenes in Three.js often becomes tedious when inspecting instances of THREE.Object3D, as standard string interpolations and logs produce the ambiguous [object Object]. Safely overriding the toString method—or implementing modern Ja" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="override-threejs-object3d-tostring-for-debugging">Override
+Three.js Object3D toString for Debugging</h1>
+<p>Debugging complex 3D scenes in Three.js often becomes tedious when
+inspecting instances of <code>THREE.Object3D</code>, as standard string
+interpolations and logs produce the ambiguous
+<code>[object Object]</code>. Safely overriding the
+<code>toString</code> method—or implementing modern JavaScript
+alternatives like <code>Symbol.toStringTag</code>—allows you to display
+meaningful metadata such as an object's <code>name</code>,
+<code>type</code>, and <code>uuid</code> during debugging. This guide
+outlines how to implement this enhancement cleanly without causing
+performance bottlenecks, breaking serialization, or polluting object
+enumerations.</p>
+<h3 id="why-safely-override-tostring">Why Safely Override
+<code>toString</code>?</h3>
+<p>By default, JavaScript objects inherit <code>toString</code> from
+<code>Object.prototype</code>, which yields
+<code>[object Object]</code>. While passing an object directly to
+<code>console.log(object)</code> preserves interactive inspection,
+template literals (e.g., <code>console.log(`Updated: ${object}`)</code>)
+or string-based logging utilities force string conversion.</p>
+<p>A naive prototype override can cause issues if:</p>
+<ul>
+<li>Properties are made enumerable, breaking loops like
+<code>for...in</code>.</li>
+<li>Heavy computations (e.g., matrix updates) are triggered inside the
+stringifier.</li>
+<li>Edge cases where properties like <code>name</code> or
+<code>uuid</code> are undefined cause runtime errors.</li>
+</ul>
+<hr />
+<h3
+id="method-1-prototype-modification-using-objectdefineproperty">Method
+1: Prototype Modification Using <code>Object.defineProperty</code></h3>
+<p>The most universal solution is to modify
+<code>THREE.Object3D.prototype.toString</code> using
+<code>Object.defineProperty</code>. This ensures the new method is
+non-enumerable and will not interfere with serialization libraries or
+<code>for...in</code> loops.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="fu">defineProperty</span>(THREE<span class="op">.</span><span class="at">Object3D</span><span class="op">.</span><span class="at">prototype</span><span class="op">,</span> <span class="st">&#39;toString&#39;</span><span class="op">,</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="kw">function</span> () {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> name <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">name</span> <span class="op">?</span> <span class="vs">`&quot;</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs">&quot;`</span> <span class="op">:</span> <span class="st">&#39;Unnamed&#39;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> id <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">id</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> type <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">type</span> <span class="op">||</span> <span class="st">&#39;Object3D&#39;</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> shortUuid <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">uuid</span> <span class="op">?</span> <span class="kw">this</span><span class="op">.</span><span class="at">uuid</span><span class="op">.</span><span class="fu">slice</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">8</span>) <span class="op">:</span> <span class="st">&#39;no-uuid&#39;</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="vs">`[</span><span class="sc">${</span>type<span class="sc">}</span><span class="vs"> </span><span class="sc">${</span>name<span class="sc">}</span><span class="vs"> (id: </span><span class="sc">${</span>id<span class="sc">}</span><span class="vs">, uuid: </span><span class="sc">${</span>shortUuid<span class="sc">}</span><span class="vs">...)]`</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">writable</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">configurable</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">enumerable</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span> <span class="co">// Prevents pollution of object keys</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="usage">Usage:</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>()<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">name</span> <span class="op">=</span> <span class="st">&#39;PlayerCube&#39;</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Current target: </span><span class="sc">${</span>mesh<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: Current target: [Mesh &quot;PlayerCube&quot; (id: 1, uuid: 4a9f3b2e...)]</span></span></code></pre></div>
+<hr />
+<h3 id="method-2-modern-tagging-with-symboltostringtag">Method 2: Modern
+Tagging with <code>Symbol.toStringTag</code></h3>
+<p>If you prefer to preserve standard JavaScript output formatting while
+making instances identifiable via
+<code>Object.prototype.toString.call(obj)</code>, define the
+<code>Symbol.toStringTag</code> getter on the prototype.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">Object</span><span class="op">.</span><span class="fu">defineProperty</span>(THREE<span class="op">.</span><span class="at">Object3D</span><span class="op">.</span><span class="at">prototype</span><span class="op">,</span> <span class="bu">Symbol</span><span class="op">.</span><span class="at">toStringTag</span><span class="op">,</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">get</span><span class="op">:</span> <span class="kw">function</span> () {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> label <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">name</span> <span class="op">?</span> <span class="vs">`</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">type</span><span class="sc">}</span><span class="vs">: </span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs">`</span> <span class="op">:</span> <span class="kw">this</span><span class="op">.</span><span class="at">type</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> label<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">configurable</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="usage-1">Usage:</h4>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">name</span> <span class="op">=</span> <span class="st">&#39;SunLight&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="bu">Object</span><span class="op">.</span><span class="at">prototype</span><span class="op">.</span><span class="at">toString</span><span class="op">.</span><span class="fu">call</span>(light))<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: [object DirectionalLight: SunLight]</span></span></code></pre></div>
+<hr />
+<h3 id="method-3-instance-level-customization">Method 3: Instance-Level
+Customization</h3>
+<p>If modifying the global <code>THREE.Object3D</code> prototype is
+undesirable in your project architecture (such as when working within
+shared libraries), assign the override directly to specific instances
+during creation or via a factory function:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">attachDebugString</span>(object) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">Object</span><span class="op">.</span><span class="fu">defineProperty</span>(object<span class="op">,</span> <span class="st">&#39;toString&#39;</span><span class="op">,</span> {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">value</span><span class="op">:</span> <span class="kw">function</span> () {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span> <span class="vs">`[</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">type</span><span class="sc">}</span><span class="vs"> &quot;</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">name</span> <span class="op">||</span> <span class="st">&#39;unnamed&#39;</span><span class="sc">}</span><span class="vs">&quot; #</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">]`</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">writable</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">configurable</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">enumerable</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> object<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="fu">attachDebugString</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>())<span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">name</span> <span class="op">=</span> <span class="st">&#39;MainCamera&#39;</span><span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Active Camera: </span><span class="sc">${</span>camera<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: Active Camera: [PerspectiveCamera &quot;MainCamera&quot; #2]</span></span></code></pre></div>
+<hr />
+<h3 id="critical-safety-guidelines">Critical Safety Guidelines</h3>
+<ol type="1">
+<li><strong>Avoid State-Dependent Calculations:</strong> Do not
+calculate bounding boxes, update world matrices, or perform heavy array
+operations inside <code>toString()</code>. Console evaluations should be
+instant and free of side effects.</li>
+<li><strong>Handle Default and Missing States:</strong> Always provide
+fallback values for optional properties. A newly instantiated
+<code>Object3D</code> often lacks a defined <code>name</code>.</li>
+<li><strong>Keep <code>enumerable</code> Set to
+<code>false</code>:</strong> Failing to explicitly mark the method as
+non-enumerable can break codebases that rely on iterating over object
+properties using <code>Object.keys()</code> or standard
+<code>for...in</code> loops.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js CSG: Complex 3D Boolean Operations - three.js</title>
+    <meta name="description" content="Constructive Solid Geometry (CSG) allows developers to build intricate 3D models in Three.js by combining simple procedural primitives using mathematical boolean operations: union, subtraction, and intersection. While Three.js does not include native boo">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-csg-complex-3d-boolean-operations">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js CSG: Complex 3D Boolean Operations - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-csg-complex-3d-boolean-operations" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Constructive Solid Geometry (CSG) allows developers to build intricate 3D models in Three.js by combining simple procedural primitives using mathematical boolean operations: union, subtraction, and intersection. While Three.js does not include native boo" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-csg-complex-3d-boolean-operations">Three.js CSG: Complex
+3D Boolean Operations</h1>
+<p>Constructive Solid Geometry (CSG) allows developers to build
+intricate 3D models in Three.js by combining simple procedural
+primitives using mathematical boolean operations: union, subtraction,
+and intersection. While Three.js does not include native boolean
+operations out of the box, modern libraries such as
+<code>three-bvh-csg</code> integrate seamlessly into the standard
+rendering pipeline. This guide walks through configuring the library,
+understanding core boolean operations, and generating a composite 3D
+mesh ready for rendering.</p>
+<hr />
+<h3 id="core-csg-boolean-operations">Core CSG Boolean Operations</h3>
+<p>Constructive Solid Geometry relies on three primary operations:</p>
+<ol type="1">
+<li><strong>Union (ADD):</strong> Merges two solid objects into a single
+contiguous volume, removing internal faces where the geometries
+overlap.</li>
+<li><strong>Subtraction (SUBTRACT):</strong> Carves the shape of one
+object out of another, creating holes, grooves, or hollow cavities.</li>
+<li><strong>Intersection (INTERSECT):</strong> Retains only the
+overlapping volume shared by both geometries, discarding everything
+else.</li>
+</ol>
+<hr />
+<h3 id="prerequisites-and-setup">Prerequisites and Setup</h3>
+<p>Install Three.js and <code>three-bvh-csg</code>, which provides fast,
+robust CSG processing accelerated by Bounding Volume Hierarchy
+(BVH):</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install three three-bvh-csg</span></code></pre></div>
+<hr />
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To perform a boolean operation, wrap your standard Three.js meshes
+into <code>Brush</code> instances, configure an <code>Evaluator</code>,
+and execute the operation.</p>
+<h4 id="1-import-dependencies">1. Import Dependencies</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Evaluator<span class="op">,</span> Brush<span class="op">,</span> SUBTRACTION<span class="op">,</span> ADDITION<span class="op">,</span> INTERSECTION } <span class="im">from</span> <span class="st">&#39;three-bvh-csg&#39;</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-create-the-base-geometries-and-brushes">2. Create the Base
+Geometries and Brushes</h4>
+<p>A <code>Brush</code> extends <code>THREE.Mesh</code> and provides CSG
+algorithms with the vertex and spatial transformations needed to compute
+surface intersections.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Base shape: A solid box</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boxGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boxMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x156289</span><span class="op">,</span> <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.4</span> })<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseBrush <span class="op">=</span> <span class="kw">new</span> <span class="fu">Brush</span>(boxGeometry<span class="op">,</span> boxMaterial)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Cutting shape: A sphere offset from center</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphereGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SphereGeometry</span>(<span class="fl">1.3</span><span class="op">,</span> <span class="dv">32</span><span class="op">,</span> <span class="dv">32</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphereMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xe74c3c</span><span class="op">,</span> <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.4</span> })<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cutterBrush <span class="op">=</span> <span class="kw">new</span> <span class="fu">Brush</span>(sphereGeometry<span class="op">,</span> sphereMaterial)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Position the cutter</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>cutterBrush<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="fl">0.8</span><span class="op">,</span> <span class="fl">0.8</span><span class="op">,</span> <span class="fl">0.8</span>)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>cutterBrush<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span></code></pre></div>
+<h4 id="3-execute-the-boolean-operation">3. Execute the Boolean
+Operation</h4>
+<p>Initialize the <code>Evaluator</code> and supply the operations.
+Here, we subtract the sphere from the box:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> evaluator <span class="op">=</span> <span class="kw">new</span> <span class="fu">Evaluator</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Compute subtraction: baseBrush - cutterBrush</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> resultMesh <span class="op">=</span> evaluator<span class="op">.</span><span class="fu">evaluate</span>(baseBrush<span class="op">,</span> cutterBrush<span class="op">,</span> SUBTRACTION)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Add the resulting mesh to your Three.js scene</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(resultMesh)<span class="op">;</span></span></code></pre></div>
+<h4 id="4-chaining-operations-for-complex-shapes">4. Chaining Operations
+for Complex Shapes</h4>
+<p>You can feed the output of one operation directly into subsequent CSG
+operations to construct compound models:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a cylinder to drill a central hole</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cylinderGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CylinderGeometry</span>(<span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">32</span>)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cylinderMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x2ecc71</span> })<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> drillBrush <span class="op">=</span> <span class="kw">new</span> <span class="fu">Brush</span>(cylinderGeometry<span class="op">,</span> cylinderMaterial)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>drillBrush<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Drill through the already-carved geometry</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> finalMesh <span class="op">=</span> evaluator<span class="op">.</span><span class="fu">evaluate</span>(resultMesh<span class="op">,</span> drillBrush<span class="op">,</span> SUBTRACTION)<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Clean up intermediate geometries from GPU memory</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>baseBrush<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>cutterBrush<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>resultMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(finalMesh)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="best-practices-for-stability-and-performance">Best Practices for
+Stability and Performance</h3>
+<ul>
+<li><strong>Ensure Geometries are Manifold:</strong> CSG relies on
+watertight (2-manifold) meshes with consistent outward-facing normals.
+Open surfaces or self-intersecting meshes can produce rendering
+artifacts or invalid geometry.</li>
+<li><strong>Update World Matrices:</strong> Always call
+<code>mesh.updateMatrixWorld()</code> on brushes after transforming
+their position, rotation, or scale, ensuring accurate spatial
+calculation.</li>
+<li><strong>Dispose Intermediate Assets:</strong> CSG operations
+generate new <code>BufferGeometry</code> instances on each evaluation.
+Call <code>.dispose()</code> on unused geometries to prevent memory
+leaks in dynamic applications.</li>
+<li><strong>Precompute Static Meshes:</strong> Real-time CSG
+calculations on dense geometries can affect frame rates. Compute complex
+boolean models during initialization or in a web worker rather than
+inside the main animation loop.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

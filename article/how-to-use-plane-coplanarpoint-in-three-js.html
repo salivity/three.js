@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Plane.coplanarPoint in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, an infinite geometric plane is mathematically defined by a unit normal vector and a signed constant distance from the origin. When working with 3D math, physics, or rendering helpers, you frequently need to find a concrete 3D coordinate that">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-plane-coplanarpoint-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Plane.coplanarPoint in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-plane-coplanarpoint-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, an infinite geometric plane is mathematically defined by a unit normal vector and a signed constant distance from the origin. When working with 3D math, physics, or rendering helpers, you frequently need to find a concrete 3D coordinate that" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-planecoplanarpoint-in-threejs">How to Use
+Plane.coplanarPoint in Three.js</h1>
+<p>In Three.js, an infinite geometric plane is mathematically defined by
+a unit normal vector and a signed constant distance from the origin.
+When working with 3D math, physics, or rendering helpers, you frequently
+need to find a concrete 3D coordinate that lies directly on that
+surface. This guide explains how the <code>Plane.coplanarPoint()</code>
+method works in Three.js and provides practical code examples showing
+how to calculate an arbitrary point on any plane.</p>
+<h2 id="understanding-the-method">Understanding the Method</h2>
+<p>The <code>Plane.coplanarPoint(target)</code> method calculates a
+point lying directly on the surface of the calling
+<code>THREE.Plane</code> and stores it in the provided
+<code>THREE.Vector3</code> target.</p>
+<p>Under the hood, Three.js computes this point by scaling the plane's
+normal vector by the negative value of the plane's constant:</p>
+<p><span class="math display">\[\text{point} = -\text{constant} \times
+\text{normal}\]</span></p>
+<p>Because this calculation yields a vector perpendicular to the plane
+originating from <span class="math inline">\((0, 0, 0)\)</span>, the
+resulting point represents the closest point on the plane to the world
+coordinate origin.</p>
+<h3 id="signature">Signature</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="fu">coplanarPoint</span>(target)</span></code></pre></div>
+<ul>
+<li><strong><code>target</code></strong> <em>(THREE.Vector3)</em>: An
+existing <code>Vector3</code> instance where the calculated coordinates
+will be written.</li>
+<li><strong>Returns</strong>: The mutated <code>target</code> vector
+containing the coplanar point coordinates.</li>
+</ul>
+<h2 id="basic-implementation">Basic Implementation</h2>
+<p>To find a point on a plane, define a <code>THREE.Plane</code>,
+instantiate a <code>THREE.Vector3</code> to store the result, and call
+<code>coplanarPoint()</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define a plane facing up along the Y-axis, shifted 5 units along the normal</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> constant <span class="op">=</span> <span class="op">-</span><span class="dv">5</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>(normal<span class="op">,</span> constant)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a vector to receive the coordinates</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pointOnPlane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the coplanar point</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="fu">coplanarPoint</span>(pointOnPlane)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(pointOnPlane)<span class="op">;</span> </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: Vector3 { x: 0, y: 5, z: 0 }</span></span></code></pre></div>
+<h2
+id="practical-example-visualizing-a-plane-with-planehelper">Practical
+Example: Visualizing a Plane with PlaneHelper</h2>
+<p>A common application of <code>coplanarPoint()</code> is positioning
+objects, helpers, or coordinate frames relative to an arbitrary plane.
+While <code>THREE.PlaneHelper</code> automatically handles plane
+positioning, you can use <code>coplanarPoint()</code> when building
+custom markers or orienting meshes directly onto an abstract plane:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an arbitrary angled plane</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">,</span> <span class="op">-</span><span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Get a point resting on the plane</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> anchorPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="fu">coplanarPoint</span>(anchorPoint)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Place a visual marker on the plane at that point</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> markerGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SphereGeometry</span>(<span class="fl">0.2</span><span class="op">,</span> <span class="dv">16</span><span class="op">,</span> <span class="dv">16</span>)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> markerMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> markerMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(markerGeometry<span class="op">,</span> markerMaterial)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>markerMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(anchorPoint)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(markerMesh)<span class="op">;</span></span></code></pre></div>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>Always Pass a Target Vector</strong>:
+<code>Plane.coplanarPoint()</code> does not allocate a new
+<code>THREE.Vector3</code> automatically. Failing to pass a valid
+<code>THREE.Vector3</code> as an argument will result in a runtime
+error.</li>
+<li><strong>Memory Optimization</strong>: In animation loops or render
+functions, reuse a single <code>THREE.Vector3</code> variable instead of
+creating new instances to avoid triggering garbage collection
+spikes.</li>
+<li><strong>Arbitrary Point</strong>: The returned vector is only one
+specific point resting on the infinite plane (the projection of the
+origin). Any linear combination of vectors perpendicular to the normal
+can be added to this anchor point to reach other locations across the
+same plane.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

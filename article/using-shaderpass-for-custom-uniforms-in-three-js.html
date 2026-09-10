@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using ShaderPass for Custom Uniforms in Three.js - three.js</title>
+    <meta name="description" content="In Three.js post-processing pipelines, ShaderPass acts as the critical bridge between JavaScript application logic and custom GLSL fragment shaders applied across an entire scene. This article explains the exact purpose of ShaderPass when handling dynami">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-shaderpass-for-custom-uniforms-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using ShaderPass for Custom Uniforms in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-shaderpass-for-custom-uniforms-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js post-processing pipelines, ShaderPass acts as the critical bridge between JavaScript application logic and custom GLSL fragment shaders applied across an entire scene. This article explains the exact purpose of ShaderPass when handling dynami" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-shaderpass-for-custom-uniforms-in-threejs">Using
+ShaderPass for Custom Uniforms in Three.js</h1>
+<p>In Three.js post-processing pipelines, <code>ShaderPass</code> acts
+as the critical bridge between JavaScript application logic and custom
+GLSL fragment shaders applied across an entire scene. This article
+explains the exact purpose of <code>ShaderPass</code> when handling
+dynamic custom uniforms—such as elapsed time and normalized mouse
+coordinates—detailing how it manages memory, enables continuous
+CPU-to-GPU data transmission inside the render loop, and automates
+full-screen quad rendering via <code>EffectComposer</code>.</p>
+<h3 id="the-core-purpose-of-shaderpass">The Core Purpose of
+ShaderPass</h3>
+<p>When implementing full-screen image processing in Three.js, shaders
+are not applied to individual 3D meshes. Instead, the final scene is
+rendered to an off-screen buffer (a render target) and then processed as
+a flat 2D texture.</p>
+<p><code>ShaderPass</code> simplifies this workflow by automatically
+provisioning an orthographic camera and a full-screen plane geometry. It
+takes a shader object containing vertex shaders, fragment shaders, and
+uniform declarations, binding them directly to an internal
+<code>ShaderMaterial</code>. Without <code>ShaderPass</code>, you would
+need to manually create an off-screen scene, an orthographic camera, a
+1x1 quad mesh, and manage texture ping-ponging between render
+targets.</p>
+<h3 id="managing-and-exposing-custom-uniforms">Managing and Exposing
+Custom Uniforms</h3>
+<p>Uniforms represent read-only variables within GLSL shaders that
+remain constant across all processed pixels in a single draw call, but
+which can be modified between draw calls from JavaScript.</p>
+<p>When you pass a custom shader definition to <code>ShaderPass</code>,
+it stores the declared uniforms in its <code>.uniforms</code> property.
+The specific role of <code>ShaderPass</code> regarding custom uniforms
+includes:</p>
+<ol type="1">
+<li><strong>State Preservation:</strong> It maintains the current state
+of custom uniforms between frames, ensuring that variables not modified
+on every frame retain their previous values.</li>
+<li><strong>GPU Texture Mapping:</strong> It automatically maps the
+scene's rendered output texture to the default <code>tDiffuse</code>
+uniform, allowing custom uniforms to interact directly with the
+underlying render.</li>
+<li><strong>Direct CPU-to-GPU Access:</strong> It exposes a direct
+reference to the uniform values through JavaScript, allowing developers
+to target uniforms by key without interacting with lower-level WebGL
+buffer management.</li>
+</ol>
+<h3 id="handling-dynamic-uniforms-time-and-mouse-coordinates">Handling
+Dynamic Uniforms: Time and Mouse Coordinates</h3>
+<p>Dynamic visual effects—such as chromatic aberration, water ripples,
+noise distortion, and vignette tracking—require values that change
+continuously over time or in response to user input.
+<code>ShaderPass</code> allows these variables to be updated
+frame-by-frame.</p>
+<h4 id="driving-procedural-animation-with-time">Driving Procedural
+Animation with Time</h4>
+<p>Time uniforms (commonly named <code>u_time</code> or
+<code>time</code>) require scalar float values that increase
+monotonically. Inside the fragment shader, time is passed into
+trigonometric functions, procedural noise algorithms, or coordinate
+offsets to create continuous motion.</p>
+<p><code>ShaderPass</code> allows this value to be updated directly in
+the animation loop prior to rendering:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update the custom time uniform inside ShaderPass</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    customShaderPass<span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;u_time&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">=</span> clock<span class="op">.</span><span class="fu">getElapsedTime</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="enabling-interactivity-with-mouse-coordinates">Enabling
+Interactivity with Mouse Coordinates</h4>
+<p>Mouse uniforms (commonly named <code>u_mouse</code> or
+<code>mouse</code>) are typically defined as a 2D vector
+(<code>vec2</code>). They translate normalized screen-space pointer
+coordinates into the coordinate space of the fragment shader, enabling
+effects centered on the user's cursor.</p>
+<p>Event listeners capture the input on the CPU, and
+<code>ShaderPass</code> transmits the updated <code>THREE.Vector2</code>
+directly to the active shader program during the next draw call:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mouse <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;mousemove&#39;</span><span class="op">,</span> (<span class="bu">event</span>) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    mouse<span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="bu">event</span><span class="op">.</span><span class="at">clientX</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    mouse<span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="fl">1.0</span> <span class="op">-</span> (<span class="bu">event</span><span class="op">.</span><span class="at">clientY</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span> <span class="co">// Invert Y for GLSL texture coordinates</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    customShaderPass<span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;u_mouse&#39;</span>]<span class="op">.</span><span class="at">value</span><span class="op">.</span><span class="fu">copy</span>(mouse)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="execution-inside-the-effectcomposer">Execution Inside the
+EffectComposer</h3>
+<p>When <code>composer.render()</code> executes, <code>ShaderPass</code>
+performs three essential actions:</p>
+<ol type="1">
+<li>Evaluates all references in its <code>.uniforms</code> map and marks
+modified values for GPU upload.</li>
+<li>Binds the updated uniform values (floats, vectors, matrices, or
+textures) to the compiled WebGL program.</li>
+<li>Draws the full-screen quad, running the fragment shader once for
+every pixel on the screen using the newly uploaded time and mouse
+parameters.</li>
+</ol>
+<p>Through this mechanism, <code>ShaderPass</code> isolates shader
+parameter management from low-level WebGL state machine configuration,
+providing a clean, performant API for interactive post-processing
+shaders.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

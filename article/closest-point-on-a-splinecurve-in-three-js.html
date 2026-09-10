@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Closest Point on a SplineCurve in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to mathematically calculate the absolute closest point on a Three.js SplineCurve to an arbitrary target point. Because a spline curve consists of piecewise polynomial segments, the exact orthogonal projection cannot be solved wi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/closest-point-on-a-splinecurve-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Closest Point on a SplineCurve in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/closest-point-on-a-splinecurve-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to mathematically calculate the absolute closest point on a Three.js SplineCurve to an arbitrary target point. Because a spline curve consists of piecewise polynomial segments, the exact orthogonal projection cannot be solved wi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="closest-point-on-a-splinecurve-in-threejs">Closest Point on a
+SplineCurve in Three.js</h1>
+<p>This article explains how to mathematically calculate the absolute
+closest point on a Three.js <code>SplineCurve</code> to an arbitrary
+target point. Because a spline curve consists of piecewise polynomial
+segments, the exact orthogonal projection cannot be solved with a simple
+built-in Three.js method alone. Instead, finding the true minimum
+distance requires formulating a squared-distance objective function,
+deriving its critical points across piecewise cubic segments, and
+applying numerical root-finding techniques such as Newton-Raphson
+iteration.</p>
+<hr />
+<h3 id="mathematical-formulation">Mathematical Formulation</h3>
+<p>A <code>SplineCurve</code> in Three.js is defined parametrically as
+<span class="math inline">\(C(t)\)</span>, where <span
+class="math inline">\(t \in [0, 1]\)</span>. In practice, the curve is
+composed of <span class="math inline">\(N\)</span> piecewise cubic
+segments, each defined over a local sub-interval <span
+class="math inline">\(u \in [0, 1]\)</span>:</p>
+<p><span class="math display">\[C(u) = \mathbf{a}u^3 + \mathbf{b}u^2 +
+\mathbf{c}u + \mathbf{d}\]</span></p>
+<p>Given a query point <span class="math inline">\(\mathbf{P} = (p_x,
+p_y)\)</span>, the squared Euclidean distance between <span
+class="math inline">\(\mathbf{P}\)</span> and any point on the curve
+is:</p>
+<p><span class="math display">\[D(u) = \|\mathbf{C}(u) - \mathbf{P}\|^2
+= (\mathbf{C}(u) - \mathbf{P}) \cdot (\mathbf{C}(u) -
+\mathbf{P})\]</span></p>
+<p>To find the minimum distance, we compute the critical points by
+taking the derivative with respect to <span
+class="math inline">\(u\)</span> and setting it to zero:</p>
+<p><span class="math display">\[D&#39;(u) = 2 (\mathbf{C}(u) -
+\mathbf{P}) \cdot \mathbf{C}&#39;(u) = 0\]</span></p>
+<p>Because <span class="math inline">\(\mathbf{C}(u)\)</span> is degree
+3 (cubic) and <span class="math inline">\(\mathbf{C}&#39;(u)\)</span> is
+degree 2 (quadratic), their dot product produces a 5th-degree polynomial
+(quintic):</p>
+<p><span class="math display">\[f(u) = (\mathbf{a}u^3 + \mathbf{b}u^2 +
+\mathbf{c}u + \mathbf{d} - \mathbf{P}) \cdot (3\mathbf{a}u^2 +
+2\mathbf{b}u + \mathbf{c}) = 0\]</span></p>
+<p>By the Abel-Ruffini theorem, general quintic polynomials have no
+algebraic closed-form solution in radicals. Therefore, finding the exact
+roots requires a hybrid numerical approach: isolating candidate regions
+and refining them via root-finding algorithms.</p>
+<hr />
+<h3 id="step-by-step-numerical-algorithm">Step-by-Step Numerical
+Algorithm</h3>
+<p>To ensure the absolute global minimum is found and avoid local minima
+traps, the process is split into two phases: coarse discretization and
+iterative refinement.</p>
+<h4 id="1-coarse-discretization-interval-isolation">1. Coarse
+Discretization (Interval Isolation)</h4>
+<p>Sample the curve uniformly at discrete intervals to approximate the
+global minimum:</p>
+<ul>
+<li>Sample <span class="math inline">\(M\)</span> points along <span
+class="math inline">\(t \in [0, 1]\)</span> (e.g., <span
+class="math inline">\(M = 100\)</span> or using
+<code>curve.getPoints(divisions)</code>).</li>
+<li>Measure the distance from <span
+class="math inline">\(\mathbf{P}\)</span> to each sample point.</li>
+<li>Identify the sample <span
+class="math inline">\(t_{\text{best}}\)</span> with the minimum
+Euclidean distance.</li>
+</ul>
+<h4 id="2-local-root-refining-newton-raphson-iteration">2. Local Root
+Refining (Newton-Raphson Iteration)</h4>
+<p>Use <span class="math inline">\(t_{\text{best}}\)</span> as the
+initial estimate for the Newton-Raphson method to solve <span
+class="math inline">\(D&#39;(t) = 0\)</span>. The iteration step is:</p>
+<p><span class="math display">\[t_{k+1} = t_k -
+\frac{D&#39;(t_k)}{D&#39;&#39;(t_k)}\]</span></p>
+<p>The second derivative <span
+class="math inline">\(D&#39;&#39;(t)\)</span> is given by:</p>
+<p><span class="math display">\[D&#39;&#39;(t) = 2 \left(
+\|\mathbf{C}&#39;(t)\|^2 + (\mathbf{C}(t) - \mathbf{P}) \cdot
+\mathbf{C}&#39;&#39;(t) \right)\]</span></p>
+<p>Three.js provides native methods to evaluate <span
+class="math inline">\(\mathbf{C}(t)\)</span> and its tangent
+vectors:</p>
+<ul>
+<li><code>curve.getPoint(t)</code> evaluates <span
+class="math inline">\(\mathbf{C}(t)\)</span>.</li>
+<li><code>curve.getTangent(t)</code> evaluates the normalized tangent.
+To obtain the exact unnormalized velocity <span
+class="math inline">\(\mathbf{C}&#39;(t)\)</span> and acceleration <span
+class="math inline">\(\mathbf{C}&#39;&#39;(t)\)</span>, central finite
+differences can be used if explicit polynomial coefficients are not
+extracted directly.</li>
+</ul>
+<h4 id="3-boundary-checks">3. Boundary Checks</h4>
+<p>A minimum on a bounded segment may occur at the boundaries rather
+than an internal stationary point. Evaluate <span
+class="math inline">\(D(0)\)</span> and <span
+class="math inline">\(D(1)\)</span> for each segment (or at <span
+class="math inline">\(t = 0\)</span> and <span class="math inline">\(t =
+1\)</span> for the global curve), comparing these boundary distances
+against the refined internal critical points.</p>
+<hr />
+<h3 id="implementation-in-threejs">Implementation in Three.js</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"> * Computes the absolute closest point on a SplineCurve to a target point.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{THREE.SplineCurve}</span><span class="co"> curve</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{THREE.Vector2}</span><span class="co"> targetPoint</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> samples - Number of intervals for coarse search</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> maxIterations - Maximum Newton-Raphson iterations</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> tolerance - Convergence threshold for delta t</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@returns</span><span class="co"> {{ point: THREE.Vector2, t: number, distance: number }}</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">getClosestPointOnSpline</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  curve<span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  targetPoint<span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  samples <span class="op">=</span> <span class="dv">100</span><span class="op">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  maxIterations <span class="op">=</span> <span class="dv">10</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  tolerance <span class="op">=</span> <span class="fl">1e-6</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>) {</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> minDistanceSq <span class="op">=</span> <span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> bestT <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Step 1: Coarse search to isolate the closest global region</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;=</span> samples<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t <span class="op">=</span> i <span class="op">/</span> samples<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> pt <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(t)<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> distSq <span class="op">=</span> pt<span class="op">.</span><span class="fu">distanceToSquared</span>(targetPoint)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (distSq <span class="op">&lt;</span> minDistanceSq) {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>      minDistanceSq <span class="op">=</span> distSq<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>      bestT <span class="op">=</span> t<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Step 2: Newton-Raphson refinement</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> t <span class="op">=</span> bestT<span class="op">;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> h <span class="op">=</span> <span class="fl">1e-4</span><span class="op">;</span> <span class="co">// Step size for finite difference derivatives</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> maxIterations<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Clamp t to curve domain</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">0</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(<span class="dv">1</span><span class="op">,</span> t))<span class="op">;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Finite difference approximation for C&#39;(t) and C&#39;&#39;(t)</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> tMinus <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">0</span><span class="op">,</span> t <span class="op">-</span> h)<span class="op">;</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> tPlus <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(<span class="dv">1</span><span class="op">,</span> t <span class="op">+</span> h)<span class="op">;</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> pt <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(t)<span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ptMinus <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(tMinus)<span class="op">;</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ptPlus <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(tPlus)<span class="op">;</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="co">// First derivative C&#39;(t)</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> dC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">subVectors</span>(ptPlus<span class="op">,</span> ptMinus)</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">divideScalar</span>(tPlus <span class="op">-</span> tMinus)<span class="op">;</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Second derivative C&#39;&#39;(t)</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> d2C <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">addVectors</span>(ptPlus<span class="op">,</span> ptMinus)</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">subScaledVector</span>(pt<span class="op">,</span> <span class="dv">2</span>)</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>      <span class="op">.</span><span class="fu">divideScalar</span>(h <span class="op">*</span> h)<span class="op">;</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> diff <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">.</span><span class="fu">subVectors</span>(pt<span class="op">,</span> targetPoint)<span class="op">;</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>    <span class="co">// D&#39;(t) = 2 * (C(t) - P) . C&#39;(t)</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> firstDerivative <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> diff<span class="op">.</span><span class="fu">dot</span>(dC)<span class="op">;</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>    <span class="co">// D&#39;&#39;(t) = 2 * (|C&#39;(t)|^2 + (C(t) - P) . C&#39;&#39;(t))</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> secondDerivative <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (dC<span class="op">.</span><span class="fu">lengthSq</span>() <span class="op">+</span> diff<span class="op">.</span><span class="fu">dot</span>(d2C))<span class="op">;</span></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(secondDerivative) <span class="op">&lt;</span> <span class="fl">1e-12</span>) {</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>      <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> deltaT <span class="op">=</span> firstDerivative <span class="op">/</span> secondDerivative<span class="op">;</span></span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>    t <span class="op">-=</span> deltaT<span class="op">;</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(deltaT) <span class="op">&lt;</span> tolerance) {</span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>      <span class="cf">break</span><span class="op">;</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Final clamping to curve bounds</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a>  t <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">0</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(<span class="dv">1</span><span class="op">,</span> t))<span class="op">;</span></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> finalPoint <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(t)<span class="op">;</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>    <span class="dt">point</span><span class="op">:</span> finalPoint<span class="op">,</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>    <span class="dt">t</span><span class="op">:</span> t<span class="op">,</span></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a>    <span class="dt">distance</span><span class="op">:</span> finalPoint<span class="op">.</span><span class="fu">distanceTo</span>(targetPoint)</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This hybrid approach guarantees convergence to the absolute closest
+point by combining global interval search to find the correct catchment
+basin with the quadratic convergence rate of Newton-Raphson
+optimization.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

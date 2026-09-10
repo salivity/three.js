@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Three.js DeviceOrientationControls Avoids Gimbal Lock - three.js</title>
+    <meta name="description" content="This article explores how the DeviceOrientationControls class in Three.js processes raw mobile motion data while avoiding rotational singularities. Mobile devices emit orientation readings as intrinsic Euler angles via the standard Device Orientation API">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-three-js-deviceorientationcontrols-avoids-gimbal-lock">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Three.js DeviceOrientationControls Avoids Gimbal Lock - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-three-js-deviceorientationcontrols-avoids-gimbal-lock" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the DeviceOrientationControls class in Three.js processes raw mobile motion data while avoiding rotational singularities. Mobile devices emit orientation readings as intrinsic Euler angles via the standard Device Orientation API" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-threejs-deviceorientationcontrols-avoids-gimbal-lock">How
+Three.js DeviceOrientationControls Avoids Gimbal Lock</h1>
+<p>This article explores how the <code>DeviceOrientationControls</code>
+class in Three.js processes raw mobile motion data while avoiding
+rotational singularities. Mobile devices emit orientation readings as
+intrinsic Euler angles via the standard Device Orientation API, a format
+vulnerable to gimbal lock during vertical or extreme tilting. Three.js
+eliminates this mathematical bottleneck by instantly transforming these
+angles into four-dimensional unit quaternions, applying reference frame
+corrections via quaternion multiplication, and binding the final
+orientation directly to the camera’s transformation matrix without ever
+evaluating composite Euler states.</p>
+<h3 id="the-origin-of-gimbal-lock-in-mobile-gyroscopes">The Origin of
+Gimbal Lock in Mobile Gyroscopes</h3>
+<p>The W3C Device Orientation API measures mobile orientation by
+recording movement along three axes: <span
+class="math inline">\(\alpha\)</span> (rotation around the Z-axis, <span
+class="math inline">\(0^\circ\)</span> to <span
+class="math inline">\(360^\circ\)</span>), <span
+class="math inline">\(\beta\)</span> (pitch around the X-axis, <span
+class="math inline">\(-180^\circ\)</span> to <span
+class="math inline">\(180^\circ\)</span>), and <span
+class="math inline">\(\gamma\)</span> (roll around the Y-axis, <span
+class="math inline">\(-90^\circ\)</span> to <span
+class="math inline">\(90^\circ\)</span>). These values follow an
+intrinsic Z-X'-Y'' Tait-Bryan rotation sequence.</p>
+<p>Gimbal lock occurs in this system whenever the intermediate rotation
+axis (<span class="math inline">\(\beta\)</span>) reaches <span
+class="math inline">\(\pm 90^\circ\)</span>. At this alignment, the
+first rotation axis (<span class="math inline">\(Z\)</span>) and the
+third rotation axis (<span class="math inline">\(Y&#39;&#39;\)</span>)
+become parallel in the global coordinate space. This alignment strips
+the mathematical model of one rotational degree of freedom, causing
+erratic jumps, unpredictable flipping, and loss of responsiveness when a
+user points a mobile device straight up toward the ceiling or directly
+down at the ground.</p>
+<h3 id="instant-conversion-to-unit-quaternions">Instant Conversion to
+Unit Quaternions</h3>
+<p><code>DeviceOrientationControls</code> prevents gimbal lock by
+converting raw Euler angles into unit quaternions the moment the
+<code>deviceorientation</code> event fires. Quaternions represent
+rotations as four-dimensional coordinates (<span class="math inline">\(q
+= w + xi + yj + zk\)</span>) on the surface of a four-dimensional unit
+hypersphere (<span class="math inline">\(S^3\)</span>). Because <span
+class="math inline">\(S^3\)</span> provides a smooth, singularity-free
+parameterization of the special orthogonal group <span
+class="math inline">\(\mathrm{SO}(3)\)</span>, quaternions inherently
+lack the mechanical or mathematical dead zones that plague
+three-dimensional Euler angles.</p>
+<p>Mathematically, the controller maps the individual angle measurements
+(<span class="math inline">\(\alpha, \beta, \gamma\)</span>) to
+component rotations using the half-angle formula:</p>
+<p><span class="math display">\[q_x(\beta) =
+\left[\cos\left(\frac{\beta}{2}\right),
+\sin\left(\frac{\beta}{2}\right), 0, 0\right]\]</span></p>
+<p><span class="math display">\[q_y(\gamma) =
+\left[\cos\left(\frac{\gamma}{2}\right), 0,
+\sin\left(\frac{\gamma}{2}\right), 0\right]\]</span></p>
+<p><span class="math display">\[q_z(\alpha) =
+\left[\cos\left(\frac{\alpha}{2}\right), 0, 0,
+\sin\left(\frac{\alpha}{2}\right)\right]\]</span></p>
+<p>The composite device rotation <span
+class="math inline">\(Q_{\text{device}}\)</span> is calculated using the
+Hamilton product following the intrinsic order defined by the W3C
+specification:</p>
+<p><span class="math display">\[Q_{\text{device}} = q_z(\alpha) \times
+q_x(\beta) \times q_y(\gamma)\]</span></p>
+<p>This conversion translates Euler input into an unambiguous spatial
+representation before any matrix manipulations take place.</p>
+<h3
+id="coordinate-frame-transformation-via-quaternion-chaining">Coordinate
+Frame Transformation via Quaternion Chaining</h3>
+<p>Converting the raw data into a quaternion is only the first phase.
+The native mobile orientation coordinate space differs significantly
+from the Three.js 3D world coordinate space:</p>
+<ol type="1">
+<li>In Three.js, the camera faces down the negative Z-axis by default,
+with positive Y pointing upward and positive X pointing right.</li>
+<li>The W3C device standard assumes the device is resting flat on a
+table facing North, with the screen pointing upward along positive
+Z.</li>
+<li>Mobile screens dynamically switch orientations (portrait versus
+landscape), adding an offset around the screen normal vector.</li>
+</ol>
+<p>To harmonize these mismatched systems,
+<code>DeviceOrientationControls</code> defines static and dynamic
+correction quaternions rather than rotating Euler angles:</p>
+<ul>
+<li><p><strong>Camera Alignment Offset (<span
+class="math inline">\(Q_{\text{align}}\)</span>):</strong> A fixed
+negative <span class="math inline">\(90^\circ\)</span> (<span
+class="math inline">\(-\pi/2\)</span> radians) rotation around the
+X-axis aligns the flat mobile orientation with the Three.js camera's
+line of sight: <span class="math display">\[Q_{\text{align}} =
+\left[\cos\left(-\frac{\pi}{4}\right), \sin\left(-\frac{\pi}{4}\right),
+0, 0\right]\]</span></p></li>
+<li><p><strong>Screen Orientation Offset (<span
+class="math inline">\(Q_{\text{screen}}\)</span>):</strong> A variable
+rotation matching the display angle (<span
+class="math inline">\(\theta_{\text{screen}}\)</span>) around the local
+Z-axis corrects for landscape or portrait modes: <span
+class="math display">\[Q_{\text{screen}} =
+\left[\cos\left(-\frac{\theta_{\text{screen}}}{2}\right), 0, 0,
+\sin\left(-\frac{\theta_{\text{screen}}}{2}\right)\right]\]</span></p></li>
+<li><p><strong>World Inversion (<span
+class="math inline">\(Q_{\text{world}}\)</span>):</strong> A static
+correction quaternion that converts the right-handed North-East-Down
+(NED) conventions used by certain sensors into standard WebGL
+world-space coordinates.</p></li>
+</ul>
+<p>The final camera quaternion (<span
+class="math inline">\(Q_{\text{final}}\)</span>) is constructed entirely
+through chained quaternion multiplication:</p>
+<p><span class="math display">\[Q_{\text{final}} = Q_{\text{world}}
+\times Q_{\text{device}} \times Q_{\text{align}} \times
+Q_{\text{screen}}\]</span></p>
+<h3 id="direct-transformation-matrix-construction">Direct Transformation
+Matrix Construction</h3>
+<p>Once <span class="math inline">\(Q_{\text{final}}\)</span> is
+determined, it is assigned directly to the
+<code>camera.quaternion</code> property. Three.js transforms this
+quaternion into a <span class="math inline">\(4 \times 4\)</span> affine
+transformation matrix (<span class="math inline">\(M\)</span>) via
+direct vector operations:</p>
+<p><span class="math display">\[M = \begin{bmatrix}
+1 - 2(y^2 + z^2) &amp; 2(xy - wz) &amp; 2(xz + wy) &amp; 0 \\
+2(xy + wz) &amp; 1 - 2(x^2 + z^2) &amp; 2(yz - wx) &amp; 0 \\
+2(xz - wy) &amp; 2(yz + wx) &amp; 1 - 2(x^2 + y^2) &amp; 0 \\
+0 &amp; 0 &amp; 0 &amp; 1
+\end{bmatrix}\]</span></p>
+<p>Because the transformation path remains entirely within quaternion
+and matrix algebra, at no point during the render loop are the angles
+recomposed into an Euler object or evaluated via trigonometric functions
+that introduce division-by-zero singularities. By isolating the Euler
+data to an instantaneous point-of-entry input and executing all spatial
+updates across <span class="math inline">\(S^3\)</span>,
+<code>DeviceOrientationControls</code> allows smooth, continuous <span
+class="math inline">\(360^\circ\)</span> rotation across every physical
+axis.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Absolute Scale of Nested Child in Three.js - three.js</title>
+    <meta name="description" content="Extracting the absolute scale of an object nested three levels deep in a Three.js hierarchy requires resolving the cumulative transformations applied by each ancestor. Because Three.js uses a scene graph where children inherit their parents' transformati">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/extract-absolute-scale-of-nested-child-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Extract Absolute Scale of Nested Child in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/extract-absolute-scale-of-nested-child-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extracting the absolute scale of an object nested three levels deep in a Three.js hierarchy requires resolving the cumulative transformations applied by each ancestor. Because Three.js uses a scene graph where children inherit their parents' transformati" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="extract-absolute-scale-of-nested-child-in-threejs">Extract
+Absolute Scale of Nested Child in Three.js</h1>
+<p>Extracting the absolute scale of an object nested three levels deep
+in a Three.js hierarchy requires resolving the cumulative
+transformations applied by each ancestor. Because Three.js uses a scene
+graph where children inherit their parents' transformations through
+matrix multiplication, an object's true world scale is represented
+within its global model matrix. This article explains the underlying
+mathematics behind hierarchical matrix concatenation and details how to
+extract the exact scale vector using matrix decomposition and vector
+magnitude calculations.</p>
+<h3 id="understanding-hierarchical-transformations">Understanding
+Hierarchical Transformations</h3>
+<p>When an object is nested within groups (e.g., <code>Scene</code>
+-&gt; <code>Group1</code> -&gt; <code>Group2</code> -&gt;
+<code>Group3</code> -&gt; <code>Child</code>), each entity possesses its
+own local transformation matrix, <span
+class="math inline">\(M_{local}\)</span>, derived from its local
+position, rotation (quaternion), and scale:</p>
+<p><span class="math display">\[M_{local} = T \cdot R \cdot
+S\]</span></p>
+<p>To determine the child’s absolute position, orientation, and scale in
+the global world space, local transformation matrices must be multiplied
+sequentially from the root to the leaf node:</p>
+<p><span class="math display">\[M_{world} = M_{Group1} \times M_{Group2}
+\times M_{Group3} \times M_{Child}\]</span></p>
+<p>Before extracting scale values mathematically, the transformation
+chain must be evaluated by ensuring the world matrices are updated:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>child<span class="op">.</span><span class="fu">updateWorldMatrix</span>(<span class="kw">true</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span></code></pre></div>
+<h3
+id="mathematical-extraction-via-basis-vector-magnitudes">Mathematical
+Extraction via Basis Vector Magnitudes</h3>
+<p>In Three.js, <span class="math inline">\(M_{world}\)</span> is
+represented as a 4x4 column-major matrix stored in a 16-element flat
+array (<code>matrixWorld.elements</code>). The upper-left 3x3 submatrix
+encodes both rotation and scale:</p>
+<p><span class="math display">\[M_{3\times3} = \begin{bmatrix} m_{0}
+&amp; m_{4} &amp; m_{8} \\ m_{1} &amp; m_{5} &amp; m_{9} \\ m_{2} &amp;
+m_{6} &amp; m_{10} \end{bmatrix}\]</span></p>
+<p>Each column represents the transformed local coordinate basis
+vectors:</p>
+<ul>
+<li>Column 0 (<span class="math inline">\(v_x = [m_0, m_1,
+m_2]^T\)</span>): Transformed X-axis basis vector</li>
+<li>Column 1 (<span class="math inline">\(v_y = [m_4, m_5,
+m_6]^T\)</span>): Transformed Y-axis basis vector</li>
+<li>Column 2 (<span class="math inline">\(v_z = [m_8, m_9,
+m_{10}]^T\)</span>): Transformed Z-axis basis vector</li>
+</ul>
+<p>Because rotation preserves vector length (isometry), any stretching
+or shrinking of these basis vectors is solely the result of cumulative
+scaling across all parent tiers. Therefore, the absolute scale along
+each axis is the Euclidean norm (length) of the corresponding column
+vector:</p>
+<p><span class="math display">\[S_x = \|v_x\| = \sqrt{m_0^2 + m_1^2 +
+m_2^2}\]</span></p>
+<p><span class="math display">\[S_y = \|v_y\| = \sqrt{m_4^2 + m_5^2 +
+m_6^2}\]</span></p>
+<p><span class="math display">\[S_z = \|v_z\| = \sqrt{m_8^2 + m_9^2 +
+m_{10}^2}\]</span></p>
+<h3 id="direct-mathematical-implementation">Direct Mathematical
+Implementation</h3>
+<p>You can compute this directly using the raw array elements of the
+child’s world matrix:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure hierarchy transforms are evaluated</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>child<span class="op">.</span><span class="fu">updateWorldMatrix</span>(<span class="kw">true</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> e <span class="op">=</span> child<span class="op">.</span><span class="at">matrixWorld</span><span class="op">.</span><span class="at">elements</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the length of each basis column</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaleX <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sqrt</span>(e[<span class="dv">0</span>] <span class="op">*</span> e[<span class="dv">0</span>] <span class="op">+</span> e[<span class="dv">1</span>] <span class="op">*</span> e[<span class="dv">1</span>] <span class="op">+</span> e[<span class="dv">2</span>] <span class="op">*</span> e[<span class="dv">2</span>])<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaleY <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sqrt</span>(e[<span class="dv">4</span>] <span class="op">*</span> e[<span class="dv">4</span>] <span class="op">+</span> e[<span class="dv">5</span>] <span class="op">*</span> e[<span class="dv">5</span>] <span class="op">+</span> e[<span class="dv">6</span>] <span class="op">*</span> e[<span class="dv">6</span>])<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaleZ <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sqrt</span>(e[<span class="dv">8</span>] <span class="op">*</span> e[<span class="dv">8</span>] <span class="op">+</span> e[<span class="dv">9</span>] <span class="op">*</span> e[<span class="dv">9</span>] <span class="op">+</span> e[<span class="dv">10</span>] <span class="op">*</span> e[<span class="dv">10</span>])<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> absoluteScale <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(scaleX<span class="op">,</span> scaleY<span class="op">,</span> scaleZ)<span class="op">;</span></span></code></pre></div>
+<h3 id="using-threejs-built-in-methods">Using Three.js Built-in
+Methods</h3>
+<p>Three.js executes this exact vector magnitude operation internally
+within its utility methods:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> absoluteScale <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Method 1: Using getWorldScale directly</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>child<span class="op">.</span><span class="fu">getWorldScale</span>(absoluteScale)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Method 2: Decomposing matrixWorld</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> position <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> quaternion <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Quaternion</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>child<span class="op">.</span><span class="at">matrixWorld</span><span class="op">.</span><span class="fu">decompose</span>(position<span class="op">,</span> quaternion<span class="op">,</span> absoluteScale)<span class="op">;</span></span></code></pre></div>
+<p>Both approaches yield identical results. When dealing with
+non-uniform scaling combined with rotations in ancestral nodes, shear
+(skew) can be introduced. In standard transformation setups without
+shearing, computing the Euclidean length of the matrix columns provides
+the mathematically precise absolute scale of the nested child.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding morphTargetsRelative in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the morphTargetsRelative property on a BufferGeometry determines whether morph target attribute data represents absolute world-space positions or relative displacement vectors. By default, this boolean is set to false, treating target vertic">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/understanding-morphtargetsrelative-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding morphTargetsRelative in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/understanding-morphtargetsrelative-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the morphTargetsRelative property on a BufferGeometry determines whether morph target attribute data represents absolute world-space positions or relative displacement vectors. By default, this boolean is set to false, treating target vertic" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="understanding-morphtargetsrelative-in-threejs">Understanding
+morphTargetsRelative in Three.js</h1>
+<p>In Three.js, the <code>morphTargetsRelative</code> property on a
+<code>BufferGeometry</code> determines whether morph target attribute
+data represents absolute world-space positions or relative displacement
+vectors. By default, this boolean is set to <code>false</code>, treating
+target vertices as complete coordinates. Toggling it to
+<code>true</code> reconfigures the vertex shader mathematics from an
+interpolation between full coordinates to an additive accumulation of
+positional deltas, fundamentally changing how vertex positions, normals,
+and tangents are computed on the GPU.</p>
+<h3 id="absolute-morph-targets-morphtargetsrelative--false">Absolute
+Morph Targets (<code>morphTargetsRelative = false</code>)</h3>
+<p>When <code>morphTargetsRelative</code> is <code>false</code>, each
+morph target buffer stores the absolute coordinates of the mesh in that
+specific morphed state. A vertex in the morph target buffer is defined
+in the same coordinate space as the base <code>position</code>
+attribute.</p>
+<p>Mathematically, the shader calculates the displacement by finding the
+difference between the morph target's position and the original base
+vertex position before applying the target's influence weight:</p>
+<p><span class="math display">\[\mathbf{v}_{\text{final}} =
+\mathbf{v}_{\text{base}} + \sum_{i=1}^{n} w_i
+(\mathbf{v}_{\text{target}, i} - \mathbf{v}_{\text{base}})\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(\mathbf{v}_{\text{base}}\)</span> is the
+original vertex position attribute.</li>
+<li><span class="math inline">\(\mathbf{v}_{\text{target}, i}\)</span>
+is the absolute position defined in morph target <span
+class="math inline">\(i\)</span>.</li>
+<li><span class="math inline">\(w_i\)</span> is the scalar weight
+(influence) of morph target <span class="math inline">\(i\)</span>.</li>
+</ul>
+<p>In this mode, if an individual weight <span
+class="math inline">\(w_i\)</span> is <code>1.0</code> and all other
+weights are <code>0.0</code>, the vertex position simplifies directly to
+<span class="math inline">\(\mathbf{v}_{\text{target}, i}\)</span>.
+However, combining multiple morph targets requires the shader to
+subtract the base position repeatedly for every active target
+buffer.</p>
+<h3 id="relative-morph-targets-morphtargetsrelative--true">Relative
+Morph Targets (<code>morphTargetsRelative = true</code>)</h3>
+<p>When <code>morphTargetsRelative</code> is set to <code>true</code>,
+each morph target buffer does not store absolute positions. Instead, it
+stores precomputed delta values—the displacement vector (<span
+class="math inline">\(\Delta \mathbf{v}\)</span>) representing how far a
+vertex moves away from the base mesh.</p>
+<p>The shader calculation eliminates the subtraction step entirely and
+performs pure additive blending:</p>
+<p><span class="math display">\[\mathbf{v}_{\text{final}} =
+\mathbf{v}_{\text{base}} + \sum_{i=1}^{n} w_i \Delta
+\mathbf{v}_i\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(\Delta \mathbf{v}_i\)</span> is the
+precomputed offset stored directly inside the morph target attribute
+buffer.</li>
+</ul>
+<p>Because the buffer data already represents the vector difference
+(<span class="math inline">\(\mathbf{v}_{\text{target}} -
+\mathbf{v}_{\text{base}}\)</span>), the GPU simply multiplies the offset
+by the influence weight and adds it to the base position.</p>
+<h3 id="impact-on-normals-and-tangents">Impact on Normals and
+Tangents</h3>
+<p>The mathematics apply identically to morph normals and morph
+tangents:</p>
+<ul>
+<li><strong>Absolute Mode (<code>false</code>):</strong> The shader
+computes <span class="math inline">\((\mathbf{n}_{\text{target}, i} -
+\mathbf{n}_{\text{base}}) \times w_i\)</span> and adds it to the base
+normal.</li>
+<li><strong>Relative Mode (<code>true</code>):</strong> The shader
+assumes the buffer holds precomputed delta normals (<span
+class="math inline">\(\Delta \mathbf{n}_i\)</span>) and computes <span
+class="math inline">\(\mathbf{n}_{\text{base}} + \sum (w_i \Delta
+\mathbf{n}_i)\)</span>, followed by normalization.</li>
+</ul>
+<h3 id="practical-implications-and-performance">Practical Implications
+and Performance</h3>
+<ol type="1">
+<li><strong>Format Standards:</strong> Modern 3D formats like glTF 2.0
+define morph targets as relative displacements by design. When loading
+glTF models via <code>GLTFLoader</code>, Three.js automatically sets
+<code>morphTargetsRelative = true</code>. Older formats or manual buffer
+setups often use absolute coordinates.</li>
+<li><strong>Shader Efficiency:</strong> Relative targets require fewer
+arithmetic operations in the vertex shader. The GPU skips calculating
+<span class="math inline">\((\mathbf{v}_{\text{target}} -
+\mathbf{v}_{\text{base}})\)</span> for every vertex across every active
+morph target on every frame, executing a single multiply-add operation
+per target instead.</li>
+<li><strong>Sparse Updates and Storage:</strong> Relative offsets
+naturally lend themselves to sparse morph target data, as unchanged
+vertices have an offset of <span class="math inline">\((0, 0,
+0)\)</span>, whereas absolute targets must duplicate the base mesh
+positions for unmoved vertices.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

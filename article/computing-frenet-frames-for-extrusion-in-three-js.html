@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computing Frenet Frames for Extrusion in Three.js - three.js</title>
+    <meta name="description" content="Extruding custom 2D cross-sections along 3D paths in Three.js often results in unexpected twisting, pinching, or orientation flips if the coordinate frames are calculated naively. This article explains how to compute and apply Frenet-Serret frames along">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/computing-frenet-frames-for-extrusion-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Computing Frenet Frames for Extrusion in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/computing-frenet-frames-for-extrusion-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extruding custom 2D cross-sections along 3D paths in Three.js often results in unexpected twisting, pinching, or orientation flips if the coordinate frames are calculated naively. This article explains how to compute and apply Frenet-Serret frames along" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="computing-frenet-frames-for-extrusion-in-threejs">Computing
+Frenet Frames for Extrusion in Three.js</h1>
+<p>Extruding custom 2D cross-sections along 3D paths in Three.js often
+results in unexpected twisting, pinching, or orientation flips if the
+coordinate frames are calculated naively. This article explains how to
+compute and apply Frenet-Serret frames along a curve to establish a
+continuous, smooth coordinate system (Tangent, Normal, and Binormal
+vectors), enabling you to align and extrude custom cross-sectional
+geometry along any 3D path reliably.</p>
+<h3 id="understanding-frenet-frames">Understanding Frenet Frames</h3>
+<p>A Frenet frame (or Frenet-Serret frame) is an orthonormal coordinate
+system attached to a point on a curve. It consists of three mutually
+perpendicular unit vectors:</p>
+<ul>
+<li><strong>Tangent (<span
+class="math inline">\(\mathbf{T}\)</span>):</strong> Points in the
+direction of the curve's motion (the first derivative).</li>
+<li><strong>Normal (<span
+class="math inline">\(\mathbf{N}\)</span>):</strong> Points in the
+direction of the curve's curvature (perpendicular to the tangent).</li>
+<li><strong>Binormal (<span
+class="math inline">\(\mathbf{B}\)</span>):</strong> Orthogonal to both
+the tangent and the normal, computed via the cross product <span
+class="math inline">\(\mathbf{B} = \mathbf{T} \times
+\mathbf{N}\)</span>.</li>
+</ul>
+<p>When extruding a 2D profile along a curve, these vectors define the
+orientation of the 2D shape's plane at each step, mapping local 2D <span
+class="math inline">\((x, y)\)</span> coordinates to 3D world space.</p>
+<h3 id="using-native-curve-methods">Using Native Curve Methods</h3>
+<p>Three.js provides built-in methods on its <code>THREE.Curve</code>
+classes to generate these frames. Rather than calculating strict
+mathematical Frenet frames—which suffer from severe discontinuities and
+180-degree flips at inflection points where curvature is zero—Three.js
+implements a parallel transport frame algorithm (minimizing rotation)
+via <code>computeFrenetFrames</code>.</p>
+<p>To generate frames along a curve:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define a 3D curve</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> curve <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CatmullRomCurve3</span>([</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the number of subdivisions along the curve</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> segments <span class="op">=</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> closed <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Compute Frenet frames</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frenetFrames <span class="op">=</span> curve<span class="op">.</span><span class="fu">computeFrenetFrames</span>(segments<span class="op">,</span> closed)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// frenetFrames contains three arrays of THREE.Vector3:</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// frenetFrames.tangents: Array of length segments + 1</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">// frenetFrames.normals: Array of length segments + 1</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">// frenetFrames.binormals: Array of length segments + 1</span></span></code></pre></div>
+<h3 id="aligning-cross-sections-using-the-frames">Aligning
+Cross-Sections Using the Frames</h3>
+<p>To project a 2D profile (such as a circle, rectangle, or arbitrary
+star shape) along the curve, iterate through the subdivision steps and
+apply the frame's orientation matrix to each vertex of the
+cross-section.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shapeVertices <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> extrudedPoints <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;=</span> segments<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> u <span class="op">=</span> i <span class="op">/</span> segments<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> pointOnCurve <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPointAt</span>(u)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> N <span class="op">=</span> frenetFrames<span class="op">.</span><span class="at">normals</span>[i]<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> B <span class="op">=</span> frenetFrames<span class="op">.</span><span class="at">binormals</span>[i]<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> T <span class="op">=</span> frenetFrames<span class="op">.</span><span class="at">tangents</span>[i]<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Construct a rotation matrix from the basis vectors</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> orientationMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">.</span><span class="fu">makeBasis</span>(N<span class="op">,</span> B<span class="op">,</span> T)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Transform each cross-section vertex to 3D space</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> shapeVertices<span class="op">.</span><span class="at">length</span><span class="op">;</span> j<span class="op">++</span>) {</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> localVertex <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(shapeVertices[j]<span class="op">.</span><span class="at">x</span><span class="op">,</span> shapeVertices[j]<span class="op">.</span><span class="at">y</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Rotate the vertex according to the frame</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        localVertex<span class="op">.</span><span class="fu">applyMatrix4</span>(orientationMatrix)<span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Translate to the curve position</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        localVertex<span class="op">.</span><span class="fu">add</span>(pointOnCurve)<span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        extrudedPoints<span class="op">.</span><span class="fu">push</span>(localVertex)<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="addressing-extrusion-artifacts">Addressing Extrusion
+Artifacts</h3>
+<p>While <code>computeFrenetFrames</code> mitigates sudden flips along
+continuous non-straight curves, straight-line segments or closed loops
+can still produce edge cases:</p>
+<ol type="1">
+<li><strong>Initial Vector Degeneracy:</strong> If the curve starts as a
+straight line along the Z-axis, the cross-product calculation used for
+the initial normal can fail if arbitrary reference vectors align with
+the tangent. You can manually seed <code>frenetFrames.normals[0]</code>
+with an explicit perpendicular vector if your path starts along a
+cardinal axis.</li>
+<li><strong>Closed Loop Alignment:</strong> For closed curves
+(<code>closed = true</code>), parallel transport may cause the final
+frame to be rotated relative to the initial frame when returning to the
+start point. To fix this, calculate the angle difference between the
+initial and final normals and distribute an angular correction linearly
+across all frames along the path.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Bounding Sphere for Frustum Culling in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the renderer uses bounding spheres to perform frustum culling, automatically skipping meshes outside the camera’s view to preserve performance. By default, Three.js computes this sphere directly from the vertices in a mesh's BufferGeometry">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/custom-bounding-sphere-for-frustum-culling-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Bounding Sphere for Frustum Culling in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/custom-bounding-sphere-for-frustum-culling-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the renderer uses bounding spheres to perform frustum culling, automatically skipping meshes outside the camera’s view to preserve performance. By default, Three.js computes this sphere directly from the vertices in a mesh's BufferGeometry" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="custom-bounding-sphere-for-frustum-culling-in-threejs">Custom
+Bounding Sphere for Frustum Culling in Three.js</h1>
+<p>In Three.js, the renderer uses bounding spheres to perform frustum
+culling, automatically skipping meshes outside the camera’s view to
+preserve performance. By default, Three.js computes this sphere directly
+from the vertices in a mesh's <code>BufferGeometry</code>. This guide
+explains how to define and lock a custom <code>THREE.Sphere</code> on
+your geometry to manually control frustum culling behavior, which is
+essential when dealing with vertex shader displacements, expansive
+particle systems, or skeletal animations that exceed standard geometry
+bounds.</p>
+<h3 id="why-override-the-bounding-sphere">Why Override the Bounding
+Sphere?</h3>
+<p>When vertices are manipulated via custom shaders (such as vertex
+displacement, waves, or wind effects) or custom bone rigs, the actual
+rendered positions differ from the base geometry data. Because the
+default frustum culling relies purely on the static attributes of
+<code>BufferGeometry</code>, the camera may cull (hide) a mesh while
+parts of it should still be visible on screen. Setting a custom,
+enlarged bounding sphere ensures the mesh stays rendered without the
+heavy performance penalty of disabling frustum culling entirely via
+<code>mesh.frustumCulled = false</code>.</p>
+<h3 id="defining-the-custom-bounding-sphere">Defining the Custom
+Bounding Sphere</h3>
+<p>Frustum culling calculations evaluate the <code>boundingSphere</code>
+property located on the <code>geometry</code> of the <code>Mesh</code>,
+expressed in the geometry's local coordinate space.</p>
+<p>To define a custom bounding sphere, instantiate a
+<code>THREE.Sphere</code> with a specified center
+(<code>THREE.Vector3</code>) and radius, then assign it directly to the
+geometry:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create your geometry and mesh</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define custom center and radius (in local space)</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customCenter <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customRadius <span class="op">=</span> <span class="dv">10</span><span class="op">;</span> <span class="co">// Extended radius to account for displacements</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Explicitly assign the custom bounding sphere</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(customCenter<span class="op">,</span> customRadius)<span class="op">;</span></span></code></pre></div>
+<h3 id="preventing-automatic-overwrites">Preventing Automatic
+Overwrites</h3>
+<p>Three.js may invoke <code>geometry.computeBoundingSphere()</code>
+internally during certain operations, scene graph updates, or loaders,
+which resets <code>geometry.boundingSphere</code> to the default
+calculated size.</p>
+<p>To permanently preserve your custom bounding sphere, override the
+<code>computeBoundingSphere</code> method on that specific geometry
+instance:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Prevent Three.js internals from recalculating the bounding sphere</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">computeBoundingSphere</span> <span class="op">=</span> <span class="kw">function</span>() {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Keep the assigned custom sphere intact</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">this</span><span class="op">.</span><span class="at">boundingSphere</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(customCenter<span class="op">,</span> customRadius)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>Alternatively, override it with an empty function if you have already
+set the instance:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(customCenter<span class="op">,</span> customRadius)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">computeBoundingSphere</span> <span class="op">=</span> () <span class="kw">=&gt;</span> {}<span class="op">;</span></span></code></pre></div>
+<h3 id="local-space-vs-world-space">Local Space vs. World Space</h3>
+<p>The <code>boundingSphere</code> set on <code>BufferGeometry</code>
+must be defined in <strong>local coordinates</strong>. During the render
+loop, Three.js automatically multiplies this local sphere by
+<code>mesh.matrixWorld</code> to derive the final world-space sphere
+used for frustum intersection tests. You do not need to manually account
+for the position, rotation, or scale of the <code>Mesh</code> instance
+itself when setting the sphere radius and center.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Velocity onto a Slope in Three.js - three.js</title>
+    <meta name="description" content="When implementing character controllers or physics in Three.js, moving across ramps and uneven terrain often causes characters to stutter, float, or clip through geometry. This article explains how to project a movement velocity Vector3 onto a sloped sur">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/project-velocity-onto-a-slope-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Project Velocity onto a Slope in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/project-velocity-onto-a-slope-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When implementing character controllers or physics in Three.js, moving across ramps and uneven terrain often causes characters to stutter, float, or clip through geometry. This article explains how to project a movement velocity Vector3 onto a sloped sur" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="project-velocity-onto-a-slope-in-threejs">Project Velocity onto
+a Slope in Three.js</h1>
+<p>When implementing character controllers or physics in Three.js,
+moving across ramps and uneven terrain often causes characters to
+stutter, float, or clip through geometry. This article explains how to
+project a movement velocity <code>Vector3</code> onto a sloped surface
+using Three.js's built-in <code>Vector3.projectOnPlane()</code> method.
+By redirecting the velocity along the surface rather than through it,
+you can achieve smooth, natural slope traversal.</p>
+<h3 id="understanding-projectonplane">Understanding
+<code>projectOnPlane</code></h3>
+<p>In Three.js, the method
+<code>Vector3.projectOnPlane(planeNormal)</code> does not take a
+<code>THREE.Plane</code> object as its argument; instead, it requires
+the <strong>normal vector</strong> (<code>Vector3</code>) perpendicular
+to the plane.</p>
+<p>The method subtracts the component of the velocity vector that is
+parallel to the surface normal, leaving only the component tangential to
+the slope. Mathematically, it performs:</p>
+<p><span class="math display">\[\vec{v}_{\text{projected}} = \vec{v} -
+(\vec{v} \cdot \hat{n})\hat{n}\]</span></p>
+<p>where <span class="math inline">\(\vec{v}\)</span> is your velocity
+and <span class="math inline">\(\hat{n}\)</span> is the unit normal of
+the slope.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<ol type="1">
+<li><strong>Obtain the Surface Normal:</strong> When your character is
+standing on a slope, detect the surface using a
+<code>THREE.Raycaster</code> pointing downwards. The intersection result
+provides the face normal of the slope in world coordinates.</li>
+<li><strong>Project the Velocity:</strong> Call
+<code>.projectOnPlane(surfaceNormal)</code> on your velocity
+vector.</li>
+<li><strong>Maintain Movement Speed (Optional):</strong> Projecting a
+vector reduces its length depending on the steepness of the angle. If
+you want the character to move at the same speed regardless of the
+slope's incline, re-scale the projected vector back to the original
+magnitude.</li>
+</ol>
+<h3 id="complete-code-example">Complete Code Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define initial forward velocity (e.g., moving along the Z-axis)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velocity <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> originalSpeed <span class="op">=</span> velocity<span class="op">.</span><span class="fu">length</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the surface normal of the slope</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// In a real project, obtain this from raycaster intersects: intersect[0].face.normal</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure the normal is in world space and normalized</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> slopeNormal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="fl">0.7071</span><span class="op">,</span> <span class="fl">0.7071</span>)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Project the velocity onto the plane defined by the normal</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>velocity<span class="op">.</span><span class="fu">projectOnPlane</span>(slopeNormal)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. (Optional) Preserve original speed across the slope</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (velocity<span class="op">.</span><span class="fu">lengthSq</span>() <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    velocity<span class="op">.</span><span class="fu">setLength</span>(originalSpeed)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Apply the adjusted velocity to your object position</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">// mesh.position.addScaledVector(velocity, delta);</span></span></code></pre></div>
+<h3 id="integrating-with-raycasting">Integrating with Raycasting</h3>
+<p>In an active game loop, combine this logic with surface
+detection:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> downRay <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Raycaster</span>(character<span class="op">.</span><span class="at">position</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>))<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> intersects <span class="op">=</span> downRay<span class="op">.</span><span class="fu">intersectObjects</span>(terrainObjects<span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (intersects<span class="op">.</span><span class="at">length</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> intersects[<span class="dv">0</span>]<span class="op">.</span><span class="at">distance</span> <span class="op">&lt;</span> characterHeight) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Transform normal to world space if the terrain mesh is rotated</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> worldNormal <span class="op">=</span> intersects[<span class="dv">0</span>]<span class="op">.</span><span class="at">face</span><span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    worldNormal<span class="op">.</span><span class="fu">transformDirection</span>(intersects[<span class="dv">0</span>]<span class="op">.</span><span class="at">object</span><span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Project velocity along the detected terrain slope</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    velocity<span class="op">.</span><span class="fu">projectOnPlane</span>(worldNormal)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This ensures that the forward movement aligns parallel to the ground
+below the character, preventing gravity and forward acceleration from
+fighting the geometry.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

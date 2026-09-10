@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blend Two Textures Using mixNode in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to blend two distinct textures seamlessly using the mix node (MixNode) in modern Three.js. With the introduction of the WebGPU-ready Node Material system (TSL - Three.js Shading Language), developers can construct custom shaders v">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/blend-two-textures-using-mixnode-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Blend Two Textures Using mixNode in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/blend-two-textures-using-mixnode-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to blend two distinct textures seamlessly using the mix node (MixNode) in modern Three.js. With the introduction of the WebGPU-ready Node Material system (TSL - Three.js Shading Language), developers can construct custom shaders v" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="blend-two-textures-using-mixnode-in-threejs">Blend Two Textures
+Using mixNode in Three.js</h1>
+<p>This guide explains how to blend two distinct textures seamlessly
+using the <code>mix</code> node (MixNode) in modern Three.js. With the
+introduction of the WebGPU-ready Node Material system (TSL - Three.js
+Shading Language), developers can construct custom shaders visually and
+programmatically using node graphs instead of writing raw GLSL strings.
+Below, you will learn the setup, node configuration, and implementation
+details required to interpolate two textures dynamically using color,
+noise, or UV-based masks.</p>
+<h3 id="understanding-the-node-system-setup">Understanding the Node
+System Setup</h3>
+<p>In modern Three.js, node-based shaders are driven by imports from
+<code>three/nodes</code> (or <code>three/tsl</code>). The node
+equivalent of GLSL's <code>mix()</code> function is the
+<code>mix()</code> operator, which creates a <code>MixNode</code>. It
+performs linear interpolation between two input values based on a third
+factor:</p>
+<p><span class="math display">\[\text{result} = A \times (1 -
+\text{factor}) + B \times \text{factor}\]</span></p>
+<p>When working with textures, input <span
+class="math inline">\(A\)</span> and input <span
+class="math inline">\(B\)</span> are texture nodes, while the factor can
+be a static float, a dynamic uniform, a UV coordinate, or a third
+grayscale mask texture.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-import-dependencies">1. Import Dependencies</h4>
+<p>To use Node materials, import the core Three.js library alongside the
+specific node components:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  texture<span class="op">,</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  mix<span class="op">,</span> </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  uv<span class="op">,</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  oscSine<span class="op">,</span> </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  timerLocal<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  MeshStandardNodeMaterial </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>} <span class="im">from</span> <span class="st">&#39;three/nodes&#39;</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-load-the-source-textures">2. Load the Source Textures</h4>
+<p>Load your base images using the standard
+<code>THREE.TextureLoader</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> map1 <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/texture1.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> map2 <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/texture2.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure correct color space for color maps</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>map1<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>map2<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span></code></pre></div>
+<h4 id="3-define-texture-nodes-and-the-blend-factor">3. Define Texture
+Nodes and the Blend Factor</h4>
+<p>Wrap the loaded textures into node representations using the
+<code>texture()</code> helper. Then, define the interpolation
+factor:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Convert standard textures into node-compatible textures</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> nodeTexA <span class="op">=</span> <span class="fu">texture</span>(map1)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> nodeTexB <span class="op">=</span> <span class="fu">texture</span>(map2)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Option A: A static or uniform float factor (0.0 displays texture A, 1.0 displays texture B)</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> blendFactor <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Option B: An animated factor oscillating over time</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// const blendFactor = oscSine(timerLocal(1));</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Option C: A horizontal gradient across the mesh using UV coordinates</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">// const blendFactor = uv().x;</span></span></code></pre></div>
+<h4 id="4-combine-textures-with-the-mix-function">4. Combine Textures
+with the <code>mix</code> Function</h4>
+<p>Pass the texture nodes and your blending factor into
+<code>mix()</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// mix() returns a MixNode that blends nodeTexA and nodeTexB</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> blendedOutput <span class="op">=</span> <span class="fu">mix</span>(nodeTexA<span class="op">,</span> nodeTexB<span class="op">,</span> blendFactor)<span class="op">;</span></span></code></pre></div>
+<h4 id="5-assign-to-a-node-material">5. Assign to a Node Material</h4>
+<p>Assign the blended node graph directly to the <code>colorNode</code>
+property of a node-compatible material such as
+<code>MeshStandardNodeMaterial</code> or
+<code>MeshBasicNodeMaterial</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> <span class="fu">MeshStandardNodeMaterial</span>()<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">colorNode</span> <span class="op">=</span> blendedOutput<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="using-a-mask-texture-for-localized-blending">Using a Mask
+Texture for Localized Blending</h3>
+<p>To create complex surface transitions (such as terrain blending,
+wear-and-tear, or splat mapping), you can supply a grayscale texture as
+the blend factor instead of a scalar value:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/mask.jpg&#39;</span>)<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> nodeMask <span class="op">=</span> <span class="fu">texture</span>(maskTexture)<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Uses the red channel of the mask image to drive the mix</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskedBlend <span class="op">=</span> <span class="fu">mix</span>(nodeTexA<span class="op">,</span> nodeTexB<span class="op">,</span> nodeMask<span class="op">.</span><span class="at">r</span>)<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">colorNode</span> <span class="op">=</span> maskedBlend<span class="op">;</span></span></code></pre></div>
+<p>When <code>nodeMask.r</code> is <code>0.0</code> (black),
+<code>nodeTexA</code> renders completely; when it is <code>1.0</code>
+(white), <code>nodeTexB</code> renders. Any intermediate grayscale value
+produces a smooth transition between both textures without writing
+custom shader code.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Anti-Aliasing: SMAAPass vs FXAAPass - three.js</title>
+    <meta name="description" content="Post-processing anti-aliasing in Three.js primarily relies on two techniques: Fast Approximate Anti-Aliasing (FXAAPass) and Subpixel Morphological Anti-Aliasing (SMAAPass). While FXAA uses a single-pass heuristic based on local contrast to blur high-freq">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-anti-aliasing-smaapass-vs-fxaapass">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Anti-Aliasing: SMAAPass vs FXAAPass - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-anti-aliasing-smaapass-vs-fxaapass" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Post-processing anti-aliasing in Three.js primarily relies on two techniques: Fast Approximate Anti-Aliasing (FXAAPass) and Subpixel Morphological Anti-Aliasing (SMAAPass). While FXAA uses a single-pass heuristic based on local contrast to blur high-freq" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-anti-aliasing-smaapass-vs-fxaapass">Three.js
+Anti-Aliasing: SMAAPass vs FXAAPass</h1>
+<p>Post-processing anti-aliasing in Three.js primarily relies on two
+techniques: Fast Approximate Anti-Aliasing (<code>FXAAPass</code>) and
+Subpixel Morphological Anti-Aliasing (<code>SMAAPass</code>). While FXAA
+uses a single-pass heuristic based on local contrast to blur
+high-frequency edges rapidly, SMAA utilizes a multi-pass pipeline backed
+by precomputed lookup tables to accurately reconstruct edge geometry and
+calculate subpixel coverage. Choosing between them involves balancing
+FXAA's raw rendering speed against SMAA's superior structural clarity
+and reduction of visual blur.</p>
+<h3 id="algorithmic-and-mathematical-differences">Algorithmic and
+Mathematical Differences</h3>
+<h4 id="1-fxaa-fxaapass">1. FXAA (<code>FXAAPass</code>)</h4>
+<p>FXAA operates strictly on the final rendered image (LDR color buffer)
+in a single screen-space pass.</p>
+<ul>
+<li><strong>Luminance Calculation:</strong> FXAA converts RGB values
+into scalar luminance (<span class="math inline">\(L\)</span>) using
+perceptual weights: <span class="math display">\[L = 0.299R + 0.587G +
+0.114B\]</span></li>
+<li><strong>Edge Detection:</strong> It computes local contrast by
+sampling the center pixel and its four direct orthogonal neighbors
+(North, South, East, West). The local contrast is defined as: <span
+class="math display">\[\text{Range} = \max(L_{\text{neighbors}},
+L_{\text{center}}) - \min(L_{\text{neighbors}},
+L_{\text{center}})\]</span> If <span class="math inline">\(\text{Range}
+&lt; \max(\text{Threshold}_{\text{min}}, \text{Threshold}_{\text{rel}}
+\times \max(L_{\text{neighbors}}, L_{\text{center}}))\)</span>, the
+pixel is skipped.</li>
+<li><strong>Edge Orientation and Search:</strong> If an edge is
+confirmed, FXAA calculates horizontal and vertical gradients to
+determine edge orientation. It then searches along the edge direction in
+steps to find endpoints where the contrast drops.</li>
+<li><strong>Filtering:</strong> Based on the pixel's relative distance
+to the detected endpoints, FXAA applies a sub-pixel offset using
+bilinear texture filtering. Because it relies on localized blurring, it
+frequently softens high-frequency texture details and text along with
+aliased edges.</li>
+</ul>
+<h4 id="2-smaa-smaapass">2. SMAA (<code>SMAAPass</code>)</h4>
+<p>SMAA is a multi-pass morphological approach that analyzes structural
+patterns (such as lines, corners, and diagonal shapes) rather than
+relying solely on directional gradients.</p>
+<ul>
+<li><strong>Pass 1: Edge Detection:</strong> SMAA detects color or
+luminance discontinuities using a perceptual metric with local contrast
+adaptation. It evaluates differences between adjacent pixels and marks
+edge locations in an edge-render target.</li>
+<li><strong>Pass 2: Pattern Recognition and Weight Calculation:</strong>
+Instead of simple gradient sampling, SMAA classifies the morphological
+nature of edges (e.g., L-junctions, U-shapes, Z-shapes). It measures
+edge lengths using an iterative search and calculates the exact
+trapezoidal or triangular area coverage of pixels intersecting the edge.
+To perform this integration in real time, SMAA uses two precomputed
+lookup textures:
+<ul>
+<li><code>AreaTex</code>: Encodes precomputed analytical coverage areas
+based on edge length and distance to the edge.</li>
+<li><code>SearchTex</code>: Accelerates the detection of horizontal and
+vertical line endpoints without requiring deep shader branching
+loops.</li>
+</ul></li>
+<li><strong>Pass 3: Neighborhood Blending:</strong> SMAA uses the
+blending weights computed in Pass 2 to blend neighbor colors via
+bilinear fetches, resulting in sharp, geometrically accurate edge
+reconstruction without blurring internal texture details.</li>
+</ul>
+<h3 id="performance-and-resource-differences">Performance and Resource
+Differences</h3>
+<ul>
+<li><strong>Pass Count and Draw Calls:</strong> <code>FXAAPass</code>
+executes in a single fullscreen draw call. In contrast,
+<code>SMAAPass</code> requires three sequential passes (Edge Detection,
+Blending Weight Calculation, and Neighborhood Blending), tripling the
+draw call overhead for the anti-aliasing stage.</li>
+<li><strong>Memory Bandwidth and VRAM:</strong> FXAA requires no
+auxiliary textures and minimal intermediate memory. SMAA allocates extra
+render targets for intermediate edge and weight buffers, and requires
+two static lookup textures (<code>AreaTex</code> and
+<code>SearchTex</code>) loaded into GPU memory. This significantly
+increases memory bandwidth demands.</li>
+<li><strong>GPU Execution Time:</strong> FXAA has very low ALU and
+texture-fetch requirements, making it ideal for mobile devices,
+integrated GPUs, or scenes with heavy compute budgets elsewhere. SMAA
+incurs significantly higher ALU workloads and texture samples per
+pixel.</li>
+<li><strong>Visual Fidelity vs. Cost:</strong> FXAA provides a fast,
+approximate smoothing pass that can cause noticeable loss of sharpness
+on textured surfaces. SMAA preserves sharp silhouettes, properly handles
+diagonal lines, and avoids texture blurring, making it visually superior
+for desktop environments where the GPU budget allows for multiple render
+passes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js traverse vs traverseVisible Explained - three.js</title>
+    <meta name="description" content="When building 3D applications with Three.js, developers frequently need to iterate through the scene graph to inspect, modify, or update objects. This article explains the fundamental differences between the traverse and traverseVisible methods in Three.">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-traverse-vs-traversevisible-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js traverse vs traverseVisible Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-traverse-vs-traversevisible-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When building 3D applications with Three.js, developers frequently need to iterate through the scene graph to inspect, modify, or update objects. This article explains the fundamental differences between the traverse and traverseVisible methods in Three." />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-traverse-vs-traversevisible-explained">Three.js traverse
+vs traverseVisible Explained</h1>
+<p>When building 3D applications with Three.js, developers frequently
+need to iterate through the scene graph to inspect, modify, or update
+objects. This article explains the fundamental differences between the
+<code>traverse</code> and <code>traverseVisible</code> methods in
+Three.js, detailing how each handles object visibility, how child
+inheritance impacts traversal, and when to use each method for optimal
+performance and functionality.</p>
+<h2 id="understanding-traverse">Understanding <code>traverse</code></h2>
+<p>The <code>Object3D.traverse()</code> method recursively executes a
+specified callback function on the object calling it and on all of its
+descendants, regardless of their visibility state.</p>
+<p>Even if an object or one of its parent containers has its
+<code>visible</code> property set to <code>false</code>,
+<code>traverse</code> will still process the object and continue walking
+down the entire hierarchy.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This runs for EVERY mesh in the scene,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// including hidden meshes and meshes inside hidden groups.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(child<span class="op">.</span><span class="at">name</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="common-use-cases-for-traverse">Common Use Cases for
+<code>traverse</code></h3>
+<ul>
+<li><strong>Resource Management:</strong> Disposing of geometries,
+materials, and textures across an entire imported model before removing
+it from memory.</li>
+<li><strong>Global Modifications:</strong> Updating shadow settings
+(<code>castShadow</code>, <code>receiveShadow</code>) or applying global
+custom shaders across the entire scene graph.</li>
+<li><strong>Finding Objects:</strong> Searching for a specific node by
+name or type when you cannot be certain if its parent elements are
+visible.</li>
+</ul>
+<hr />
+<h2 id="understanding-traversevisible">Understanding
+<code>traverseVisible</code></h2>
+<p>The <code>Object3D.traverseVisible()</code> method also recursively
+visits the object and its descendants, but with one critical
+distinction: it only executes the callback on objects whose
+<code>visible</code> property evaluates to <code>true</code>.</p>
+<p>More importantly, if an object has <code>visible = false</code>,
+<code>traverseVisible</code> <strong>stops recursing down that entire
+branch</strong>. Any children attached to that hidden object will be
+completely skipped, even if those individual child objects have
+<code>visible = true</code> set on themselves.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">traverseVisible</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// This ONLY runs for meshes where the mesh AND</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// all of its ancestors have visible = true.</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(child<span class="op">.</span><span class="at">name</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="common-use-cases-for-traversevisible">Common Use Cases for
+<code>traverseVisible</code></h3>
+<ul>
+<li><strong>Raycasting and Interaction:</strong> Checking interactions
+only against elements that are currently rendered and visible to the
+user.</li>
+<li><strong>Animation Updates:</strong> Skipping calculations or
+skeletal bone updates for parts of a scene or character rigs that are
+toggled off.</li>
+<li><strong>Performance Optimization:</strong> Limiting expensive
+per-frame computations solely to active visual elements.</li>
+</ul>
+<hr />
+<h2 id="key-differences-summary">Key Differences Summary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>traverse</code></th>
+<th style="text-align: left;"><code>traverseVisible</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Visibility Check</strong></td>
+<td style="text-align: left;">Ignores the <code>visible</code> property
+entirely.</td>
+<td style="text-align: left;">Requires
+<code>visible === true</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Child Branch
+Skipping</strong></td>
+<td style="text-align: left;">Never skips branches based on
+visibility.</td>
+<td style="text-align: left;">Skips the entire subtree if a parent is
+hidden.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Count</strong></td>
+<td style="text-align: left;">Always processes every descendant
+node.</td>
+<td style="text-align: left;">Only processes nodes in actively visible
+branches.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Best For</strong></td>
+<td style="text-align: left;">Asset loading, batch setup, cleanup,
+disposal.</td>
+<td style="text-align: left;">Render loops, raycasting, interactions,
+visible updates.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="important-caveat-inherited-visibility">Important Caveat:
+Inherited Visibility</h2>
+<p>Three.js does not calculate an <code>inheritedVisible</code> property
+automatically on objects. A child object inside a hidden group will
+still report <code>child.visible === true</code> if its individual flag
+was never changed to <code>false</code>.</p>
+<p>Because <code>traverseVisible</code> cuts off evaluation at the
+hidden parent level, it correctly avoids processing children that are
+visually hidden by inheritance. Conversely, if you use standard
+<code>traverse</code> and simply check <code>if (child.visible)</code>
+inside the callback, you may get false positives because the check will
+not account for hidden parents higher up in the hierarchy.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

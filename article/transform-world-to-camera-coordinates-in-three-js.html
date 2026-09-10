@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform World to Camera Coordinates in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, converting 3D objects from global world coordinates into local camera coordinates is a fundamental task for custom projection, occlusion culling, and spatial calculations. This article explains how to utilize the camera's matrixWorldInverse">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/transform-world-to-camera-coordinates-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Transform World to Camera Coordinates in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/transform-world-to-camera-coordinates-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, converting 3D objects from global world coordinates into local camera coordinates is a fundamental task for custom projection, occlusion culling, and spatial calculations. This article explains how to utilize the camera's matrixWorldInverse" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="transform-world-to-camera-coordinates-in-threejs">Transform
+World to Camera Coordinates in Three.js</h1>
+<p>In Three.js, converting 3D objects from global world coordinates into
+local camera coordinates is a fundamental task for custom projection,
+occlusion culling, and spatial calculations. This article explains how
+to utilize the camera's <code>matrixWorldInverse</code> property to map
+any global <code>Vector3</code> directly into view space (camera space).
+By applying this inverse matrix, you transform standard global
+coordinates so that the camera becomes the origin
+<code>(0, 0, 0)</code>, establishing a coordinate frame where positions
+are relative to the camera's current point of view.</p>
+<h3 id="understanding-matrixworldinverse">Understanding
+<code>matrixWorldInverse</code></h3>
+<p>Every object in Three.js maintains a <code>matrixWorld</code>, which
+defines its position, rotation, and scale relative to the scene's global
+origin. The camera also has a <code>matrixWorld</code>.</p>
+<p>The <code>camera.matrixWorldInverse</code> property is the
+mathematical inverse of the camera's <code>matrixWorld</code>. When you
+multiply a world-space point by <code>matrixWorldInverse</code>, it
+transforms that point from global space into the camera's local
+coordinate system (often called View Space or Eye Space). In this
+system:</p>
+<ul>
+<li><code>(0, 0, 0)</code> is the camera's optical center.</li>
+<li>The positive X-axis points to the camera's right.</li>
+<li>The positive Y-axis points up relative to the camera.</li>
+<li>The negative Z-axis extends directly in front of the camera's
+lens.</li>
+</ul>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To perform this transformation accurately, follow these three
+steps:</p>
+<h4 id="1-update-camera-matrices">1. Update Camera Matrices</h4>
+<p>Before performing matrix calculations, ensure that the camera's
+spatial transform and its inverse are synchronized with its current
+position and orientation. While the Three.js renderer does this
+automatically inside the render loop, manual calculations outside or
+before the render call require an explicit update:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span></code></pre></div>
+<h4 id="2-obtain-the-target-world-position">2. Obtain the Target World
+Position</h4>
+<p>Ensure your target coordinate is explicitly in world space. If the
+target is a child of another transformed object, extract its world
+coordinates using <code>getWorldPosition()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetWorldPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>targetMesh<span class="op">.</span><span class="fu">getWorldPosition</span>(targetWorldPosition)<span class="op">;</span></span></code></pre></div>
+<p>If you already have a static world-space vector, instantiate it
+directly:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetWorldPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">20</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="3-apply-matrixworldinverse">3. Apply
+<code>matrixWorldInverse</code></h4>
+<p>Use the <code>applyMatrix4()</code> method on the vector to apply the
+transformation. This mutates the vector in place:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Transform the point from world space to camera space</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>targetWorldPosition<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`X (Right/Left): </span><span class="sc">${</span>targetWorldPosition<span class="op">.</span><span class="at">x</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Y (Up/Down): </span><span class="sc">${</span>targetWorldPosition<span class="op">.</span><span class="at">y</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Z (Depth/Distance): </span><span class="sc">${</span>targetWorldPosition<span class="op">.</span><span class="at">z</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="complete-example-function">Complete Example Function</h3>
+<p>Here is a reusable function that takes a target vector, applies the
+transformation, and returns a new vector representing the
+camera-relative position without modifying the original coordinates:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getCameraRelativePosition</span>(worldVector<span class="op">,</span> camera) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Ensure the camera&#39;s matrix and inverse matrix are up to date</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Clone the vector to avoid mutating the original input</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> cameraRelativeVector <span class="op">=</span> worldVector<span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Multiply the vector by the camera&#39;s inverse world matrix</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    cameraRelativeVector<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> cameraRelativeVector<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> globalPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="op">-</span><span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> relativePoint <span class="op">=</span> <span class="fu">getCameraRelativePosition</span>(globalPoint<span class="op">,</span> camera)<span class="op">;</span></span></code></pre></div>
+<h3 id="view-space-vs-screen-space">View Space vs. Screen Space</h3>
+<p>Do not confuse <code>matrixWorldInverse</code> with
+<code>Vector3.project(camera)</code>.</p>
+<ul>
+<li><strong><code>matrixWorldInverse</code></strong> converts global
+coordinates to <strong>View Space</strong>, retaining metric units. A
+point with a <code>z</code> value of <code>-5</code> is exactly 5 units
+in front of the camera.</li>
+<li><strong><code>Vector3.project(camera)</code></strong> applies both
+<code>matrixWorldInverse</code> and the camera's
+<code>projectionMatrix</code> to convert coordinates into
+<strong>Normalized Device Coordinates (NDC)</strong>, where coordinates
+range from <code>-1</code> to <code>1</code> across the screen
+axes.</li>
+</ul>
+<p>Use <code>matrixWorldInverse</code> when you need metric
+measurements, directional offsets, or view-aligned distance relative to
+the camera.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js DirectionalLight Shadows for Large Terrain - three.js</title>
+    <meta name="description" content="Configuring clean, high-performance orthographic shadow maps across large terrains in Three.js requires precisely sizing the directional light's shadow frustum, adjusting depth bounds, and eliminating shadow acne. Because a DirectionalLight uses an Ortho">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-directionallight-shadows-for-large-terrain">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js DirectionalLight Shadows for Large Terrain - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-directionallight-shadows-for-large-terrain" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Configuring clean, high-performance orthographic shadow maps across large terrains in Three.js requires precisely sizing the directional light's shadow frustum, adjusting depth bounds, and eliminating shadow acne. Because a DirectionalLight uses an Ortho" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-directionallight-shadows-for-large-terrain">Three.js
+DirectionalLight Shadows for Large Terrain</h1>
+<p>Configuring clean, high-performance orthographic shadow maps across
+large terrains in Three.js requires precisely sizing the directional
+light's shadow frustum, adjusting depth bounds, and eliminating shadow
+acne. Because a <code>DirectionalLight</code> uses an
+<code>OrthographicCamera</code> internally to generate its depth map,
+developers must manually tune the camera's bounding box and bias
+settings to balance shadow resolution with spatial coverage. This guide
+provides the exact configuration needed to project crisp shadows over
+extensive terrain geometry.</p>
+<h3 id="1-enable-shadows-in-the-webglrenderer">1. Enable Shadows in the
+WebGLRenderer</h3>
+<p>Before configuring the light, shadow map rendering must be enabled
+globally on the <code>WebGLRenderer</code>. Setting the shadow type to
+<code>PCFSoftShadowMap</code> produces smooth edges along the terrain
+elevation.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">PCFSoftShadowMap</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-orthographic-frustum-bounds">2. Configure the
+Orthographic Frustum Bounds</h3>
+<p>By default, the shadow camera's orthographic volume is tiny (5 units
+in each direction). For a large terrain, you must expand the frustum
+planes (<code>left</code>, <code>right</code>, <code>top</code>,
+<code>bottom</code>) to tightly wrap the visible play area. Making the
+bounds excessively large will dilute shadow resolution, causing
+pixelation.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dirLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.5</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">100</span><span class="op">,</span> <span class="dv">150</span><span class="op">,</span> <span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Shadow map texture resolution</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">4096</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">4096</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Define orthographic bounds (e.g., a 200x200 unit coverage area)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> d <span class="op">=</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">left</span> <span class="op">=</span> <span class="op">-</span>d<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">right</span> <span class="op">=</span> d<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> d<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> <span class="op">-</span>d<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Keep near and far planes as tight as possible</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="dv">400</span><span class="op">;</span></span></code></pre></div>
+<h3 id="3-eliminate-shadow-acne-with-bias">3. Eliminate Shadow Acne with
+Bias</h3>
+<p>Large orthographic projections over uneven surfaces like heightmaps
+often suffer from shadow acne (self-shadowing artifacts) and
+peter-panning (detached shadows). Use <code>normalBias</code> alongside
+a minor <code>bias</code> to fix surface interpolation issues across
+steep terrain slopes:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">bias</span> <span class="op">=</span> <span class="op">-</span><span class="fl">0.0005</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">normalBias</span> <span class="op">=</span> <span class="fl">0.05</span><span class="op">;</span></span></code></pre></div>
+<h3 id="4-enable-shadow-casting-and-receiving-on-meshes">4. Enable
+Shadow Casting and Receiving on Meshes</h3>
+<p>Ensure the terrain mesh is set to receive shadows, while props,
+foliage, and characters are configured to cast and receive them:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>terrainMesh<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>terrainMesh<span class="op">.</span><span class="at">receiveShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>propMesh<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>propMesh<span class="op">.</span><span class="at">receiveShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h3 id="5-anchor-the-light-to-the-player-for-infinite-terrains">5.
+Anchor the Light to the Player for Infinite Terrains</h3>
+<p>Covering an entire massive world in a single static shadow map is
+impractical because texture resolution degrades over extreme distances.
+Instead, move the light and its target in sync with the player in your
+render loop, snapping coordinates to texel increments to prevent shadow
+edge shimmering:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateShadows</span>(player) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> shadowCamSize <span class="op">=</span> <span class="dv">200</span><span class="op">;</span> <span class="co">// Total width/height of the frustum</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> texelSize <span class="op">=</span> shadowCamSize <span class="op">/</span> dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate quantized target position</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetX <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(player<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">/</span> texelSize) <span class="op">*</span> texelSize<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetZ <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(player<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">/</span> texelSize) <span class="op">*</span> texelSize<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Offset the light from the quantized target</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  dirLight<span class="op">.</span><span class="at">target</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(targetX<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> targetZ)<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  dirLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(targetX <span class="op">+</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">150</span><span class="op">,</span> targetZ <span class="op">+</span> <span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  dirLight<span class="op">.</span><span class="at">target</span><span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  dirLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">camera</span><span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This ensures maximum shadow resolution immediately around the
+viewpoint without wasting texture memory on distant, unseen
+geometry.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

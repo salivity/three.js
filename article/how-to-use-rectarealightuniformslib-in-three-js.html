@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use RectAreaLightUniformsLib in Three.js - three.js</title>
+    <meta name="description" content="Rectangular area lights (RectAreaLight) simulate realistic lighting by emitting rays uniformly across a 2D rectangular surface, but they do not render properly out of the box without initializing their underlying shader dependencies. This guide explains">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-rectarealightuniformslib-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use RectAreaLightUniformsLib in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-rectarealightuniformslib-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rectangular area lights (RectAreaLight) simulate realistic lighting by emitting rays uniformly across a 2D rectangular surface, but they do not render properly out of the box without initializing their underlying shader dependencies. This guide explains" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-rectarealightuniformslib-in-threejs">How to Use
+RectAreaLightUniformsLib in Three.js</h1>
+<p>Rectangular area lights (<code>RectAreaLight</code>) simulate
+realistic lighting by emitting rays uniformly across a 2D rectangular
+surface, but they do not render properly out of the box without
+initializing their underlying shader dependencies. This guide explains
+how to use <code>RectAreaLightUniformsLib</code> to initialize the
+required Linearly Transformed Cosines (LTC) lookup data in Three.js,
+enabling realistic diffuse and specular reflections on standard
+materials with minimal setup.</p>
+<h2 id="why-rectarealightuniformslib-is-required">Why
+RectAreaLightUniformsLib is Required</h2>
+<p>Three.js uses Linearly Transformed Cosines to calculate the real-time
+shading of rectangular area lights. This calculation relies on large
+precomputed lookup tables (LUTs) stored within shader uniforms to
+resolve the area light integral.</p>
+<p>To keep the core Three.js bundle lightweight, these lookup tables are
+excluded from the main build. Without
+<code>RectAreaLightUniformsLib</code>, materials will not calculate
+specular and diffuse highlights for rectangular lights, causing the
+lights to appear non-functional. Calling
+<code>RectAreaLightUniformsLib.init()</code> loads these uniforms into
+the internal shader chunks globally.</p>
+<h2 id="implementation-steps">Implementation Steps</h2>
+<h3 id="1-import-the-necessary-modules">1. Import the Necessary
+Modules</h3>
+<p>Import <code>RectAreaLight</code> and your core Three.js library,
+along with <code>RectAreaLightUniformsLib</code> from the
+<code>addons</code> (or <code>examples/jsm</code>) directory. You can
+also import <code>RectAreaLightHelper</code> to visualize the source in
+your scene.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RectAreaLightUniformsLib } <span class="im">from</span> <span class="st">&#39;three/addons/lights/RectAreaLightUniformsLib.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RectAreaLightHelper } <span class="im">from</span> <span class="st">&#39;three/addons/helpers/RectAreaLightHelper.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-initialize-the-uniforms">2. Initialize the Uniforms</h3>
+<p>Call the <code>init()</code> method before rendering the scene or
+creating materials that interact with the light. You only need to run
+this function once during your application lifecycle.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize the shader data globally</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>RectAreaLightUniformsLib<span class="op">.</span><span class="fu">init</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-create-and-position-the-rectarealight">3. Create and Position
+the RectAreaLight</h3>
+<p>Instantiate the <code>RectAreaLight</code> by specifying the color,
+intensity, width, and height. Position the light and orient it toward
+your subject using <code>.lookAt()</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Parameters: color, intensity, width, height</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> rectLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">RectAreaLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>rectLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>rectLight<span class="op">.</span><span class="fu">lookAt</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(rectLight)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Optional: Add a helper to visualize the light shape</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> rectLightHelper <span class="op">=</span> <span class="kw">new</span> <span class="fu">RectAreaLightHelper</span>(rectLight)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>rectLight<span class="op">.</span><span class="fu">add</span>(rectLightHelper)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-apply-compatible-materials">4. Apply Compatible Materials</h3>
+<p><code>RectAreaLight</code> calculations only work with
+physically-based materials. Ensure any surface meant to receive
+rectangular light uses either <code>MeshStandardMaterial</code> or
+<code>MeshPhysicalMaterial</code>.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> floorGeo <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">20</span><span class="op">,</span> <span class="dv">20</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> floorMat <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0x808080</span><span class="op">,</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.2</span><span class="op">,</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.1</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> floor <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(floorGeo<span class="op">,</span> floorMat)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>floor<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="op">-</span><span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(floor)<span class="op">;</span></span></code></pre></div>
+<h2 id="important-considerations">Important Considerations</h2>
+<ul>
+<li><strong>Shadow Support:</strong> In vanilla Three.js,
+<code>RectAreaLight</code> does not cast dynamic real-time shadows. To
+achieve shadows with area lights, supplementary techniques such as baked
+lightmaps, contact shadows, or custom render pipelines are
+necessary.</li>
+<li><strong>Execution Order:</strong> Always ensure
+<code>RectAreaLightUniformsLib.init()</code> executes prior to creating
+any shader programs that rely on standard lighting, ideally right after
+initializing your Three.js imports.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using MathNode for GPU Calculations in Three.js - three.js</title>
+    <meta name="description" content="This article provides a practical guide on implementing the MathNode within Three.js's Node Material system to execute complex mathematical calculations directly on the GPU. By leveraging GPU-accelerated node expressions, you can create procedural textur">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-mathnode-for-gpu-calculations-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using MathNode for GPU Calculations in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-mathnode-for-gpu-calculations-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide on implementing the MathNode within Three.js's Node Material system to execute complex mathematical calculations directly on the GPU. By leveraging GPU-accelerated node expressions, you can create procedural textur" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-mathnode-for-gpu-calculations-in-threejs">Using MathNode
+for GPU Calculations in Three.js</h1>
+<p>This article provides a practical guide on implementing the
+<code>MathNode</code> within Three.js's Node Material system to execute
+complex mathematical calculations directly on the GPU. By leveraging
+GPU-accelerated node expressions, you can create procedural textures,
+vertex displacements, and dynamic shader effects without writing raw
+GLSL or WGSL code.</p>
+<h2 id="the-role-of-mathnode-in-threejs">The Role of MathNode in
+Three.js</h2>
+<p>Three.js includes a modern Node Material system (often used with the
+<code>WebGPURenderer</code> or extended WebGL renderers) that constructs
+shaders as directed acyclic graphs. At the core of numerical
+transformations in this system is <code>MathNode</code>. It maps
+standard mathematical operations—such as trigonometry, exponentiation,
+clamping, and vector mathematics—directly into compiled shader
+instructions executed in parallel on the GPU.</p>
+<p>While you can instantiate <code>MathNode</code> directly, Three.js
+provides shorthand mathematical functions (<code>sin</code>,
+<code>cos</code>, <code>pow</code>, <code>mix</code>,
+<code>cross</code>, etc.) from the <code>three/nodes</code> module that
+construct <code>MathNode</code> instances under the hood.</p>
+<h2 id="setting-up-node-imports">Setting Up Node Imports</h2>
+<p>To use the Node system, import the required nodes from
+<code>three/nodes</code> alongside the standard Three.js library:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  MeshStandardNodeMaterial<span class="op">,</span> </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  MathNode<span class="op">,</span> </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  float<span class="op">,</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  vec3<span class="op">,</span> </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  uv<span class="op">,</span> </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  timerLocal<span class="op">,</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  sin<span class="op">,</span> </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  cos<span class="op">,</span> </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  mul<span class="op">,</span> </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  add </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>} <span class="im">from</span> <span class="st">&#39;three/nodes&#39;</span><span class="op">;</span></span></code></pre></div>
+<h2 id="constructing-gpu-math-expressions">Constructing GPU Math
+Expressions</h2>
+<p>You can construct operations using explicit <code>MathNode</code>
+instances or using the functional syntax.</p>
+<h3 id="method-1-explicit-mathnode-instantiation">Method 1: Explicit
+MathNode Instantiation</h3>
+<p><code>MathNode</code> accepts a method name as a string along with
+input nodes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Computes sin(time * 2.0)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> time <span class="op">=</span> <span class="fu">timerLocal</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scaledTime <span class="op">=</span> <span class="kw">new</span> <span class="fu">MathNode</span>(MathNode<span class="op">.</span><span class="at">MUL</span><span class="op">,</span> time<span class="op">,</span> <span class="fu">float</span>(<span class="fl">2.0</span>))<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wave <span class="op">=</span> <span class="kw">new</span> <span class="fu">MathNode</span>(MathNode<span class="op">.</span><span class="at">SIN</span><span class="op">,</span> scaledTime)<span class="op">;</span></span></code></pre></div>
+<p>Common methods supported by <code>MathNode</code> include:</p>
+<ul>
+<li><code>MathNode.SIN</code>, <code>MathNode.COS</code>,
+<code>MathNode.TAN</code></li>
+<li><code>MathNode.POW</code>, <code>MathNode.EXP</code>,
+<code>MathNode.LOG</code></li>
+<li><code>MathNode.MIN</code>, <code>MathNode.MAX</code>,
+<code>MathNode.CLAMP</code></li>
+<li><code>MathNode.MIX</code>, <code>MathNode.SMOOTHSTEP</code></li>
+<li><code>MathNode.DOT</code>, <code>MathNode.CROSS</code>,
+<code>MathNode.NORMALIZE</code></li>
+</ul>
+<h3 id="method-2-fluent-tsl-three-shading-language-syntax">Method 2:
+Fluent TSL (Three Shading Language) Syntax</h3>
+<p>The modern idiomatic approach in Three.js wraps <code>MathNode</code>
+under declarative functions, which allows for cleaner composition:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> coords <span class="op">=</span> <span class="fu">uv</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> time <span class="op">=</span> <span class="fu">timerLocal</span>(<span class="fl">1.0</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Complex calculation: wave pattern combining multiple frequencies</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frequency <span class="op">=</span> <span class="fu">float</span>(<span class="fl">10.0</span>)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waveX <span class="op">=</span> <span class="fu">sin</span>(<span class="fu">add</span>(<span class="fu">mul</span>(coords<span class="op">.</span><span class="at">x</span><span class="op">,</span> frequency)<span class="op">,</span> time))<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waveY <span class="op">=</span> <span class="fu">cos</span>(<span class="fu">add</span>(<span class="fu">mul</span>(coords<span class="op">.</span><span class="at">y</span><span class="op">,</span> frequency)<span class="op">,</span> time))<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Combine calculations using MathNode operations</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> combined <span class="op">=</span> <span class="fu">mul</span>(<span class="fu">add</span>(waveX<span class="op">,</span> waveY)<span class="op">,</span> <span class="fu">float</span>(<span class="fl">0.5</span>))<span class="op">;</span></span></code></pre></div>
+<h2 id="applying-gpu-calculations-to-a-material">Applying GPU
+Calculations to a Material</h2>
+<p>Once the node calculation graph is constructed, bind it to a node
+material property, such as <code>colorNode</code> for fragment shading
+or <code>positionNode</code> for vertex displacement.</p>
+<h3 id="example-vertex-displacement-and-dynamic-color">Example: Vertex
+Displacement and Dynamic Color</h3>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  MeshStandardNodeMaterial<span class="op">,</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  positionLocal<span class="op">,</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  timerLocal<span class="op">,</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  sin<span class="op">,</span> </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  vec3<span class="op">,</span> </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  mul<span class="op">,</span> </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  add </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>} <span class="im">from</span> <span class="st">&#39;three/nodes&#39;</span><span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the calculation graph</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> time <span class="op">=</span> <span class="fu">timerLocal</span>()<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> elevationFactor <span class="op">=</span> <span class="fu">float</span>(<span class="fl">0.3</span>)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate displacement: sin(position.x * 4.0 + time) * 0.3</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> waveCalculation <span class="op">=</span> <span class="fu">mul</span>(</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sin</span>(<span class="fu">add</span>(<span class="fu">mul</span>(positionLocal<span class="op">.</span><span class="at">x</span><span class="op">,</span> <span class="fu">float</span>(<span class="fl">4.0</span>))<span class="op">,</span> time))<span class="op">,</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  elevationFactor</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">// Displace vertices along the Y axis</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> displacedPosition <span class="op">=</span> <span class="fu">vec3</span>(</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  positionLocal<span class="op">.</span><span class="at">x</span><span class="op">,</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add</span>(positionLocal<span class="op">.</span><span class="at">y</span><span class="op">,</span> waveCalculation)<span class="op">,</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  positionLocal<span class="op">.</span><span class="at">z</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Dynamic coloring based on elevation</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colorOutput <span class="op">=</span> <span class="fu">vec3</span>(</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add</span>(waveCalculation<span class="op">,</span> <span class="fu">float</span>(<span class="fl">0.5</span>))<span class="op">,</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">float</span>(<span class="fl">0.2</span>)<span class="op">,</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">float</span>(<span class="fl">0.8</span>)</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the Node Material</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> <span class="fu">MeshStandardNodeMaterial</span>()<span class="op">;</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">positionNode</span> <span class="op">=</span> displacedPosition<span class="op">;</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">colorNode</span> <span class="op">=</span> colorOutput<span class="op">;</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Attach to Mesh</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">64</span><span class="op">,</span> <span class="dv">64</span>)<span class="op">;</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h2 id="performance-benefits">Performance Benefits</h2>
+<ul>
+<li><strong>Zero CPU-to-GPU Overhead</strong>: Values update per-frame
+via GPU uniforms (like <code>timerLocal</code>) without transferring
+geometry or vertex buffers every frame.</li>
+<li><strong>Compilation Optimization</strong>: During the render pass,
+Three.js optimizes the node tree, eliminating redundant calculations and
+directly inlining instructions into the target shader stage.</li>
+<li><strong>Cross-Platform Parity</strong>: The same node graph compiles
+down to GLSL for WebGL or WGSL for WebGPU without altering the
+calculation logic.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

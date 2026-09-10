@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloatNode vs ColorNode in Three.js TSL - three.js</title>
+    <meta name="description" content="In the Three.js Shading Language (TSL), constructing custom shaders requires composing modular nodes that represent values, operations, and attributes. While both floatNode and colorNode represent numeric data fed into shader pipelines, they differ funda">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/floatnode-vs-colornode-in-three-js-tsl">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="FloatNode vs ColorNode in Three.js TSL - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/floatnode-vs-colornode-in-three-js-tsl" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In the Three.js Shading Language (TSL), constructing custom shaders requires composing modular nodes that represent values, operations, and attributes. While both floatNode and colorNode represent numeric data fed into shader pipelines, they differ funda" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="floatnode-vs-colornode-in-threejs-tsl">FloatNode vs ColorNode in
+Three.js TSL</h1>
+<p>In the Three.js Shading Language (TSL), constructing custom shaders
+requires composing modular nodes that represent values, operations, and
+attributes. While both <code>floatNode</code> and <code>colorNode</code>
+represent numeric data fed into shader pipelines, they differ
+fundamentally in their dimensionality, uniform buffer serialization, and
+color space awareness. This article breaks down the technical and
+structural differences between <code>floatNode</code> and
+<code>colorNode</code> when authoring node-based materials.</p>
+<h3 id="dimensionality-and-underlying-type">Dimensionality and
+Underlying Type</h3>
+<p>The most direct difference between the two nodes lies in their
+dimensionality and underlying shader data types:</p>
+<ul>
+<li><strong><code>floatNode</code></strong>: Represents a 1D scalar
+floating-point value. In generated WGSL, it maps to <code>f32</code>,
+and in GLSL, it maps to <code>float</code>. It holds a single continuous
+value and does not contain sub-components.</li>
+<li><strong><code>colorNode</code></strong>: Represents a
+multi-component vector, typically a 3D vector (<code>vec3</code> in GLSL
+or <code>vec3&lt;f32&gt;</code> in WGSL) corresponding to red, green,
+and blue channels. While it behaves structurally like a
+<code>vec3Node</code>, it is specifically tagged within the TSL
+hierarchy to handle color-specific operations.</li>
+</ul>
+<h3 id="color-space-awareness-and-conversions">Color Space Awareness and
+Conversions</h3>
+<p>The primary structural distinction separating a
+<code>colorNode</code> from a standard vector or scalar node is how TSL
+handles color management:</p>
+<ul>
+<li><strong>Automatic Color Space Conversion</strong>: When a
+<code>colorNode</code> is instantiated using a Three.js
+<code>Color</code> object or a hex value, TSL flags the node for color
+management. During code generation, TSL automatically injects conversion
+routines (such as converting sRGB inputs into the renderer's working
+linear color space).</li>
+<li><strong>Direct Scalar Passthrough</strong>: A <code>floatNode</code>
+represents raw mathematical data. It undergoes no color space
+conversions regardless of the renderer's color management pipeline. It
+passes directly to the shader uniform buffer as a raw scalar.</li>
+</ul>
+<h3 id="uniform-buffer-layout-and-javascript-representation">Uniform
+Buffer Layout and JavaScript Representation</h3>
+<p>In the material definition on the JavaScript side, the nodes map to
+different native types and memory layouts in the uniform buffer:</p>
+<ul>
+<li><strong><code>floatNode</code> Uniforms</strong>: Backed by a
+standard JavaScript <code>number</code>. In memory, it requires a single
+4-byte float slot within a uniform buffer (subject to standard 16-byte
+alignment rules depending on surrounding data).</li>
+<li><strong><code>colorNode</code> Uniforms</strong>: Backed by an
+instance of <code>THREE.Color</code>. When packed into a uniform buffer,
+it occupies three sequential 4-byte float slots (<code>r</code>,
+<code>g</code>, <code>b</code>), often aligned to 16 bytes inside
+standard uniform blocks.</li>
+</ul>
+<h3 id="swizzling-and-property-access">Swizzling and Property
+Access</h3>
+<p>Due to their differing dimensions, TSL provides distinct property
+interfaces for each node type:</p>
+<ul>
+<li><strong><code>floatNode</code></strong>: Does not support channel
+swizzling directly because it has no vector components. However, it can
+be broadcast to higher dimensions by passing it into vector
+constructors, such as <code>vec3(myFloatNode)</code>.</li>
+<li><strong><code>colorNode</code></strong>: Supports component
+accessors and swizzling. Developers can access individual channels using
+color-specific properties (<code>.r</code>, <code>.g</code>,
+<code>.b</code>) as well as traditional spatial coordinates
+(<code>.x</code>, <code>.y</code>, <code>.z</code>), or multi-channel
+swizzles like <code>.rgb</code> and <code>.bgr</code>.</li>
+</ul>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>floatNode</code></th>
+<th style="text-align: left;"><code>colorNode</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Data Type</strong></td>
+<td style="text-align: left;">Scalar (<code>f32</code> /
+<code>float</code>)</td>
+<td style="text-align: left;">Vector (<code>vec3&lt;f32&gt;</code> /
+<code>vec3</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Component Count</strong></td>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">3 (RGB)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Input Value</strong></td>
+<td style="text-align: left;">Primitive JS <code>number</code></td>
+<td style="text-align: left;"><code>THREE.Color</code> or hex value</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Color Management</strong></td>
+<td style="text-align: left;">None (treated as linear/raw)</td>
+<td style="text-align: left;">Automatic sRGB to Linear conversion</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Channel Accessors</strong></td>
+<td style="text-align: left;">N/A</td>
+<td style="text-align: left;"><code>.r</code>, <code>.g</code>,
+<code>.b</code> / <code>.x</code>, <code>.y</code>, <code>.z</code></td>
+</tr>
+</tbody>
+</table></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

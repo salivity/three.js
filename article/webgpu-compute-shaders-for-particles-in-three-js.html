@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU Compute Shaders for Particles in Three.js - three.js</title>
+    <meta name="description" content="Three.js leverages the modern WebGPURenderer to execute general-purpose GPU computing, allowing developers to simulate millions of particles at interactive framerates. By using compute shaders managed through the Three.js Shading Language (TSL) and Compu">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/webgpu-compute-shaders-for-particles-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WebGPU Compute Shaders for Particles in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/webgpu-compute-shaders-for-particles-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Three.js leverages the modern WebGPURenderer to execute general-purpose GPU computing, allowing developers to simulate millions of particles at interactive framerates. By using compute shaders managed through the Three.js Shading Language (TSL) and Compu" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="webgpu-compute-shaders-for-particles-in-threejs">WebGPU Compute
+Shaders for Particles in Three.js</h1>
+<p>Three.js leverages the modern <code>WebGPURenderer</code> to execute
+general-purpose GPU computing, allowing developers to simulate millions
+of particles at interactive framerates. By using compute shaders managed
+through the Three.js Shading Language (TSL) and
+<code>ComputeNode</code>, the engine updates complex particle
+physics—such as velocity, position, and collision—directly in GPU
+memory. This approach eliminates the performance overhead of
+transferring data between the CPU and GPU, feeding simulated data
+seamlessly into render passes.</p>
+<h3 id="the-compute-pipeline-architecture">The Compute Pipeline
+Architecture</h3>
+<p>In traditional WebGL implementations, particle updates either relied
+on CPU loops or complex workarounds like transform feedback or
+render-to-texture ping-pong techniques. <code>WebGPURenderer</code>
+eliminates these workarounds by providing native access to WebGPU
+compute pipelines.</p>
+<p>The compute pipeline runs independently of the standard vertex and
+fragment pipelines. Compute shaders operate on multi-dimensional grids
+of workgroups, executing arbitrary mathematical operations on structured
+buffers in parallel. In Three.js, these operations are typically
+declared using TSL nodes, which abstract raw WGSL (WebGPU Shading
+Language) into a modular, chainable node graph.</p>
+<h3 id="buffer-management-and-data-binding">Buffer Management and Data
+Binding</h3>
+<p>Particle data—such as position, velocity, mass, and lifetime—is
+stored in GPU-accessible storage buffers. Three.js manages these via
+<code>StorageInstancedBufferAttribute</code> or
+<code>StorageBufferNode</code>.</p>
+<ol type="1">
+<li><strong>Storage Allocation:</strong> An array buffer is initialized
+on the GPU containing the initial state of the particle system.</li>
+<li><strong>Buffer Binding:</strong> The buffer is bound as a read-write
+storage buffer within the compute pass, allowing compute threads to read
+previous state values, calculate updates, and write new values back into
+the exact same memory space.</li>
+<li><strong>Direct Render Binding:</strong> The same storage buffer is
+simultaneously bound to an <code>InstancedMesh</code> or a point cloud
+material as an attribute. Because the data remains on the GPU, the
+rendering pass immediately draws the updated transforms without memory
+re-allocation or host-device transfers.</li>
+</ol>
+<h3 id="executing-compute-nodes">Executing Compute Nodes</h3>
+<p>To run the simulation, Three.js provides the <code>ComputeNode</code>
+abstraction. A compute node encapsulates the logic executed by each
+thread across specified workgroup counts:</p>
+<ul>
+<li><strong>Logic Definition:</strong> Developers write simulation rules
+(e.g., gravity, drag, turbulence fields) using TSL operations, binding
+storage buffers via <code>storage()</code> nodes.</li>
+<li><strong>Dispatch:</strong> The compute pass is dispatched explicitly
+via <code>renderer.compute(computeNode)</code> during the animation loop
+prior to calling <code>renderer.render(scene, camera)</code>.</li>
+<li><strong>Synchronization:</strong> WebGPU automatically handles
+pipeline barriers. The renderer ensures compute write operations
+complete before the vertex shader attempts to read from the storage
+buffer in the subsequent render pass, preventing race conditions.</li>
+</ul>
+<h3 id="benefits-for-advanced-simulations">Benefits for Advanced
+Simulations</h3>
+<p>By offloading calculations to compute shaders via
+<code>WebGPURenderer</code>, particle systems gain distinct
+advantages:</p>
+<ul>
+<li><strong>Massive Concurrency:</strong> Thread dispatch sizes can
+scale to millions of elements while keeping the main JavaScript thread
+completely unblocked.</li>
+<li><strong>Complex Interactions:</strong> Compute shaders support
+random memory read-write operations, enabling inter-particle collision,
+spatial hashing, flocking (Boids), and fluid simulations (SPH) that are
+impractical in standard vertex or fragment shaders.</li>
+<li><strong>Deterministic Performance:</strong> Because data transfers
+over the PCIe bus are avoided entirely after initialization, frame times
+remain stable regardless of particle count.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

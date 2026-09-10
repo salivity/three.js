@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Sphere Intersection in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, testing whether two mathematical spheres overlap is achieved using the THREE.Sphere class and its built-in intersectsSphere method. This article covers how to define mathematical sphere boundaries, compute their positions in 3D space, and ex">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/check-sphere-intersection-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Check Sphere Intersection in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/check-sphere-intersection-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, testing whether two mathematical spheres overlap is achieved using the THREE.Sphere class and its built-in intersectsSphere method. This article covers how to define mathematical sphere boundaries, compute their positions in 3D space, and ex" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="check-sphere-intersection-in-threejs">Check Sphere Intersection
+in Three.js</h1>
+<p>In Three.js, testing whether two mathematical spheres overlap is
+achieved using the <code>THREE.Sphere</code> class and its built-in
+<code>intersectsSphere</code> method. This article covers how to define
+mathematical sphere boundaries, compute their positions in 3D space, and
+execute the intersection check to return a simple boolean indicating
+whether a collision has occurred.</p>
+<h3 id="creating-sphere-objects">Creating Sphere Objects</h3>
+<p>The <code>THREE.Sphere</code> class represents a mathematical sphere
+defined by a center point (<code>THREE.Vector3</code>) and a radius (a
+scalar number). Unlike visual meshes, mathematical spheres do not render
+in the scene; they exist purely for spatial calculations.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the center and radius for the first sphere</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> centerA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radiusA <span class="op">=</span> <span class="fl">2.0</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphereA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(centerA<span class="op">,</span> radiusA)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the center and radius for the second sphere</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> centerB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">3</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radiusB <span class="op">=</span> <span class="fl">1.5</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphereB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(centerB<span class="op">,</span> radiusB)<span class="op">;</span></span></code></pre></div>
+<h3 id="performing-the-intersection-check">Performing the Intersection
+Check</h3>
+<p>To verify if <code>sphereA</code> and <code>sphereB</code> overlap,
+call <code>intersectsSphere</code> on one sphere object and pass the
+second sphere as an argument:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> isOverlapping <span class="op">=</span> sphereA<span class="op">.</span><span class="fu">intersectsSphere</span>(sphereB)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (isOverlapping) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;The spheres are overlapping.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;The spheres do not intersect.&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The method returns <code>true</code> if the spheres touch or overlap,
+and <code>false</code> otherwise.</p>
+<h3 id="the-underlying-math">The Underlying Math</h3>
+<p>The <code>intersectsSphere</code> method works by calculating the
+Euclidean distance between the centers of the two spheres and comparing
+it to the sum of their radii:</p>
+<p><span class="math display">\[\text{distance} \le \text{radius}_A +
+\text{radius}_B\]</span></p>
+<p>To optimize performance, Three.js compares the squared distance
+between the centers with the squared sum of the radii, avoiding
+expensive square root operations:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> radiusSum <span class="op">=</span> sphereA<span class="op">.</span><span class="at">radius</span> <span class="op">+</span> sphereB<span class="op">.</span><span class="at">radius</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> distanceSq <span class="op">=</span> sphereA<span class="op">.</span><span class="at">center</span><span class="op">.</span><span class="fu">distanceToSquared</span>(sphereB<span class="op">.</span><span class="at">center</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> overlaps <span class="op">=</span> distanceSq <span class="op">&lt;=</span> (radiusSum <span class="op">*</span> radiusSum)<span class="op">;</span></span></code></pre></div>
+<h3 id="checking-intersections-from-meshes">Checking Intersections from
+Meshes</h3>
+<p>If working with rendered <code>THREE.Mesh</code> objects, you must
+extract their world-space bounding spheres before running the
+intersection check:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure geometry has a bounding sphere computed</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>meshA<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>meshB<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Create bounding spheres in world coordinates</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldSphereA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>()<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldSphereB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>()<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Copy and apply world transformation matrices</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>worldSphereA<span class="op">.</span><span class="fu">copy</span>(meshA<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span>)<span class="op">.</span><span class="fu">applyMatrix4</span>(meshA<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>worldSphereB<span class="op">.</span><span class="fu">copy</span>(meshB<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span>)<span class="op">.</span><span class="fu">applyMatrix4</span>(meshB<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Perform the collision test</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> collision <span class="op">=</span> worldSphereA<span class="op">.</span><span class="fu">intersectsSphere</span>(worldSphereB)<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layering a 3D UI in Three.js Using clearDepth - three.js</title>
+    <meta name="description" content="This article explains how to layer a secondary 3D user interface (UI) on top of a primary 3D game environment in Three.js using the renderer.clearDepth() method. By decoupling the depth buffer between rendering passes, you can display interactive 3D UI e">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/layering-a-3d-ui-in-three-js-using-cleardepth">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Layering a 3D UI in Three.js Using clearDepth - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/layering-a-3d-ui-in-three-js-using-cleardepth" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to layer a secondary 3D user interface (UI) on top of a primary 3D game environment in Three.js using the renderer.clearDepth() method. By decoupling the depth buffer between rendering passes, you can display interactive 3D UI e" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="layering-a-3d-ui-in-threejs-using-cleardepth">Layering a 3D UI
+in Three.js Using clearDepth</h1>
+<p>This article explains how to layer a secondary 3D user interface (UI)
+on top of a primary 3D game environment in Three.js using the
+<code>renderer.clearDepth()</code> method. By decoupling the depth
+buffer between rendering passes, you can display interactive 3D UI
+elements or HUDs directly over world geometry, completely preventing
+scene geometry from clipping through UI components regardless of their
+spatial coordinates.</p>
+<h3 id="the-problem-with-single-scene-rendering">The Problem with
+Single-Scene Rendering</h3>
+<p>In a standard Three.js setup, every mesh shares the same depth buffer
+(Z-buffer). If you attempt to place 3D elements—such as floating health
+bars, inventory screens, or interactive holographic menus—inside the
+main game scene, distant UI elements can be obstructed by closer world
+geometry. Moving UI meshes closer to the camera can cause field-of-view
+distortion and scale inconsistencies.</p>
+<h3 id="the-solution-two-scenes-and-a-cleared-depth-buffer">The
+Solution: Two Scenes and a Cleared Depth Buffer</h3>
+<p>The optimal approach separates your application into two independent
+scenes and cameras:</p>
+<ol type="1">
+<li><strong>World Scene &amp; Camera:</strong> Handles the terrain,
+characters, and environment, typically via a
+<code>PerspectiveCamera</code>.</li>
+<li><strong>UI Scene &amp; Camera:</strong> Handles UI components, using
+either an <code>OrthographicCamera</code> for fixed 2D-like positioning
+or a separate <code>PerspectiveCamera</code> for 3D perspective-tilted
+panels.</li>
+</ol>
+<p>By disabling the renderer's automatic clearing behavior, you can
+manually render the game world, wipe only the depth buffer, and then
+render the UI over the top. The color data remains intact, but the UI is
+drawn as if the depth buffer were completely empty.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-configure-the-webglrenderer">1. Configure the
+WebGLRenderer</h4>
+<p>By default, <code>WebGLRenderer</code> clears the color, depth, and
+stencil buffers automatically before every call to
+<code>renderer.render()</code>. Disable this behavior to control the
+buffers manually:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">autoClear</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-define-separate-scenes-and-cameras">2. Define Separate Scenes
+and Cameras</h4>
+<p>Create distinct scene and camera instances for your game environment
+and your interface:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Main game world</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldScene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// UI overlay</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uiScene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uiCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="op">-</span><span class="dv">2</span><span class="op">,</span> </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="dv">2</span><span class="op">,</span> </span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span> <span class="op">/</span> <span class="dv">2</span><span class="op">,</span> </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span> <span class="op">/</span> <span class="op">-</span><span class="dv">2</span><span class="op">,</span> </span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1</span><span class="op">,</span> </span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="dv">1000</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>uiCamera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span></code></pre></div>
+<h4 id="3-structure-the-render-loop">3. Structure the Render Loop</h4>
+<p>In your animation loop, perform the rendering passes in this exact
+order:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Manually clear all buffers (color, depth, stencil)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">clear</span>()<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Render the background / game world</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(worldScene<span class="op">,</span> worldCamera)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Clear only the depth buffer</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">clearDepth</span>()<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Render the UI scene on top</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(uiScene<span class="op">,</span> uiCamera)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="handling-pointer-events-and-raycasting">Handling Pointer Events
+and Raycasting</h3>
+<p>When implementing mouse interactions (such as button clicks or
+dragging items), raycasting must check the UI scene first:</p>
+<ol type="1">
+<li>Cast a ray into <code>uiScene</code> using the
+<code>uiCamera</code>.</li>
+<li>If an intersection occurs, trigger the UI event and halt
+execution.</li>
+<li>If no UI element is intersected, cast the ray into
+<code>worldScene</code> using <code>worldCamera</code> to handle in-game
+targeting or movement.</li>
+</ol>
+<p>This approach guarantees an intuitive interface layer that prevents
+unwanted clicks on the world behind active UI elements.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

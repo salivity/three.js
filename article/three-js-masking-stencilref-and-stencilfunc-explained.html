@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Masking: stencilRef and stencilFunc Explained - three.js</title>
+    <meta name="description" content="The stencil buffer in Three.js provides a high-performance, per-pixel masking pipeline that controls which fragments of a mesh are rendered to the screen. At the core of this system are the stencilRef and stencilFunc material properties, which work toget">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-masking-stencilref-and-stencilfunc-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Masking: stencilRef and stencilFunc Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-masking-stencilref-and-stencilfunc-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The stencil buffer in Three.js provides a high-performance, per-pixel masking pipeline that controls which fragments of a mesh are rendered to the screen. At the core of this system are the stencilRef and stencilFunc material properties, which work toget" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-masking-stencilref-and-stencilfunc-explained">Three.js
+Masking: stencilRef and stencilFunc Explained</h1>
+<p>The stencil buffer in Three.js provides a high-performance, per-pixel
+masking pipeline that controls which fragments of a mesh are rendered to
+the screen. At the core of this system are the <code>stencilRef</code>
+and <code>stencilFunc</code> material properties, which work together to
+define the logic of the stencil test: <code>stencilRef</code> supplies a
+reference integer value, while <code>stencilFunc</code> defines the
+comparison rule used to test that reference against the value currently
+stored in the stencil buffer.</p>
+<h2 id="the-role-of-stencilref">The Role of stencilRef</h2>
+<p><code>stencilRef</code> is a material property that sets an 8-bit
+integer reference value (ranging from <code>0</code> to
+<code>255</code>). This value serves two distinct roles depending on
+whether a material is writing to or reading from the stencil buffer:</p>
+<ul>
+<li><strong>As a Comparison Value:</strong> When performing stencil
+testing, the GPU compares <code>stencilRef</code> directly to the
+integer value currently present in the stencil buffer at the
+corresponding pixel coordinate.</li>
+<li><strong>As a Write Value:</strong> When using stencil write
+operations—such as <code>THREE.ReplaceStencilOp</code> defined in
+<code>stencilZPass</code> or <code>stencilFail</code>—the GPU writes
+this <code>stencilRef</code> value directly into the stencil buffer to
+establish the mask area.</li>
+</ul>
+<h2 id="the-role-of-stencilfunc">The Role of stencilFunc</h2>
+<p><code>stencilFunc</code> defines the comparison operator that
+determines whether a fragment passes or fails the stencil test. If the
+test passes, the pixel is rendered (or processed further down the
+depth/blending pipeline); if it fails, the pixel is discarded.</p>
+<p>Three.js maps <code>stencilFunc</code> to standard WebGL stencil
+functions, including:</p>
+<ul>
+<li><code>THREE.NeverStencilFunc</code>: Always fails; the fragment is
+never drawn.</li>
+<li><code>THREE.AlwaysStencilFunc</code>: Always passes; used commonly
+when drawing a mask object that only exists to write values into the
+stencil buffer.</li>
+<li><code>THREE.EqualStencilFunc</code>: Passes only if
+<code>stencilRef</code> is equal to the stencil buffer value.</li>
+<li><code>THREE.NotEqualStencilFunc</code>: Passes only if
+<code>stencilRef</code> differs from the stencil buffer value.</li>
+<li><code>THREE.LessStencilFunc</code> /
+<code>THREE.LessEqualStencilFunc</code>: Passes if
+<code>stencilRef</code> is less than (or less than or equal to) the
+buffer value.</li>
+<li><code>THREE.GreaterStencilFunc</code> /
+<code>THREE.GreaterEqualStencilFunc</code>: Passes if
+<code>stencilRef</code> is greater than (or greater than or equal to)
+the buffer value.</li>
+</ul>
+<p>The actual comparison evaluated by the graphics hardware is:</p>
+<pre class="text"><code>(stencilRef &amp; stencilFuncMask) [stencilFunc] (stencilBufferValue &amp; stencilFuncMask)</code></pre>
+<h2 id="how-stencilref-and-stencilfunc-work-together-for-masking">How
+stencilRef and stencilFunc Work Together for Masking</h2>
+<p>Creating a mask in Three.js requires coordinating these two
+properties across at least two different render passes or objects:</p>
+<h3 id="1-writing-the-mask">1. Writing the Mask</h3>
+<p>To define a masking region, a geometry representing the mask shape is
+rendered with:</p>
+<ul>
+<li><code>stencilWrite</code> set to <code>true</code>.</li>
+<li><code>stencilFunc</code> set to
+<code>THREE.AlwaysStencilFunc</code>, ensuring every pixel of the mask
+passes the test.</li>
+<li><code>stencilRef</code> set to an identifier, such as
+<code>1</code>.</li>
+<li><code>stencilZPass</code> set to
+<code>THREE.ReplaceStencilOp</code>, which overwrites the stencil buffer
+with the <code>stencilRef</code> value (<code>1</code>) wherever this
+geometry renders.</li>
+<li>Optionally, <code>colorWrite</code> and <code>depthWrite</code> set
+to <code>false</code> if the mask geometry itself should remain
+invisible.</li>
+</ul>
+<h3 id="2-reading-the-mask">2. Reading the Mask</h3>
+<p>To restrict another object so it only renders inside (or outside)
+that masked shape:</p>
+<ul>
+<li><code>stencilWrite</code> set to <code>true</code>.</li>
+<li><code>stencilRef</code> set to the same identifier
+(<code>1</code>).</li>
+<li><code>stencilFunc</code> set to <code>THREE.EqualStencilFunc</code>
+(to render only <strong>inside</strong> the mask) or
+<code>THREE.NotEqualStencilFunc</code> (to render only
+<strong>outside</strong> the mask).</li>
+<li><code>stencilZPass</code> set to <code>THREE.KeepStencilOp</code> so
+the rendered object reads the mask without altering the stored stencil
+values.</li>
+</ul>
+<p>By pairing an explicit reference value (<code>stencilRef</code>) with
+a matching evaluation condition (<code>stencilFunc</code>), Three.js
+allows you to create complex portals, cutaways, selective lighting
+passes, and 2D UI masks directly on 3D geometry.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Spherical Distance Between Points in Three.js - three.js</title>
+    <meta name="description" content="Calculating the shortest distance over the surface of a sphere—known as the great-circle distance—requires determining the central angle between two points and scaling it by the sphere's radius. In Three.js, you can achieve this efficiently by conver">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/calculate-spherical-distance-between-points-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Calculate Spherical Distance Between Points in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/calculate-spherical-distance-between-points-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the shortest distance over the surface of a sphere—known as the great-circle distance—requires determining the central angle between two points and scaling it by the sphere's radius. In Three.js, you can achieve this efficiently by conver" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="calculate-spherical-distance-between-points-in-threejs">Calculate
+Spherical Distance Between Points in Three.js</h1>
+<p>Calculating the shortest distance over the surface of a sphere—known
+as the great-circle distance—requires determining the central angle
+between two points and scaling it by the sphere's radius. In Three.js,
+you can achieve this efficiently by converting geographical coordinates
+(latitude and longitude) into Cartesian vectors using
+<code>THREE.Spherical</code> and <code>THREE.Vector3</code>, and then
+using built-in vector methods like <code>angleTo()</code> to compute the
+angular separation in radians.</p>
+<h3 id="1-converting-coordinates-to-threevector3">1. Converting
+Coordinates to <code>THREE.Vector3</code></h3>
+<p>To work with Three.js math utilities, points defined by latitude and
+longitude must first be represented as 3D direction vectors. In
+Three.js, <code>THREE.Spherical</code> uses physics conventions:</p>
+<ul>
+<li><code>radius</code>: Distance from the center.</li>
+<li><code>phi</code> (polar angle): Angle down from the positive Y-axis
+(<span class="math inline">\(0\)</span> to <span
+class="math inline">\(\pi\)</span>). Latitude maps to <code>phi</code>
+as <code>(90 - lat) * (Math.PI / 180)</code>.</li>
+<li><code>theta</code> (azimuthal angle): Angle around the Y-axis (<span
+class="math inline">\(0\)</span> to <span
+class="math inline">\(2\pi\)</span>). Longitude maps to
+<code>theta</code> as <code>(lon + 180) * (Math.PI / 180)</code> (or
+simply converted to radians depending on your prime meridian
+orientation).</li>
+</ul>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">latLonToVector3</span>(lat<span class="op">,</span> lon<span class="op">,</span> radius <span class="op">=</span> <span class="dv">1</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> phi <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">90</span> <span class="op">-</span> lat)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> theta <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(lon <span class="op">+</span> <span class="dv">180</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> spherical <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Spherical</span>(radius<span class="op">,</span> phi<span class="op">,</span> theta)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">setFromSpherical</span>(spherical)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="2-calculating-the-angular-separation">2. Calculating the Angular
+Separation</h3>
+<p>The shortest route between two points on a sphere lies along the
+perimeter of the circle formed by the intersection of the sphere and the
+plane passing through both points and the center of the sphere.</p>
+<p>The angle <span class="math inline">\(\Delta\sigma\)</span> between
+two unit vectors <span class="math inline">\(\vec{v_1}\)</span> and
+<span class="math inline">\(\vec{v_2}\)</span> can be obtained using the
+dot product: <span class="math display">\[\cos(\Delta\sigma) =
+\frac{\vec{v_1} \cdot \vec{v_2}}{\|\vec{v_1}\|
+\|\vec{v_2}\|}\]</span></p>
+<p>Three.js abstracts this calculation via the
+<code>Vector3.angleTo()</code> method, which computes the angle in
+radians between two vectors while automatically handling numerical
+precision limits.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> v1 <span class="op">=</span> <span class="fu">latLonToVector3</span>(lat1<span class="op">,</span> lon1)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> v2 <span class="op">=</span> <span class="fu">latLonToVector3</span>(lat2<span class="op">,</span> lon2)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> centralAngle <span class="op">=</span> v1<span class="op">.</span><span class="fu">angleTo</span>(v2)<span class="op">;</span> <span class="co">// returns angle in radians</span></span></code></pre></div>
+<h3 id="3-computing-the-arc-length">3. Computing the Arc Length</h3>
+<p>Once the central angle in radians is known, the spherical distance
+<span class="math inline">\(d\)</span> is the product of the sphere's
+radius <span class="math inline">\(R\)</span> and the central angle
+<span class="math inline">\(\Delta\sigma\)</span>:</p>
+<p><span class="math display">\[d = R \times \Delta\sigma\]</span></p>
+<h3 id="full-implementation">Full Implementation</h3>
+<p>Here is the complete utility function to calculate the surface
+distance between two latitude and longitude points on a globe with a
+given radius:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getSphericalDistance</span>(lat1<span class="op">,</span> lon1<span class="op">,</span> lat2<span class="op">,</span> lon2<span class="op">,</span> globeRadius <span class="op">=</span> <span class="dv">6371</span>) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> phi1 <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">90</span> <span class="op">-</span> lat1)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> theta1 <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(lon1)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">setFromSpherical</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Spherical</span>(<span class="dv">1</span><span class="op">,</span> phi1<span class="op">,</span> theta1))<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> phi2 <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">90</span> <span class="op">-</span> lat2)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> theta2 <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(lon2)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">setFromSpherical</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Spherical</span>(<span class="dv">1</span><span class="op">,</span> phi2<span class="op">,</span> theta2))<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> angle <span class="op">=</span> v1<span class="op">.</span><span class="fu">angleTo</span>(v2)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> angle <span class="op">*</span> globeRadius<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Example: Distance between New York (40.7128° N, 74.0060° W) and London (51.5074° N, 0.1278° W)</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> earthRadiusKm <span class="op">=</span> <span class="dv">6371</span><span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> distance <span class="op">=</span> <span class="fu">getSphericalDistance</span>(<span class="fl">40.7128</span><span class="op">,</span> <span class="op">-</span><span class="fl">74.0060</span><span class="op">,</span> <span class="fl">51.5074</span><span class="op">,</span> <span class="op">-</span><span class="fl">0.1278</span><span class="op">,</span> earthRadiusKm)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Distance: </span><span class="sc">${</span>distance<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="sc">}</span><span class="vs"> km`</span>)<span class="op">;</span> <span class="co">// Output: ~5570.22 km</span></span></code></pre></div>
+<h3 id="pre-existing-3d-points">Pre-existing 3D Points</h3>
+<p>If your points are already placed in 3D space on a sphere centered at
+the origin:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getDistanceBetweenPoints</span>(pointA<span class="op">,</span> pointB<span class="op">,</span> radius) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> angle <span class="op">=</span> pointA<span class="op">.</span><span class="fu">angleTo</span>(pointB)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> angle <span class="op">*</span> radius<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Ensure that <code>pointA</code> and <code>pointB</code> are measured
+from the sphere's center. If the sphere is translated in world space,
+subtract the sphere's center vector from each point vector before
+calling <code>.angleTo()</code>.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

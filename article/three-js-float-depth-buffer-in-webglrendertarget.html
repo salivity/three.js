@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Float Depth Buffer in WebGLRenderTarget - three.js</title>
+    <meta name="description" content="This guide demonstrates how to configure a THREE.WebGLRenderTarget to utilize a 32-bit floating-point depth buffer in Three.js. Standard render targets default to 16-bit or 24-bit fixed-point depth buffers, which often cause precision artifacts and Z-fig">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-float-depth-buffer-in-webglrendertarget">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Float Depth Buffer in WebGLRenderTarget - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-float-depth-buffer-in-webglrendertarget" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to configure a THREE.WebGLRenderTarget to utilize a 32-bit floating-point depth buffer in Three.js. Standard render targets default to 16-bit or 24-bit fixed-point depth buffers, which often cause precision artifacts and Z-fig" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-float-depth-buffer-in-webglrendertarget">Three.js Float
+Depth Buffer in WebGLRenderTarget</h1>
+<p>This guide demonstrates how to configure a
+<code>THREE.WebGLRenderTarget</code> to utilize a 32-bit floating-point
+depth buffer in Three.js. Standard render targets default to 16-bit or
+24-bit fixed-point depth buffers, which often cause precision artifacts
+and Z-fighting across massive view distances. By attaching an explicit
+<code>THREE.DepthTexture</code> configured with
+<code>THREE.FloatType</code>, you can ensure the underlying WebGL
+context allocates an IEEE 754 32-bit floating-point depth buffer
+(<code>DEPTH_COMPONENT32F</code>) for your custom render passes.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To force high-precision floating-point depth storage on a render
+target, instantiate a <code>THREE.DepthTexture</code>, assign its type
+to <code>THREE.FloatType</code>, and attach it to the
+<code>WebGLRenderTarget.depthTexture</code> property.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the Render Target</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">generateMipmaps</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilBuffer</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthBuffer</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create and configure the Float DepthTexture</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> depthTexture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DepthTexture</span>(width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>depthTexture<span class="op">.</span><span class="at">format</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">DepthFormat</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>depthTexture<span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">FloatType</span><span class="op">;</span> <span class="co">// Forces 32-bit float depth (DEPTH_COMPONENT32F)</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Attach the depth texture to the render target</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>renderTarget<span class="op">.</span><span class="at">depthTexture</span> <span class="op">=</span> depthTexture<span class="op">;</span></span></code></pre></div>
+<h3 id="key-configuration-settings">Key Configuration Settings</h3>
+<ul>
+<li><strong><code>depthTexture.type = THREE.FloatType</code></strong>:
+This is the critical line. In WebGL 2 contexts, setting this property
+maps the depth attachment to the <code>gl.DEPTH_COMPONENT32F</code>
+internal format instead of the default <code>gl.DEPTH_COMPONENT16</code>
+or <code>gl.DEPTH_COMPONENT24</code>.</li>
+<li><strong><code>depthTexture.format = THREE.DepthFormat</code></strong>:
+Ensures the texture strictly holds depth data. Do not use
+<code>THREE.DepthStencilFormat</code> unless you are actively using a
+stencil buffer, in which case you must use <code>THREE.FloatType</code>
+alongside WebGL 2 support for <code>DEPTH32F_STENCIL8</code>.</li>
+<li><strong>Filter Modes</strong>: It is recommended to use
+<code>THREE.NearestFilter</code> for both <code>minFilter</code> and
+<code>magFilter</code> on floating-point depth textures, as linear
+filtering on float depth attachments is not universally supported across
+all GPUs without specific extensions.</li>
+</ul>
+<h3 id="handling-resizing">Handling Resizing</h3>
+<p>When resizing the application, you must update both the render target
+and the depth texture dimensions to maintain proper pixel-to-texel
+mapping:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">onWindowResize</span>() {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> newWidth <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> newHeight <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">.</span><span class="fu">setSize</span>(newWidth<span class="op">,</span> newHeight)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">.</span><span class="at">depthTexture</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> newWidth<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">.</span><span class="at">depthTexture</span><span class="op">.</span><span class="at">image</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> newHeight<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">.</span><span class="at">depthTexture</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="shader-reading-considerations">Shader Reading
+Considerations</h3>
+<p>When sampling this texture inside a custom shader pass via a
+<code>sampler2D</code> uniform, read the red channel
+(<code>texture2D(tDepth, vUv).r</code>). The sampled value will contain
+non-linear, high-precision window depth normalized to the range
+<code>[0.0, 1.0]</code>, which can be converted back to view-space
+linear distance without the severe banding typical of lower bit-depth
+buffers.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

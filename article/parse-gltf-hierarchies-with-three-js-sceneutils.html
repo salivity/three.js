@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parse glTF Hierarchies with Three.js SceneUtils - three.js</title>
+    <meta name="description" content="Parsing deeply nested glTF models in Three.js can become challenging when handling compound transformations, multi-level parent-child relationships, and scene graph operations. This guide explains how to import a glTF asset, systematically traverse and p">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/parse-gltf-hierarchies-with-three-js-sceneutils">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Parse glTF Hierarchies with Three.js SceneUtils - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/parse-gltf-hierarchies-with-three-js-sceneutils" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Parsing deeply nested glTF models in Three.js can become challenging when handling compound transformations, multi-level parent-child relationships, and scene graph operations. This guide explains how to import a glTF asset, systematically traverse and p" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="parse-gltf-hierarchies-with-threejs-sceneutils">Parse glTF
+Hierarchies with Three.js SceneUtils</h1>
+<p>Parsing deeply nested glTF models in Three.js can become challenging
+when handling compound transformations, multi-level parent-child
+relationships, and scene graph operations. This guide explains how to
+import a glTF asset, systematically traverse and parse its node tree,
+use the <code>SceneUtils</code> utility class to manipulate or reparent
+nodes without breaking global transformations, and visually represent
+the underlying hierarchy inside your 3D viewport.</p>
+<h3 id="loading-the-gltf-asset">Loading the glTF Asset</h3>
+<p>To work with glTF node hierarchies, first load the model using
+<code>GLTFLoader</code>. Ensure both <code>GLTFLoader</code> and
+<code>SceneUtils</code> are imported from the <code>three/addons/</code>
+directory.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> SceneUtils <span class="im">from</span> <span class="st">&#39;three/addons/utils/SceneUtils.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/model.gltf&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> rootNode <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(rootNode)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">parseAndVisualizeHierarchy</span>(rootNode)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="parsing-the-node-hierarchy">Parsing the Node Hierarchy</h3>
+<p>A glTF scene is composed of an <code>Object3D</code> tree containing
+meshes, groups, bones, and cameras. Use the built-in
+<code>traverse</code> method on the root node to iterate through all
+descendants and extract structural details like node names, types, and
+transform matrices.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">parseHierarchy</span>(<span class="bu">root</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> nodeTree <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">root</span><span class="op">.</span><span class="fu">traverse</span>((node) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        nodeTree<span class="op">.</span><span class="fu">push</span>({</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>            <span class="dt">name</span><span class="op">:</span> node<span class="op">.</span><span class="at">name</span> <span class="op">||</span> <span class="st">&#39;Unnamed_Node&#39;</span><span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>            <span class="dt">type</span><span class="op">:</span> node<span class="op">.</span><span class="at">type</span><span class="op">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="dt">uuid</span><span class="op">:</span> node<span class="op">.</span><span class="at">uuid</span><span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="dt">parent</span><span class="op">:</span> node<span class="op">.</span><span class="at">parent</span> <span class="op">?</span> node<span class="op">.</span><span class="at">parent</span><span class="op">.</span><span class="at">name</span> <span class="op">:</span> <span class="kw">null</span><span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>            <span class="dt">childrenCount</span><span class="op">:</span> node<span class="op">.</span><span class="at">children</span><span class="op">.</span><span class="at">length</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        })<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> nodeTree<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="restructuring-nodes-with-sceneutils">Restructuring Nodes with
+SceneUtils</h3>
+<p>When parsing complex assemblies, you often need to isolate a
+sub-tree, pull deeply nested parts out for individual animation, or
+reparent nodes to different hierarchies without disturbing their global
+scale, position, or rotation.</p>
+<p><code>SceneUtils.attach()</code> and <code>SceneUtils.detach()</code>
+allow you to move nodes between different parent spaces dynamically
+while recalculating local transform matrices relative to the new
+parent:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Detaching a deeply nested node to the root scene while preserving its world transform</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetNode <span class="op">=</span> rootNode<span class="op">.</span><span class="fu">getObjectByName</span>(<span class="st">&#39;Engine_Piston&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (targetNode) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    SceneUtils<span class="op">.</span><span class="fu">detach</span>(targetNode<span class="op">,</span> targetNode<span class="op">.</span><span class="at">parent</span><span class="op">,</span> scene)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Attaching the node to a new parent without causing transform jumps</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> newParent <span class="op">=</span> rootNode<span class="op">.</span><span class="fu">getObjectByName</span>(<span class="st">&#39;SubAssembly_Carrier&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (targetNode <span class="op">&amp;&amp;</span> newParent) {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    SceneUtils<span class="op">.</span><span class="fu">attach</span>(targetNode<span class="op">,</span> scene<span class="op">,</span> newParent)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="visualizing-the-node-graph-in-3d">Visualizing the Node Graph in
+3D</h3>
+<p>To visually debug and inspect the hierarchical connections of the
+parsed glTF model, attach visible markers and directional connection
+lines between each parent and its children.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">parseAndVisualizeHierarchy</span>(<span class="bu">root</span>) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> lineMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">LineBasicMaterial</span>({ </span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ff88</span><span class="op">,</span> </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="dt">depthTest</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">root</span><span class="op">.</span><span class="fu">traverse</span>((node) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Add a localized coordinate frame helper to each node</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> axesHelper <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AxesHelper</span>(<span class="fl">0.2</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        axesHelper<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        node<span class="op">.</span><span class="fu">add</span>(axesHelper)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Draw visual links to children to display the structural tree</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        node<span class="op">.</span><span class="at">children</span><span class="op">.</span><span class="fu">forEach</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Ignore the newly added axes helpers</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (child <span class="kw">instanceof</span> THREE<span class="op">.</span><span class="at">AxesHelper</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> parentPos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> childPos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>            node<span class="op">.</span><span class="fu">getWorldPosition</span>(parentPos)<span class="op">;</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>            child<span class="op">.</span><span class="fu">getWorldPosition</span>(childPos)<span class="op">;</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>                node<span class="op">.</span><span class="fu">worldToLocal</span>(parentPos)<span class="op">,</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>                node<span class="op">.</span><span class="fu">worldToLocal</span>(childPos)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>            ]<span class="op">;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">.</span><span class="fu">setFromPoints</span>(points)<span class="op">;</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> connectionLine <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Line</span>(geometry<span class="op">,</span> lineMaterial)<span class="op">;</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>            node<span class="op">.</span><span class="fu">add</span>(connectionLine)<span class="op">;</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        })<span class="op">;</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="summary-of-workflow">Summary of Workflow</h3>
+<ol type="1">
+<li><strong>Load</strong>: Import the model using
+<code>GLTFLoader</code> to generate the default scene graph.</li>
+<li><strong>Inspect</strong>: Use recursive traversal on the glTF root
+to map parent-child indices and verify identity names.</li>
+<li><strong>Re-index / Transform</strong>: Use
+<code>SceneUtils.attach</code> and <code>SceneUtils.detach</code> to
+restructure or flatten complex sub-branches without distorting world
+coordinates.</li>
+<li><strong>Debug</strong>: Generate <code>AxesHelper</code> and
+geometry line primitives between parsed parent-child pairs to clearly
+visualize node chains in 3D space.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

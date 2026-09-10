@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Doppler Effect with PositionalAudio - three.js</title>
+    <meta name="description" content="This guide demonstrates how to attach a PositionalAudio node directly to a moving mesh in Three.js and calculate a realistic Doppler effect. By binding spatial audio directly to a mesh's transform hierarchy and calculating relative velocity toward the sc">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-doppler-effect-with-positionalaudio">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Doppler Effect with PositionalAudio - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-doppler-effect-with-positionalaudio" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to attach a PositionalAudio node directly to a moving mesh in Three.js and calculate a realistic Doppler effect. By binding spatial audio directly to a mesh's transform hierarchy and calculating relative velocity toward the sc" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-doppler-effect-with-positionalaudio">Three.js Doppler
+Effect with PositionalAudio</h1>
+<p>This guide demonstrates how to attach a <code>PositionalAudio</code>
+node directly to a moving mesh in Three.js and calculate a realistic
+Doppler effect. By binding spatial audio directly to a mesh's transform
+hierarchy and calculating relative velocity toward the scene's listener
+in the animation loop, you can dynamically pitch-shift the audio to
+simulate authentic Doppler shifts.</p>
+<h3 id="1-set-up-the-audiolistener">1. Set Up the AudioListener</h3>
+<p>The <code>AudioListener</code> represents the ears of the scene and
+must be attached to the camera so spatial panning corresponds to the
+user's viewpoint.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> listener <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioListener</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">add</span>(listener)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-create-the-mesh-and-attach-positionalaudio">2. Create the Mesh
+and Attach PositionalAudio</h3>
+<p>Three.js <code>PositionalAudio</code> inherits from
+<code>Object3D</code>. When you add it as a child of a
+<code>Mesh</code>, it automatically inherits the position and
+orientation of that mesh.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Create moving mesh</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> movingMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(movingMesh)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create PositionalAudio</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sound <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PositionalAudio</span>(listener)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Load an audio file</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> audioLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioLoader</span>()<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>audioLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/engine_sound.mp3&#39;</span><span class="op">,</span> (buffer) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setBuffer</span>(buffer)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setRefDistance</span>(<span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setLoop</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setVolume</span>(<span class="fl">1.0</span>)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Attach directly to the mesh</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>movingMesh<span class="op">.</span><span class="fu">add</span>(sound)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-implement-the-doppler-pitch-shift">3. Implement the Doppler
+Pitch Shift</h3>
+<p>The native Web Audio API deprecated its built-in Doppler parameters
+in modern browsers. To achieve a realistic Doppler effect, manually
+calculate the relative velocity between the audio source and the
+listener, then adjust the <code>playbackRate</code> of the
+<code>PositionalAudio</code> source using the Doppler formula:</p>
+<p><span class="math display">\[\text{Frequency Factor} = \frac{c}{c -
+v_s}\]</span></p>
+<p>Where <span class="math inline">\(c\)</span> is the speed of sound
+(approximately <span class="math inline">\(343\text{ m/s}\)</span>) and
+<span class="math inline">\(v_s\)</span> is the velocity of the source
+relative to the listener.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> SPEED_OF_SOUND <span class="op">=</span> <span class="dv">343</span><span class="op">;</span> <span class="co">// meters per second</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> prevSourcePos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateDoppler</span>(sourceMesh<span class="op">,</span> listenerCamera<span class="op">,</span> soundNode<span class="op">,</span> deltaTime) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="op">!</span>soundNode<span class="op">.</span><span class="at">isPlaying</span> <span class="op">||</span> deltaTime <span class="op">===</span> <span class="dv">0</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> currentSourcePos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  sourceMesh<span class="op">.</span><span class="fu">getWorldPosition</span>(currentSourcePos)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> listenerPos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  listenerCamera<span class="op">.</span><span class="fu">getWorldPosition</span>(listenerPos)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Vector from source to listener</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> toListener <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">subVectors</span>(listenerPos<span class="op">,</span> currentSourcePos)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate source velocity vector</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> velocity <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">subVectors</span>(currentSourcePos<span class="op">,</span> prevSourcePos)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">divideScalar</span>(deltaTime)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Project velocity onto the direction vector to get relative speed</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> relativeSpeed <span class="op">=</span> velocity<span class="op">.</span><span class="fu">dot</span>(toListener)<span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate Doppler factor</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> dopplerFactor <span class="op">=</span> SPEED_OF_SOUND <span class="op">/</span> (SPEED_OF_SOUND <span class="op">-</span> relativeSpeed)<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Clamp values to prevent distortion at extreme speeds</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> clampedRate <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">clamp</span>(dopplerFactor<span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">2.0</span>)<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Apply pitch shift</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  soundNode<span class="op">.</span><span class="fu">setPlaybackRate</span>(clampedRate)<span class="op">;</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Store current position for the next frame</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>  prevSourcePos<span class="op">.</span><span class="fu">copy</span>(currentSourcePos)<span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="4-drive-the-effect-in-the-render-loop">4. Drive the Effect in
+the Render Loop</h3>
+<p>Call your movement logic and the Doppler calculation inside the main
+animation loop using the frame's delta time.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Move the mesh along an axis</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  movingMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">+=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(clock<span class="op">.</span><span class="fu">getElapsedTime</span>() <span class="op">*</span> <span class="dv">2</span>) <span class="op">*</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update Doppler shift</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">updateDoppler</span>(movingMesh<span class="op">,</span> camera<span class="op">,</span> sound<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<p>Because <code>sound</code> is a child node of
+<code>movingMesh</code>, its local 3D transform updates concurrently
+with the mesh. Updating the playback rate relative to velocity creates
+the pitch change of a real-world object approaching and passing the
+listener.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

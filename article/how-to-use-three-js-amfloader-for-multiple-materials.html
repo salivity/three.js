@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js AMFLoader for Multiple Materials - three.js</title>
+    <meta name="description" content="This article explains how to load Additive Manufacturing Format (AMF) files containing multiple distinct materials into a Three.js scene using the AMFLoader utility. You will learn how to import the loader, process the returned multi-mesh hierarchy, and">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-amfloader-for-multiple-materials">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js AMFLoader for Multiple Materials - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-amfloader-for-multiple-materials" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to load Additive Manufacturing Format (AMF) files containing multiple distinct materials into a Three.js scene using the AMFLoader utility. You will learn how to import the loader, process the returned multi-mesh hierarchy, and" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-threejs-amfloader-for-multiple-materials">How to Use
+Three.js AMFLoader for Multiple Materials</h1>
+<p>This article explains how to load Additive Manufacturing Format (AMF)
+files containing multiple distinct materials into a Three.js scene using
+the <code>AMFLoader</code> utility. You will learn how to import the
+loader, process the returned multi-mesh hierarchy, and assign or
+customize separate materials for each volume defined within the 3D
+model.</p>
+<h3 id="importing-and-setting-up-amfloader">Importing and Setting Up
+AMFLoader</h3>
+<p>The <code>AMFLoader</code> is not included in the Three.js core
+package; it is an add-on located in the examples directory. You must
+also include the <code>jszip</code> library if your AMF files are
+compressed (<code>.amf</code> files are often zip-compressed XML).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { AMFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/AMFLoader.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="loading-the-multi-material-model">Loading the Multi-Material
+Model</h3>
+<p>AMF files structure complex assemblies by defining distinct
+<code>&lt;volume&gt;</code> tags inside an <code>&lt;object&gt;</code>
+tag, with each volume mapped to a specific material ID or embedded
+color. When <code>AMFLoader</code> parses an AMF file, it returns a
+<code>THREE.Group</code> where each distinct volume is converted into an
+individual <code>THREE.Mesh</code>.</p>
+<p>Use the following pattern to load the file and add it to your
+scene:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">AMFLoader</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;models/multi_material_part.amf&#39;</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    (group) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// The loader returns a THREE.Group containing child meshes</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="fu">add</span>(group)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    (xhr) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>((xhr<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> xhr<span class="op">.</span><span class="at">total</span> <span class="op">*</span> <span class="dv">100</span>) <span class="op">+</span> <span class="st">&#39;% loaded&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred loading the AMF file:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="handling-native-materials-and-colors">Handling Native Materials
+and Colors</h3>
+<p>If your AMF file includes embedded RGBA color data in its
+<code>&lt;material&gt;</code> definitions, <code>AMFLoader</code> will
+automatically parse these values and instantiate a
+<code>THREE.MeshPhongMaterial</code> for each volume with the
+corresponding diffuse color and opacity. Ensure your scene has
+sufficient lighting (such as a <code>THREE.DirectionalLight</code> and
+<code>THREE.AmbientLight</code>) to render these materials properly.</p>
+<h3 id="overriding-and-customizing-distinct-materials">Overriding and
+Customizing Distinct Materials</h3>
+<p>To apply custom materials—such as PBR shaders
+(<code>MeshStandardMaterial</code>), custom textures, or specific
+rendering properties—traverse the resulting <code>THREE.Group</code> in
+the loader's completion callback:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;models/multi_material_part.amf&#39;</span><span class="op">,</span> (group) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Define an array or map of replacement materials</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> customMaterials <span class="op">=</span> [</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span><span class="op">,</span> <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.1</span> })<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0055ff</span><span class="op">,</span> <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.7</span><span class="op">,</span> <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.0</span> })<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span> <span class="dt">transmission</span><span class="op">:</span> <span class="fl">0.9</span><span class="op">,</span> <span class="dt">opacity</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span> })</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> materialIndex <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    group<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Option A: Assign based on order of appearance</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (customMaterials[materialIndex]) {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                child<span class="op">.</span><span class="at">material</span> <span class="op">=</span> customMaterials[materialIndex]<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>                materialIndex<span class="op">++;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Option B: Inspect the mesh name or userData for AMF identifiers</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="co">// AMFLoader assigns volume metadata to child.name when available</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> (child<span class="op">.</span><span class="at">name</span> <span class="op">===</span> <span class="st">&#39;SupportStructure&#39;</span>) {</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>                child<span class="op">.</span><span class="at">material</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>            child<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>            child<span class="op">.</span><span class="at">receiveShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional: AMF files typically use millimeters; rescale if necessary</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    group<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(<span class="fl">0.001</span><span class="op">,</span> <span class="fl">0.001</span><span class="op">,</span> <span class="fl">0.001</span>)<span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(group)<span class="op">;</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ol type="1">
+<li><strong>Units and Scale</strong>: The AMF specification uses
+millimeters as the default measurement unit. Three.js scenes typically
+use arbitrary units often treated as meters. Adjust
+<code>group.scale</code> if your model renders too large.</li>
+<li><strong>Transparency</strong>: If any sub-material utilizes alpha
+transparency defined in the AMF, ensure
+<code>material.transparent = true</code> is active on the corresponding
+mesh material to prevent rendering artifacts.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

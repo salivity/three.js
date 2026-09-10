@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Update a Three.js BVH After Moving Vertices - three.js</title>
+    <meta name="description" content="When manipulating mesh vertices dynamically in Three.js, any underlying Bounding Volume Hierarchy (BVH)—such as the one provided by the popular three-mesh-bvh library—becomes desynchronized from the actual geometry. To restore accurate raycasting and">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-update-a-three-js-bvh-after-moving-vertices">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Update a Three.js BVH After Moving Vertices - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-update-a-three-js-bvh-after-moving-vertices" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When manipulating mesh vertices dynamically in Three.js, any underlying Bounding Volume Hierarchy (BVH)—such as the one provided by the popular three-mesh-bvh library—becomes desynchronized from the actual geometry. To restore accurate raycasting and" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-update-a-threejs-bvh-after-moving-vertices">How to Update
+a Three.js BVH After Moving Vertices</h1>
+<p>When manipulating mesh vertices dynamically in Three.js, any
+underlying Bounding Volume Hierarchy (BVH)—such as the one provided by
+the popular <code>three-mesh-bvh</code> library—becomes desynchronized
+from the actual geometry. To restore accurate raycasting and spatial
+queries, you must mark the position attribute for a GPU update,
+recalculate the geometry’s standard bounding volumes, and either refit
+or fully recompute the BVH structure. This guide explains how to
+properly handle this update pipeline for dynamic, deformed, or animated
+meshes.</p>
+<h3 id="1-flag-the-geometry-attribute-for-update">1. Flag the Geometry
+Attribute for Update</h3>
+<p>Direct modifications to the
+<code>geometry.attributes.position.array</code> happen in CPU memory. To
+ensure Three.js uploads the modified vertex data to the GPU on the next
+render frame, set the <code>needsUpdate</code> flag:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// After altering the position array values</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-update-standard-threejs-bounds">2. Update Standard Three.js
+Bounds</h3>
+<p>Three.js uses standard bounding spheres and bounding boxes for
+high-level frustum culling before executing granular BVH checks. If
+these are not recalculated, your mesh may disappear prematurely when its
+new bounds leave the camera's view frustum:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-update-the-bvh">3. Update the BVH</h3>
+<p>Depending on the extent of vertex displacement, you can update the
+BVH using one of two methods: refitting or rebuilding.</p>
+<h4
+id="method-a-refitting-the-existing-bvh-recommended-for-performance">Method
+A: Refitting the Existing BVH (Recommended for Performance)</h4>
+<p>If the mesh topology remains identical and vertices only shift
+moderately (such as during cloth simulation, skinning, or waving
+vegetation), use the <code>refit()</code> method. Refitting updates the
+existing node bounds without restructuring the entire tree hierarchy,
+making it significantly faster and suitable for per-frame execution:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (geometry<span class="op">.</span><span class="at">boundsTree</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="at">boundsTree</span><span class="op">.</span><span class="fu">refit</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4
+id="method-b-rebuilding-the-bvh-recommended-for-large-deformations">Method
+B: Rebuilding the BVH (Recommended for Large Deformations)</h4>
+<p>If the geometry undergoes drastic deformations or topological
+modifications, the original tree structure may become inefficient,
+resulting in degraded raycasting performance. In this case, dispose of
+or overwrite the existing bounds tree by recalculating it entirely:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Fully recomputes the tree structure from scratch</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">computeBoundsTree</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="complete-implementation-example">Complete Implementation
+Example</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateDynamicMesh</span>(mesh) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> geometry <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positions <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Example: Apply dynamic displacement</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> positions<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> y <span class="op">=</span> positions<span class="op">.</span><span class="fu">getY</span>(i)<span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    positions<span class="op">.</span><span class="fu">setY</span>(i<span class="op">,</span> y <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(<span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>() <span class="op">*</span> <span class="fl">0.005</span> <span class="op">+</span> i) <span class="op">*</span> <span class="fl">0.01</span>)<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 1. Notify Three.js to send data to the GPU</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  positions<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 2. Recompute basic Three.js culling volumes</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 3. Fast-update the BVH structure</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (geometry<span class="op">.</span><span class="at">boundsTree</span>) {</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    geometry<span class="op">.</span><span class="at">boundsTree</span><span class="op">.</span><span class="fu">refit</span>()<span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

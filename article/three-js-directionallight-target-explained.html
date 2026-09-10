@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js DirectionalLight Target Explained - three.js</title>
+    <meta name="description" content="In Three.js, the DirectionalLight simulates light emitted from an infinitely distant source in parallel rays, requiring both an origin and an orientation. This orientation is controlled by the light's target property, which dictates the point in 3D space">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-directionallight-target-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js DirectionalLight Target Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-directionallight-target-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the DirectionalLight simulates light emitted from an infinitely distant source in parallel rays, requiring both an origin and an orientation. This orientation is controlled by the light's target property, which dictates the point in 3D space" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-directionallight-target-explained">Three.js
+DirectionalLight Target Explained</h1>
+<p>In Three.js, the <code>DirectionalLight</code> simulates light
+emitted from an infinitely distant source in parallel rays, requiring
+both an origin and an orientation. This orientation is controlled by the
+light's <code>target</code> property, which dictates the point in 3D
+space toward which the rays travel. To make this directional pointing
+work reliably—especially when changing the target's position
+dynamically—the target object itself must be explicitly added to the
+scene graph so Three.js can compute its world transformation matrices
+properly.</p>
+<h3 id="what-is-the-target-property">What Is the <code>target</code>
+Property?</h3>
+<p>A <code>DirectionalLight</code> requires two points in space to
+define the direction of its rays: its own <code>position</code> and its
+<code>target</code>.</p>
+<p>By default, the <code>target</code> property is an instance of
+<code>THREE.Object3D</code> positioned at the world origin
+<code>(0, 0, 0)</code>. The light rays shine from
+<code>light.position</code> toward <code>light.target.position</code>.
+Unlike standard objects whose rotations are manipulated via Euler angles
+or quaternions, a <code>DirectionalLight</code> ignores standard
+rotation adjustments and instead continuously derives its orientation by
+looking at this <code>target</code>.</p>
+<h3 id="why-the-target-must-be-added-to-the-scene">Why the Target Must
+Be Added to the Scene</h3>
+<p>A frequent issue in Three.js is changing
+<code>light.target.position</code> and seeing no change in the light's
+direction or shadow mapping.</p>
+<p>For an object's position, rotation, and scale to affect the rendering
+pipeline, its world matrix must be updated on each frame. In Three.js,
+world matrices are updated automatically by traversing the scene graph
+starting from the root <code>Scene</code> object. Because
+<code>light.target</code> is an independent <code>Object3D</code>,
+creating a <code>DirectionalLight</code> does not automatically make the
+target a child of the light or of the scene.</p>
+<p>If the target is not a descendant of the scene, its world
+transformation matrix is never updated. Consequently, any changes to
+<code>target.position</code> are ignored by the light.</p>
+<h3 id="how-to-implement-it-correctly">How to Implement It
+Correctly</h3>
+<p>To ensure the light tracks its target properly, add both the light
+and its target to the scene:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the directional light</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Adjust the target&#39;s position</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">target</span><span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Add both the light and its target to the scene</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(light)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(light<span class="op">.</span><span class="at">target</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="targeting-existing-meshes">Targeting Existing Meshes</h3>
+<p>If the light should track an existing object in your scene—such as a
+moving player mesh—reassign the light's <code>target</code> directly to
+that mesh:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> characterMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(characterMesh)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign the mesh as the light&#39;s target</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">target</span> <span class="op">=</span> characterMesh<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(light)<span class="op">;</span></span></code></pre></div>
+<p>In this case, you do not need to call
+<code>scene.add(light.target)</code> separately, as
+<code>characterMesh</code> is already part of the scene graph and will
+have its transformation matrix updated automatically every frame.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

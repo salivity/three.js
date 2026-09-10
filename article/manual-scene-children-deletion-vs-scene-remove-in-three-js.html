@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual scene.children Deletion vs scene.remove in Three.js - three.js</title>
+    <meta name="description" content="Manually removing an object from scene.children instead of using scene.remove() disrupts internal Three.js state tracking, potentially breaks the render loop, and leaves dangling references in CPU memory. While manually splicing the array prevents the ob">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/manual-scene-children-deletion-vs-scene-remove-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Manual scene.children Deletion vs scene.remove in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/manual-scene-children-deletion-vs-scene-remove-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Manually removing an object from scene.children instead of using scene.remove() disrupts internal Three.js state tracking, potentially breaks the render loop, and leaves dangling references in CPU memory. While manually splicing the array prevents the ob" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="manual-scenechildren-deletion-vs-sceneremove-in-threejs">Manual
+scene.children Deletion vs scene.remove in Three.js</h1>
+<p>Manually removing an object from <code>scene.children</code> instead
+of using <code>scene.remove()</code> disrupts internal Three.js state
+tracking, potentially breaks the render loop, and leaves dangling
+references in CPU memory. While manually splicing the array prevents the
+object from being drawn, it bypasses the critical step of clearing the
+object's <code>parent</code> property and fails to emit lifecycle
+events. Furthermore, neither approach frees GPU memory, meaning
+materials, textures, and geometries remain in VRAM unless explicitly
+disposed.</p>
+<h3 id="how-sceneremove-works-internally">How
+<code>scene.remove()</code> Works Internally</h3>
+<p>To understand the problems with manual deletion, consider what
+<code>scene.remove(object)</code> actually does under the hood:</p>
+<ol type="1">
+<li>Locates the object's index within <code>scene.children</code>.</li>
+<li>Splices the array to remove the object.</li>
+<li>Sets <code>object.parent = null</code>.</li>
+<li>Dispatches the <code>removed</code> event to the target object and
+its descendants.</li>
+</ol>
+<h3 id="rendering-consequences">Rendering Consequences</h3>
+<p>The impact on the rendering pipeline depends entirely on how the
+manual deletion is performed:</p>
+<ul>
+<li><strong>Using the <code>delete</code> operator
+(<code>delete scene.children[index]</code>):</strong> This is fatal to
+the render loop. The <code>delete</code> operator leaves an
+<code>empty</code> slot (<code>undefined</code>) in the array rather
+than shifting elements. During the next frame, when the renderer
+attempts to traverse <code>scene.children</code>, it encounters
+<code>undefined</code> and throws a
+<code>TypeError: Cannot read properties of undefined</code> when trying
+to access layers or visibility flags, crashing your entire render
+loop.</li>
+<li><strong>Using <code>Array.prototype.splice()</code>:</strong> If you
+manually call <code>scene.children.splice(index, 1)</code>, the object
+is successfully eliminated from the array. Because the WebGLRenderer
+iterates directly over active array elements to build the render list,
+the object will immediately stop rendering. However, because
+<code>object.parent</code> is never set to <code>null</code>, any custom
+logic or third-party libraries checking scene hierarchy via
+<code>.parent</code> will falsely detect that the object is still part
+of the active scene graph.</li>
+</ul>
+<h3 id="cpu-memory-consequences">CPU Memory Consequences</h3>
+<p>Manually removing an element from the array without resetting its
+parent reference creates an asymmetric relationship: the scene no longer
+knows about the child, but the child still points to the scene.</p>
+<p>Modern JavaScript garbage collectors handle circular references
+effectively, so if all external references to the removed object are
+dropped, CPU memory will eventually be reclaimed. However, if your
+application holds onto the removed object, the remaining
+<code>object.parent</code> pointer will prevent the <code>scene</code>
+(and everything attached to it) from being eligible for garbage
+collection, leading to severe CPU memory leaks.</p>
+<p>Additionally, custom event systems or systems relying on the
+<code>removed</code> event will not be notified, leaving orphaned
+listeners intact.</p>
+<h3 id="gpu-memory-vram-is-unaffected">GPU Memory (VRAM) is
+Unaffected</h3>
+<p>A common misconception is that <code>scene.remove()</code> manages
+GPU resource cleanup. In reality, neither <code>scene.remove()</code>
+nor manual array modification affects WebGL memory:</p>
+<ul>
+<li>Geometries, materials, and textures reside in GPU buffers managed
+directly by the WebGL context.</li>
+<li>Removing an object from the scene hierarchy solely stops CPU-side
+tracking and WebGL render list generation.</li>
+<li>To completely free memory on the GPU, you must manually traverse the
+object and invoke <code>.dispose()</code> on its geometry, materials,
+and associated textures.</li>
+</ul>
+<h3 id="summary">Summary</h3>
+<p>Directly modifying <code>scene.children</code> provides no
+performance benefits and introduces hierarchy synchronization bugs or
+runtime crashes. Always use <code>scene.remove(object)</code> to
+maintain correct scene graph relationships, and chain
+<code>.dispose()</code> calls on underlying assets when the object is no
+longer needed.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

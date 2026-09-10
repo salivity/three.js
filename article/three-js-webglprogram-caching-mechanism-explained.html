@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js WebGLProgram Caching Mechanism Explained - three.js</title>
+    <meta name="description" content="Compiling WebGL shaders and linking them into GPU programs is one of the most performance-intensive operations in real-time 3D rendering. To prevent frame drops and redundant GPU overhead, Three.js implements an internal caching subsystem managed by the">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-webglprogram-caching-mechanism-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js WebGLProgram Caching Mechanism Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-webglprogram-caching-mechanism-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Compiling WebGL shaders and linking them into GPU programs is one of the most performance-intensive operations in real-time 3D rendering. To prevent frame drops and redundant GPU overhead, Three.js implements an internal caching subsystem managed by the" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-webglprogram-caching-mechanism-explained">Three.js
+WebGLProgram Caching Mechanism Explained</h1>
+<p>Compiling WebGL shaders and linking them into GPU programs is one of
+the most performance-intensive operations in real-time 3D rendering. To
+prevent frame drops and redundant GPU overhead, Three.js implements an
+internal caching subsystem managed by the <code>WebGLPrograms</code>
+module. This mechanism evaluates the rendering state, scene
+configuration, and material parameters to generate a unique cache
+signature, ensuring that identical shader configurations share a single
+compiled <code>WebGLProgram</code> instance across multiple meshes.</p>
+<h3 id="the-role-of-webglprograms">The Role of WebGLPrograms</h3>
+<p>At the core of the caching architecture is the
+<code>WebGLPrograms</code> manager, initialized internally by
+<code>WebGLRenderer</code>. Compiling a GLSL shader requires calls to
+WebGL APIs like <code>gl.compileShader()</code> and
+<code>gl.linkProgram()</code>, which block CPU-GPU execution. To
+minimize these operations, Three.js delegates all program generation
+requests to <code>WebGLPrograms.acquireProgram()</code>. Instead of
+blindly compiling a new program whenever a material is used, the
+renderer queries this manager to check whether a matching program has
+already been built.</p>
+<h3 id="generating-the-program-cache-key">Generating the Program Cache
+Key</h3>
+<p>The identification process relies on generating a deterministic
+string key representing the final state of the shader. Three.js
+evaluates several input parameters through internal helper methods like
+<code>getProgramCode()</code> to form this key:</p>
+<ul>
+<li><strong>Material Properties and Defines:</strong> Custom GLSL
+<code>#define</code> directives, material types (e.g.,
+<code>MeshStandardMaterial</code>, <code>MeshBasicMaterial</code>),
+precision settings, and boolean flags such as <code>wireframe</code>,
+<code>transparent</code>, or <code>fog</code>.</li>
+<li><strong>Scene and Environment State:</strong> Active lighting types
+(directional, point, spot, ambient), shadow map configurations,
+environment maps, and active tone mapping or color space
+transformations.</li>
+<li><strong>Geometry Capabilities:</strong> Mesh attributes such as
+vertex colors, morph targets, skinning indices, UV channels, and
+instanced rendering parameters.</li>
+<li><strong>Shader Snippets (ShaderChunks):</strong> Injected GLSL
+blocks provided directly or through plugins such as
+<code>onBeforeCompile</code>.</li>
+</ul>
+<p>Rather than executing an expensive full-text hash of the entire GLSL
+source code, Three.js builds a concatenated string containing these
+configuration parameters along with the vertex and fragment shader IDs.
+This generated string acts as the fingerprint for the required GPU
+program.</p>
+<h3 id="program-retrieval-and-reference-counting">Program Retrieval and
+Reference Counting</h3>
+<p>The <code>WebGLPrograms</code> instance maintains an internal array
+of cached program entries. When <code>acquireProgram()</code> is
+executed during a render pass:</p>
+<ol type="1">
+<li>The renderer calculates the cache key (<code>code</code>) for the
+given material and rendering state.</li>
+<li>The manager iterates through existing program records to find a
+match where <code>entry.code === code</code>.</li>
+<li>If an identical key is located, Three.js reuses the corresponding
+<code>WebGLProgram</code> instance without executing any WebGL
+compilation calls.</li>
+<li>The entry’s reference count (<code>usedTimes</code>) increments by
+one, tracking how many active materials or objects depend on that
+specific GPU program.</li>
+</ol>
+<h3 id="compilation-of-new-programs">Compilation of New Programs</h3>
+<p>If no match exists for the generated key, Three.js initiates the
+compilation sequence:</p>
+<ol type="1">
+<li>A new <code>WebGLProgram</code> object is instantiated.</li>
+<li>The GLSL code is resolved by expanding Three.js
+<code>ShaderChunk</code> definitions, applying preprocessor macros, and
+binding attributes and uniforms.</li>
+<li>The vertex and fragment shaders are compiled and linked via the
+native WebGL context.</li>
+<li>The resulting <code>WebGLProgram</code> is packaged alongside its
+cache key and reference count (<code>usedTimes = 1</code>), then stored
+in the cache array for future render cycles.</li>
+</ol>
+<h3 id="program-disposal-and-cleanup">Program Disposal and Cleanup</h3>
+<p>When a material is disposed of using <code>material.dispose()</code>,
+Three.js calls <code>WebGLPrograms.releaseProgram()</code>. The manager
+decrements the <code>usedTimes</code> counter for that program. When
+<code>usedTimes</code> reaches zero—meaning no active materials in the
+scene depend on that shader configuration—the program is unlinked,
+deleted from GPU memory using <code>gl.deleteProgram()</code>, and
+permanently removed from the internal cache list.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

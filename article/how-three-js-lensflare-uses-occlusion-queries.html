@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Three.js Lensflare Uses Occlusion Queries - three.js</title>
+    <meta name="description" content="This article explores how the Three.js Lensflare add-on leverages WebGL hardware occlusion queries to accurately determine when a light source is hidden behind 3D geometry. By offloading visibility tests to the GPU rather than performing expensive CPU-si">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-three-js-lensflare-uses-occlusion-queries">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Three.js Lensflare Uses Occlusion Queries - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-three-js-lensflare-uses-occlusion-queries" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores how the Three.js Lensflare add-on leverages WebGL hardware occlusion queries to accurately determine when a light source is hidden behind 3D geometry. By offloading visibility tests to the GPU rather than performing expensive CPU-si" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-threejs-lensflare-uses-occlusion-queries">How Three.js
+Lensflare Uses Occlusion Queries</h1>
+<p>This article explores how the Three.js <code>Lensflare</code> add-on
+leverages WebGL hardware occlusion queries to accurately determine when
+a light source is hidden behind 3D geometry. By offloading visibility
+tests to the GPU rather than performing expensive CPU-side raycasting,
+the engine evaluates depth buffer interactions asynchronously. You will
+learn the technical mechanics behind this process, including proxy
+geometry rendering, query polling, and how the results dynamically scale
+flare opacity.</p>
+<h3 id="the-occlusion-challenge">The Occlusion Challenge</h3>
+<p>In real-time 3D graphics, a lens flare should only be visible when
+the light source has a clear line of sight to the camera. Determining
+this visibility on the CPU using raycasting is computationally
+expensive, especially in scenes with complex meshes or animated models.
+Furthermore, CPU raycasting does not natively account for complex GPU
+states, such as depth testing, alpha-tested geometry, or displacement
+mapping.</p>
+<p>To achieve pixel-accurate visibility testing without burdening the
+CPU, Three.js shifts this calculation to the graphics processor using
+hardware occlusion queries.</p>
+<h3 id="setting-up-the-occlusion-query">Setting Up the Occlusion
+Query</h3>
+<p>When WebGL 2.0 is active (or when using the
+<code>EXT_disjoint_timer_query</code> extension in WebGL 1.0), the GPU
+provides the ability to count how many visual samples pass the depth and
+stencil tests during a draw call.</p>
+<p>The <code>Lensflare</code> implementation manages this through the
+WebGL API:</p>
+<ol type="1">
+<li><strong>Query Creation</strong>: The system generates a WebGL query
+object using <code>gl.createQuery()</code>.</li>
+<li><strong>Target Mode</strong>: The query is bound with the target
+<code>gl.ANY_SAMPLES_PASSED</code> or
+<code>gl.ANY_SAMPLES_PASSED_CONSERVATIVE</code>. The conservative
+variant allows the GPU to return a faster boolean-style confirmation of
+whether any fragment passed, prioritizing performance over precise
+fragment counts.</li>
+</ol>
+<h3 id="the-proxy-geometry-pass">The Proxy Geometry Pass</h3>
+<p>Instead of testing the light source as an abstract mathematical
+point, the <code>Lensflare</code> add-on draws a miniature proxy
+mesh—typically a 16×16 pixel quad or a small bounding shape—positioned
+directly at the light's world coordinates.</p>
+<p>The occlusion testing process follows these steps during the render
+loop:</p>
+<ol type="1">
+<li><strong>Scene Depth Pre-Pass</strong>: The main 3D scene is rendered
+normally, populating the depth buffer with the distance values of all
+opaque and transparent objects.</li>
+<li><strong>Depth Masking</strong>: The renderer disables color writes
+(<code>gl.colorMask(false, false, false, false)</code>) and depth writes
+(<code>gl.depthMask(false)</code>). This ensures the proxy geometry
+remains completely invisible and does not alter the scene's existing
+depth values.</li>
+<li><strong>Beginning the Query</strong>: The driver initiates the query
+with <code>gl.beginQuery(...)</code>.</li>
+<li><strong>Drawing the Proxy</strong>: The proxy geometry is drawn with
+depth testing enabled (<code>gl.depthFunc(gl.LEQUAL)</code>). The GPU
+tests the proxy fragments against the previously rendered scene depth
+buffer.</li>
+<li><strong>Ending the Query</strong>: The call to
+<code>gl.endQuery(...)</code> instructs the GPU to tally how many
+fragments of the proxy successfully passed the depth test.</li>
+</ol>
+<p>If geometry sits between the camera and the light, the proxy
+fragments fail the depth test. If the path is clear, some or all
+fragments pass.</p>
+<h3 id="asynchronous-polling-and-pipeline-management">Asynchronous
+Polling and Pipeline Management</h3>
+<p>Retrieving query results synchronously would cause a GPU pipeline
+stall (a CPU-GPU sync point), forcing the CPU to wait until the GPU
+finishes rendering the frame, which degrades framerates.</p>
+<p>To prevent this bottleneck, the <code>Lensflare</code> add-on handles
+results asynchronously:</p>
+<ul>
+<li>On subsequent frames, the script checks if the query result is
+available using
+<code>gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)</code>.</li>
+<li>Once the GPU sets this flag to <code>true</code>, the code calls
+<code>gl.getQueryParameter(query, gl.QUERY_RESULT)</code>.</li>
+<li>Because the result is read one or two frames after the draw call
+occurred, the visibility check operates with a slight latency.</li>
+</ul>
+<h3 id="updating-flare-visibility">Updating Flare Visibility</h3>
+<p>Once the passed sample count is obtained, the add-on computes an
+occlusion ratio:</p>
+<p><span class="math display">\[\text{Visibility} = \frac{\text{Samples
+Passed}}{\text{Total Expected Samples}}\]</span></p>
+<p>If the result indicates the proxy was fully occluded, the visibility
+is set to zero. If partially occluded, such as when a light peeks around
+an edge, a fractional value is returned.</p>
+<p>This visibility ratio is then used to modulate the opacity and scale
+of each flare element defined within the <code>Lensflare</code>
+instance. To mask the frame delay inherent in asynchronous polling, the
+system linearly interpolates (lerps) the flare’s opacity between frames.
+This results in a smooth transition as the light emerges from or
+disappears behind solid objects in the 3D environment.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

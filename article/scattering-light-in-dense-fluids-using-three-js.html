@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scattering Light in Dense Fluids Using Three.js - three.js</title>
+    <meta name="description" content="Simulating the way light scatters and absorbs inside dense fluids requires physically based volume rendering techniques. In Three.js, this effect is achieved using MeshPhysicalMaterial by combining transmission with subsurface volume properties: thicknes">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/scattering-light-in-dense-fluids-using-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Scattering Light in Dense Fluids Using Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/scattering-light-in-dense-fluids-using-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Simulating the way light scatters and absorbs inside dense fluids requires physically based volume rendering techniques. In Three.js, this effect is achieved using MeshPhysicalMaterial by combining transmission with subsurface volume properties: thicknes" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="scattering-light-in-dense-fluids-using-threejs">Scattering Light
+in Dense Fluids Using Three.js</h1>
+<p>Simulating the way light scatters and absorbs inside dense fluids
+requires physically based volume rendering techniques. In Three.js, this
+effect is achieved using <code>MeshPhysicalMaterial</code> by combining
+transmission with subsurface volume properties: <code>thickness</code>,
+<code>attenuationColor</code>, and <code>attenuationDistance</code>.
+This guide details how to configure these parameters to model materials
+like milk, murky water, amber, or honey accurately.</p>
+<h3 id="enabling-transmission">Enabling Transmission</h3>
+<p>Before <code>thickness</code> and attenuation properties take effect,
+you must enable volumetric transmission. Set the
+<code>transmission</code> property to a high value (typically between
+<code>0.9</code> and <code>1.0</code>), which permits light to pass
+through the surface of the mesh into its interior volume.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fluidMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transmission</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.1</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ior</span><span class="op">:</span> <span class="fl">1.333</span> <span class="co">// Typical index of refraction for water-based liquids</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="understanding-the-volume-properties">Understanding the Volume
+Properties</h3>
+<p>To simulate dense fluids, Three.js implements the Beer-Lambert law,
+which dictates that light loses intensity and changes color as it
+travels through an absorbing medium:</p>
+<ul>
+<li><strong><code>thickness</code></strong>: Defines the perceived depth
+of the volume along the surface normal. It sets an upper bound on how
+far light travels inside the object before exiting. A higher thickness
+means light spends more time traversing the medium.</li>
+<li><strong><code>attenuationColor</code></strong>: The color that white
+light shifts toward as it penetrates the volume. For dense liquids, this
+represents the internal absorption tint (for example, deep amber for
+honey or cloudy off-white for diluted milk).</li>
+<li><strong><code>attenuationDistance</code></strong>: The average
+distance light must travel inside the object before it completely
+transitions to the <code>attenuationColor</code>. A smaller distance
+produces a denser, more opaque liquid because light is absorbed
+rapidly.</li>
+</ul>
+<h3 id="configuring-dense-fluids">Configuring Dense Fluids</h3>
+<p>Dense liquids require a short <code>attenuationDistance</code>
+relative to the mesh dimensions and the material's
+<code>thickness</code>. When <code>attenuationDistance</code> is
+significantly smaller than <code>thickness</code>, light cannot
+penetrate deeply, resulting in a dense, murky appearance.</p>
+<p>Here is an example setup for a dense amber fluid:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> denseFluidMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span>              <span class="co">// Keep base color white to let attenuation define tint</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transmission</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span>            <span class="co">// Allow light into the volume</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">opacity</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span>           <span class="co">// Set transparent to false for optimal transmission rendering</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.15</span><span class="op">,</span>              <span class="co">// Slight surface roughness to soften reflections</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ior</span><span class="op">:</span> <span class="fl">1.45</span><span class="op">,</span>                    <span class="co">// Dense fluid refractive index (e.g., oils, syrups)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">thickness</span><span class="op">:</span> <span class="fl">2.0</span><span class="op">,</span>               <span class="co">// Maximum depth of the fluid volume</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">attenuationColor</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="bn">0xd97b26</span>)<span class="op">,</span> <span class="co">// Amber tint</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">attenuationDistance</span><span class="op">:</span> <span class="fl">0.4</span>      <span class="co">// Short distance creates high density and rapid absorption</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="tuning-tips-for-realism">Tuning Tips for Realism</h3>
+<ol type="1">
+<li><strong>Scale Dependence</strong>: <code>attenuationDistance</code>
+and <code>thickness</code> are expressed in world units. If your mesh
+has a radius of 10 units, an <code>attenuationDistance</code> of
+<code>0.5</code> will make it look completely opaque, while the same
+value on a mesh with a radius of 0.2 units will look clear. Match these
+values to your scene's real-world scale.</li>
+<li><strong>Roughness for Turbidity</strong>: Pure liquids have a low
+<code>roughness</code> (<code>0.0</code> to <code>0.05</code>). For
+colloids or suspensions with suspended particles like milk, increase
+<code>roughness</code> to <code>0.2</code> or <code>0.3</code> to
+diffuse light across the surface.</li>
+<li><strong>Environment Maps</strong>: Transmission materials rely
+heavily on refracted light from the surrounding environment. Ensure an
+<code>HDRI</code> environment map is applied to
+<code>scene.environment</code> to provide realistic light paths through
+the dense volume.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

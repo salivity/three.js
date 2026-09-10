@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use readRenderTargetPixels in Three.js - three.js</title>
+    <meta name="description" content="Extracting rendered pixel data from an off-screen target is a common task in Three.js for applications like color picking, computer vision, and texture processing. This guide explains how to use the WebGLRenderer.readRenderTargetPixels method to read RGB">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-readrendertargetpixels-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use readRenderTargetPixels in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-readrendertargetpixels-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extracting rendered pixel data from an off-screen target is a common task in Three.js for applications like color picking, computer vision, and texture processing. This guide explains how to use the WebGLRenderer.readRenderTargetPixels method to read RGB" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-readrendertargetpixels-in-threejs">How to Use
+readRenderTargetPixels in Three.js</h1>
+<p>Extracting rendered pixel data from an off-screen target is a common
+task in Three.js for applications like color picking, computer vision,
+and texture processing. This guide explains how to use the
+<code>WebGLRenderer.readRenderTargetPixels</code> method to read RGBA
+values from a <code>WebGLRenderTarget</code> directly into a JavaScript
+typed array.</p>
+<h3 id="prerequisites-and-core-concept">Prerequisites and Core
+Concept</h3>
+<p>To extract pixels, you need an active <code>WebGLRenderer</code>, a
+<code>WebGLRenderTarget</code> with content rendered to it, and a typed
+array buffer to receive the raw pixel bytes. By default, standard render
+targets use <code>THREE.UnsignedByteType</code>, which outputs 8-bit
+unsigned integer values (0–255) for Red, Green, Blue, and Alpha
+channels, requiring a <code>Uint8Array</code>.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-set-up-the-render-target">1. Set Up the Render Target</h4>
+<p>Define the dimensions and instantiate the target:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-render-to-the-target">2. Render to the Target</h4>
+<p>Direct your renderer to draw your scene into the render target
+instead of the default canvas:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(renderTarget)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(<span class="kw">null</span>)<span class="op">;</span> <span class="co">// Reset back to default framebuffer</span></span></code></pre></div>
+<h4 id="3-prepare-the-buffer-and-read-pixels">3. Prepare the Buffer and
+Read Pixels</h4>
+<p>Instantiate a <code>Uint8Array</code> sized to hold 4 bytes (RGBA)
+per pixel for the designated region. Then, call
+<code>readRenderTargetPixels</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Buffer size: width * height * 4 (RGBA)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pixelBuffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(width <span class="op">*</span> height <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Parameters: renderTarget, x, y, width, height, buffer, activeCubeFaceIndex</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">readRenderTargetPixels</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="dv">0</span><span class="op">,</span>          <span class="co">// X offset</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dv">0</span><span class="op">,</span>          <span class="co">// Y offset</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  width<span class="op">,</span>      <span class="co">// Read width</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  height<span class="op">,</span>     <span class="co">// Read height</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  pixelBuffer</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="accessing-individual-pixel-colors">Accessing Individual Pixel
+Colors</h3>
+<p>The returned buffer stores pixel components sequentially in row-major
+order starting from the bottom-left corner <code>(0, 0)</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getPixelColor</span>(x<span class="op">,</span> y<span class="op">,</span> width<span class="op">,</span> buffer) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> index <span class="op">=</span> (y <span class="op">*</span> width <span class="op">+</span> x) <span class="op">*</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">r</span><span class="op">:</span> buffer[index]<span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">g</span><span class="op">:</span> buffer[index <span class="op">+</span> <span class="dv">1</span>]<span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">b</span><span class="op">:</span> buffer[index <span class="op">+</span> <span class="dv">2</span>]<span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">a</span><span class="op">:</span> buffer[index <span class="op">+</span> <span class="dv">3</span>]</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pixel <span class="op">=</span> <span class="fu">getPixelColor</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">20</span><span class="op">,</span> width<span class="op">,</span> pixelBuffer)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`R: </span><span class="sc">${</span>pixel<span class="op">.</span><span class="at">r</span><span class="sc">}</span><span class="vs">, G: </span><span class="sc">${</span>pixel<span class="op">.</span><span class="at">g</span><span class="sc">}</span><span class="vs">, B: </span><span class="sc">${</span>pixel<span class="op">.</span><span class="at">b</span><span class="sc">}</span><span class="vs">, A: </span><span class="sc">${</span>pixel<span class="op">.</span><span class="at">a</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="reading-single-pixels-for-picking">Reading Single Pixels for
+Picking</h3>
+<p>If you only need the color under the cursor, avoid reading the entire
+texture by setting the extraction width and height to
+<code>1</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> singlePixel <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(<span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">readRenderTargetPixels</span>(renderTarget<span class="op">,</span> mouseX<span class="op">,</span> mouseY<span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> singlePixel)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> [r<span class="op">,</span> g<span class="op">,</span> b<span class="op">,</span> a] <span class="op">=</span> singlePixel<span class="op">;</span></span></code></pre></div>
+<h3 id="float-type-render-targets">Float Type Render Targets</h3>
+<p>If your <code>WebGLRenderTarget</code> is configured with
+floating-point textures (e.g., <code>type: THREE.FloatType</code>),
+replace <code>Uint8Array</code> with <code>Float32Array</code>:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> floatRenderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">FloatType</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> floatBuffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(width <span class="op">*</span> height <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">readRenderTargetPixels</span>(floatRenderTarget<span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> width<span class="op">,</span> height<span class="op">,</span> floatBuffer)<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<p>Calling <code>readRenderTargetPixels</code> forces a synchronous
+GPU-to-CPU synchronization, stalling the GPU rendering pipeline until
+data transfer completes. To maintain optimal framerates:</p>
+<ul>
+<li>Minimize the extracted area (e.g., sample a 1x1 region rather than
+the full viewport).</li>
+<li>Avoid calling the method every frame unless strictly necessary.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

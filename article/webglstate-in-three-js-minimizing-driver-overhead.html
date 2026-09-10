@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGLState in Three.js: Minimizing Driver Overhead - three.js</title>
+    <meta name="description" content="The WebGLState class in Three.js acts as an internal caching layer and state manager that sits between the engine's high-level scene graph and the low-level WebGL rendering context. WebGL is inherently a state machine, meaning that configuring capabiliti">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/webglstate-in-three-js-minimizing-driver-overhead">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WebGLState in Three.js: Minimizing Driver Overhead - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/webglstate-in-three-js-minimizing-driver-overhead" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The WebGLState class in Three.js acts as an internal caching layer and state manager that sits between the engine's high-level scene graph and the low-level WebGL rendering context. WebGL is inherently a state machine, meaning that configuring capabiliti" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="webglstate-in-threejs-minimizing-driver-overhead">WebGLState in
+Three.js: Minimizing Driver Overhead</h1>
+<p>The <code>WebGLState</code> class in Three.js acts as an internal
+caching layer and state manager that sits between the engine's
+high-level scene graph and the low-level WebGL rendering context. WebGL
+is inherently a state machine, meaning that configuring capabilities
+like depth testing, blending, and texture binding requires direct GPU
+driver communication. This article explains how <code>WebGLState</code>
+maintains a local representation of these settings to prevent redundant
+API calls, minimize costly CPU-to-GPU driver overhead, and maintain high
+rendering throughput in complex 3D scenes.</p>
+<h3 id="what-is-webglstate">What Is WebGLState?</h3>
+<p>In Three.js, <code>WebGLState</code> is an internal component
+instantiated by <code>WebGLRenderer</code>. When rendering a frame
+containing hundreds or thousands of distinct meshes with varying
+materials, the renderer constantly needs to change graphical
+configurations. Instead of invoking native WebGL context methods—such as
+<code>gl.enable()</code>, <code>gl.disable()</code>, or
+<code>gl.blendFunc()</code>—directly on the WebGL context, the renderer
+delegates all state-mutation commands through
+<code>WebGLState</code>.</p>
+<h3 id="the-problem-webgl-driver-overhead">The Problem: WebGL Driver
+Overhead</h3>
+<p>WebGL function calls are not executed directly on the GPU hardware
+immediately; they pass through the browser's graphics layer down to the
+underlying operating system graphics driver (DirectX via ANGLE, Metal,
+or native OpenGL).</p>
+<p>Switching states or making redundant API calls carries substantial
+CPU overhead:</p>
+<ol type="1">
+<li><strong>Redundant Transitions:</strong> If fifty consecutive meshes
+use standard depth testing, calling
+<code>gl.enable(gl.DEPTH_TEST)</code> fifty times forces the driver to
+validate the same pipeline configuration fifty times.</li>
+<li><strong>Context Synchronization:</strong> Querying the state via
+<code>gl.getParameter()</code> forces the CPU to synchronize with the
+GPU, halting the pipeline and destroying real-time performance.</li>
+</ol>
+<h3 id="how-webglstate-minimizes-overhead">How WebGLState Minimizes
+Overhead</h3>
+<p><code>WebGLState</code> eliminates this performance penalty using
+local state caching and dirty-checking mechanisms.</p>
+<h4 id="1-shadow-state-caching">1. Shadow State Caching</h4>
+<p><code>WebGLState</code> stores the current state of every tracked
+WebGL setting within plain JavaScript primitives and objects. Properties
+tracked include:</p>
+<ul>
+<li>Depth tests, depth masks, and depth functions
+(<code>gl.DEPTH_TEST</code>, <code>gl.depthMask</code>,
+<code>gl.depthFunc</code>)</li>
+<li>Face culling and winding orders (<code>gl.CULL_FACE</code>,
+<code>gl.frontFace</code>, <code>gl.cullFace</code>)</li>
+<li>Blending modes, equations, and premultiplied alpha
+(<code>gl.BLEND</code>, <code>gl.blendEquation</code>,
+<code>gl.blendFuncSeparate</code>)</li>
+<li>Color write masks (<code>gl.colorMask</code>)</li>
+<li>Stencil tests, buffers, and operations</li>
+<li>Scissor and viewport dimensions</li>
+</ul>
+<h4 id="2-diffing-before-dispatching">2. Diffing Before Dispatching</h4>
+<p>Whenever a material requires a specific state,
+<code>WebGLState</code> compares the incoming value with its cached
+copy. If the incoming value matches the existing state, the function
+immediately returns without invoking the underlying WebGL context. The
+native <code>gl.*</code> call is only dispatched when a change is
+strictly required.</p>
+<p>For example, when setting depth behavior:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Conceptual representation of WebGLState&#39;s internal logic</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">setDepthTest</span>(depthTest) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (currentDepthTest <span class="op">!==</span> depthTest) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (depthTest) {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>            gl<span class="op">.</span><span class="fu">enable</span>(gl<span class="op">.</span><span class="at">DEPTH_TEST</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            gl<span class="op">.</span><span class="fu">disable</span>(gl<span class="op">.</span><span class="at">DEPTH_TEST</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        currentDepthTest <span class="op">=</span> depthTest<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="3-texture-unit-management">3. Texture Unit Management</h4>
+<p>One of the most performance-sensitive areas in WebGL is binding
+textures to texture units. Binding a texture to an active unit requires
+context switches. <code>WebGLState</code> manages an internal array
+representing active texture units (<code>gl.TEXTURE0</code>,
+<code>gl.TEXTURE1</code>, etc.). It ensures that:</p>
+<ul>
+<li>Three.js only calls <code>gl.activeTexture()</code> if the requested
+unit is not already active.</li>
+<li>Textures are only rebound if a new texture target or WebGLTexture
+reference occupies that slot.</li>
+<li>Unnecessary texture unbinding is avoided between draw calls sharing
+common textures.</li>
+</ul>
+<h4 id="4-avoiding-context-queries">4. Avoiding Context Queries</h4>
+<p>Because <code>WebGLState</code> keeps an authoritative track of the
+current GPU state, Three.js never needs to call
+<code>gl.getParameter()</code> during a render loop. By retaining the
+state entirely in JavaScript memory, the engine prevents CPU-GPU
+stalls.</p>
+<h3 id="performance-impact">Performance Impact</h3>
+<p>By filtering out redundant calls and managing hardware slots in
+memory, <code>WebGLState</code> flattens the CPU workload of the render
+loop. This leaves more frame-time budget available for application
+logic, physics, matrix updates, and shader computations, allowing
+Three.js applications to draw large numbers of meshes with varying
+material properties at steady frame rates.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

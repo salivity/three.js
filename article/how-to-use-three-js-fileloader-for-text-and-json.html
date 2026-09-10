@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js FileLoader for Text and JSON - three.js</title>
+    <meta name="description" content="This guide explains how to use the THREE.FileLoader class to load low-level, generic text, and JSON assets into your Three.js application. You will learn the basic setup, how to configure different response types, manage asynchronous loading using callba">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-fileloader-for-text-and-json">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js FileLoader for Text and JSON - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-fileloader-for-text-and-json" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to use the THREE.FileLoader class to load low-level, generic text, and JSON assets into your Three.js application. You will learn the basic setup, how to configure different response types, manage asynchronous loading using callba" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-threejs-fileloader-for-text-and-json">How to Use
+Three.js FileLoader for Text and JSON</h1>
+<p>This guide explains how to use the <code>THREE.FileLoader</code>
+class to load low-level, generic text, and JSON assets into your
+Three.js application. You will learn the basic setup, how to configure
+different response types, manage asynchronous loading using callbacks
+and Promises, and handle common errors during data fetching.</p>
+<h3 id="what-is-threefileloader">What is THREE.FileLoader?</h3>
+<p><code>THREE.FileLoader</code> is a low-level utility class used
+internally by many of Three.js's higher-level loaders, such as
+<code>GLTFLoader</code> and <code>OBJLoader</code>. It relies on the
+browser's <code>fetch</code> or <code>XMLHttpRequest</code> APIs to
+retrieve raw data from a given URL or file path. You can use it directly
+whenever you need to import configuration files, custom shader code,
+point cloud text formats, or arbitrary JSON structures to configure your
+3D scene.</p>
+<h3 id="basic-implementation">Basic Implementation</h3>
+<p>To use <code>THREE.FileLoader</code>, instantiate the class and call
+its <code>.load()</code> method. The method accepts four arguments: the
+asset URL, an <code>onLoad</code> callback, an optional
+<code>onProgress</code> callback, and an optional <code>onError</code>
+callback.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiate the loader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fileLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">FileLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Load a simple text file</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>fileLoader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;assets/shaders/customVertexShader.glsl&#39;</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// onLoad callback</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (data) {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;File loaded successfully:&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(data)<span class="op">;</span> <span class="co">// Raw text by default</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// onProgress callback</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (xhr) {</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>((xhr<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> xhr<span class="op">.</span><span class="at">total</span> <span class="op">*</span> <span class="dv">100</span>) <span class="op">+</span> <span class="st">&#39;% loaded&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// onError callback</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (err) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred while loading the file:&#39;</span><span class="op">,</span> err)<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="configuring-response-types">Configuring Response Types</h3>
+<p>By default, <code>THREE.FileLoader</code> returns data as a plain
+string. To change how the response is parsed before reaching the
+<code>onLoad</code> callback, call <code>.setResponseType()</code> on
+the loader instance.</p>
+<p>Supported response types include:</p>
+<ul>
+<li><code>""</code> or <code>"text"</code> (default): Returns standard
+string text.</li>
+<li><code>"arraybuffer"</code>: Returns an <code>ArrayBuffer</code>
+containing raw binary data.</li>
+<li><code>"blob"</code>: Returns a <code>Blob</code> object.</li>
+<li><code>"document"</code>: Parses the file as an XML/HTML
+document.</li>
+<li><code>"json"</code>: Automatically parses the response into a
+JavaScript object via <code>JSON.parse()</code>.</li>
+</ul>
+<h3 id="fetching-json-data">Fetching JSON Data</h3>
+<p>When fetching JSON configuration or level design data, set the
+response type to <code>'json'</code>. The parsed JavaScript object will
+be passed directly to the <code>onLoad</code> callback, eliminating the
+need to call <code>JSON.parse()</code> manually.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">FileLoader</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Set the expected response type to JSON</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">setResponseType</span>(<span class="st">&#39;json&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;assets/data/sceneConfig.json&#39;</span><span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (jsonData) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// jsonData is already parsed into a JavaScript object</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Scene config loaded:&#39;</span><span class="op">,</span> jsonData)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Example: apply values to your scene</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (jsonData<span class="op">.</span><span class="at">backgroundColor</span>) {</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      scene<span class="op">.</span><span class="at">background</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(jsonData<span class="op">.</span><span class="at">backgroundColor</span>)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">undefined</span><span class="op">,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> (error) {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Failed to load JSON config:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="wrapping-fileloader-with-promises--async-await">Wrapping
+FileLoader with Promises / Async-Await</h3>
+<p>For cleaner application logic and to avoid callback nesting, you can
+wrap <code>THREE.FileLoader</code> in a Promise:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">loadFileAsync</span>(url<span class="op">,</span> responseType <span class="op">=</span> <span class="st">&#39;text&#39;</span>) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">FileLoader</span>()<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  loader<span class="op">.</span><span class="fu">setResponseType</span>(responseType)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> <span class="bu">Promise</span>((resolve<span class="op">,</span> reject) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    loader<span class="op">.</span><span class="fu">load</span>(url<span class="op">,</span> resolve<span class="op">,</span> <span class="kw">undefined</span><span class="op">,</span> reject)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage with async/await</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">initSceneData</span>() {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> config <span class="op">=</span> <span class="cf">await</span> <span class="fu">loadFileAsync</span>(<span class="st">&#39;assets/data/sceneConfig.json&#39;</span><span class="op">,</span> <span class="st">&#39;json&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> vertexShader <span class="op">=</span> <span class="cf">await</span> <span class="fu">loadFileAsync</span>(<span class="st">&#39;assets/shaders/vertex.glsl&#39;</span><span class="op">,</span> <span class="st">&#39;text&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Proceed with creating materials and objects</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> customMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>      <span class="dt">vertexShader</span><span class="op">:</span> vertexShader<span class="op">,</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>      <span class="co">// ...</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (error) {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;Error during data initialization:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="fu">initSceneData</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="setting-custom-headers-and-paths">Setting Custom Headers and
+Paths</h3>
+<p><code>THREE.FileLoader</code> provides utility methods to modify how
+network requests are made:</p>
+<ul>
+<li><strong><code>setPath(basePath)</code></strong>: Prepends a base URL
+or path to all subsequent <code>.load()</code> calls.</li>
+<li><strong><code>setRequestHeader(headers)</code></strong>: Accepts an
+object of HTTP headers to include with the request, useful when fetching
+protected assets requiring authentication tokens.</li>
+<li><strong><code>setWithCredentials(boolean)</code></strong>:
+Determines whether cross-origin requests should include credentials like
+cookies.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

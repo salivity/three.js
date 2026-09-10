@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expand a Three.js Box3 Using expandByPoint - three.js</title>
+    <meta name="description" content="This article explains how to use the expandByPoint method of the Box3 class in Three.js to dynamically grow a 3D bounding box to enclose a specified point. You will learn the mechanics behind the method, how it affects the internal minimum and maximum co">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/expand-a-three-js-box3-using-expandbypoint">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Expand a Three.js Box3 Using expandByPoint - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/expand-a-three-js-box3-using-expandbypoint" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to use the expandByPoint method of the Box3 class in Three.js to dynamically grow a 3D bounding box to enclose a specified point. You will learn the mechanics behind the method, how it affects the internal minimum and maximum co" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="expand-a-threejs-box3-using-expandbypoint">Expand a Three.js
+Box3 Using expandByPoint</h1>
+<p>This article explains how to use the <code>expandByPoint</code>
+method of the <code>Box3</code> class in Three.js to dynamically grow a
+3D bounding box to enclose a specified point. You will learn the
+mechanics behind the method, how it affects the internal minimum and
+maximum coordinates of the bounding box, and how to implement it
+effectively with clear code examples.</p>
+<h3 id="understanding-box3-and-expandbypoint">Understanding
+<code>Box3</code> and <code>expandByPoint</code></h3>
+<p>In Three.js, <code>THREE.Box3</code> represents an axis-aligned
+bounding box (AABB) defined by two <code>THREE.Vector3</code> vectors:
+<code>min</code> and <code>max</code>.</p>
+<p>The <code>expandByPoint(point)</code> method evaluates an arbitrary
+<code>THREE.Vector3</code> against the current boundaries of the box. If
+the coordinates of the target point fall outside the existing volume,
+the method adjusts <code>min</code> and <code>max</code> along the X, Y,
+and Z axes so that the box minimally encapsulates the new point:</p>
+<ul>
+<li><code>this.min.min(point)</code>: Reduces the <code>min</code>
+coordinates if the point has lower values.</li>
+<li><code>this.max.max(point)</code>: Increases the <code>max</code>
+coordinates if the point has higher values.</li>
+</ul>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-initializing-the-bounding-box">1. Initializing the Bounding
+Box</h4>
+<p>When creating a new <code>Box3</code>, it is initialized as an empty
+box where <code>min</code> is set to
+<code>(+Infinity, +Infinity, +Infinity)</code> and <code>max</code> is
+set to <code>(-Infinity, -Infinity, -Infinity)</code>. Calling
+<code>expandByPoint</code> on an empty box sets both <code>min</code>
+and <code>max</code> directly to the coordinates of that initial
+point.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create an empty bounding box</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> box <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Box3</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Define an initial point</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> firstPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Expand the empty box to contain the first point</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">expandByPoint</span>(firstPoint)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(box<span class="op">.</span><span class="at">min</span>)<span class="op">;</span> <span class="co">// Vector3 { x: 0, y: 0, z: 0 }</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(box<span class="op">.</span><span class="at">max</span>)<span class="op">;</span> <span class="co">// Vector3 { x: 0, y: 0, z: 0 }</span></span></code></pre></div>
+<h4 id="2-expanding-to-encapsulate-additional-points">2. Expanding to
+Encapsulate Additional Points</h4>
+<p>To grow the box to include another arbitrary 3D coordinate, call
+<code>expandByPoint</code> with the new <code>Vector3</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Define an arbitrary target point</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> newPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">15</span><span class="op">,</span> <span class="op">-</span><span class="dv">10</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Expand the bounding box</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>box<span class="op">.</span><span class="fu">expandByPoint</span>(newPoint)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// The bounds now encompass both (0, 0, 0) and (15, -10, 5)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(box<span class="op">.</span><span class="at">min</span>)<span class="op">;</span> <span class="co">// Vector3 { x: 0, y: -10, z: 0 }</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(box<span class="op">.</span><span class="at">max</span>)<span class="op">;</span> <span class="co">// Vector3 { x: 15, y: 0, z: 5 }</span></span></code></pre></div>
+<h3 id="encapsulating-an-array-of-arbitrary-points">Encapsulating an
+Array of Arbitrary Points</h3>
+<p><code>expandByPoint</code> is commonly used in loops to compute the
+bounding volume of dynamic point clouds, trajectory paths, or custom
+vertex sets:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">8</span><span class="op">,</span> <span class="op">-</span><span class="dv">4</span>)<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">3</span><span class="op">,</span> <span class="op">-</span><span class="dv">15</span><span class="op">,</span> <span class="dv">9</span>)<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">2</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boundingBox <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Box3</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> points<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  boundingBox<span class="op">.</span><span class="fu">expandByPoint</span>(points[i])<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Retrieve properties of the expanded box</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> size <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> center <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>boundingBox<span class="op">.</span><span class="fu">getSize</span>(size)<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>boundingBox<span class="op">.</span><span class="fu">getCenter</span>(center)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Box Size:&#39;</span><span class="op">,</span> size)<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Box Center:&#39;</span><span class="op">,</span> center)<span class="op">;</span></span></code></pre></div>
+<h3 id="summary-of-key-behaviors">Summary of Key Behaviors</h3>
+<ul>
+<li><strong>Chainability</strong>: The method returns <code>this</code>,
+allowing method chaining (e.g.,
+<code>box.expandByPoint(p1).expandByPoint(p2)</code>).</li>
+<li><strong>No Pre-Transformation</strong>: <code>expandByPoint</code>
+expects coordinates in the same coordinate space (local or world) as the
+<code>Box3</code>. If points exist in local object space, convert them
+to world coordinates using
+<code>Vector3.applyMatrix4(object.matrixWorld)</code> before expanding a
+world-space box.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

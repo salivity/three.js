@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js generateUUID Collision Probability - three.js</title>
+    <meta name="description" content="Three.js relies on MathUtils.generateUUID to assign unique identifiers to meshes, materials, textures, and other core scene objects. Because this function produces standard RFC4122 Version 4 UUIDs containing 122 bits of entropy, the statistical probabili">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-generateuuid-collision-probability">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js generateUUID Collision Probability - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-generateuuid-collision-probability" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Three.js relies on MathUtils.generateUUID to assign unique identifiers to meshes, materials, textures, and other core scene objects. Because this function produces standard RFC4122 Version 4 UUIDs containing 122 bits of entropy, the statistical probabili" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-generateuuid-collision-probability">Three.js
+generateUUID Collision Probability</h1>
+<p>Three.js relies on <code>MathUtils.generateUUID</code> to assign
+unique identifiers to meshes, materials, textures, and other core scene
+objects. Because this function produces standard RFC4122 Version 4 UUIDs
+containing 122 bits of entropy, the statistical probability of
+generating duplicate IDs across millions of objects is virtually
+zero—measuring around <span class="math inline">\(10^{-25}\)</span> for
+one million objects and remaining negligible even at tens of
+millions.</p>
+<h3 id="the-mathematics-of-uuid-v4-entropy">The Mathematics of UUID v4
+Entropy</h3>
+<p>A standard Version 4 UUID consists of 128 bits. Six of these bits are
+reserved for structural metadata: four bits signify version 4
+(<code>0100</code>), and two bits designate the variant
+(<code>10</code>).</p>
+<p>This leaves exactly 122 bits of unpredictable pseudo-random data:</p>
+<p><span class="math display">\[\text{Total Possible Unique UUIDs} =
+2^{122} \approx 5.316 \times 10^{36}\]</span></p>
+<p>Because unique values are sampled with replacement, estimating
+collision probability requires applying the Birthday Problem
+approximation:</p>
+<p><span class="math display">\[P(n) \approx 1 -
+e^{-\frac{n^2}{2N}}\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(n\)</span> is the number of generated
+UUIDs.</li>
+<li><span class="math inline">\(N\)</span> is the total number of
+possible combinations (<span
+class="math inline">\(2^{122}\)</span>).</li>
+<li>For very small values of <span
+class="math inline">\(\frac{n^2}{2N}\)</span>, the formula simplifies
+via Taylor expansion to:</li>
+</ul>
+<p><span class="math display">\[P(n) \approx \frac{n^2}{2 \times
+2^{122}} = \frac{n^2}{2^{123}}\]</span></p>
+<h3 id="probability-across-common-thresholds">Probability Across Common
+Thresholds</h3>
+<p>Evaluating the formula for varying object scale reveals how minuscule
+the risk is:</p>
+<ul>
+<li><p><strong>1 Million Objects (<span
+class="math inline">\(10^6\)</span>):</strong> <span
+class="math display">\[P(10^6) \approx \frac{(10^6)^2}{2 \times 5.316
+\times 10^{36}} \approx 9.4 \times 10^{-26}\]</span> This is
+approximately a 1 in <span class="math inline">\(10^{25}\)</span> chance
+of a single collision occurring.</p></li>
+<li><p><strong>10 Million Objects (<span
+class="math inline">\(10^7\)</span>):</strong> <span
+class="math display">\[P(10^7) \approx \frac{(10^7)^2}{1.063 \times
+10^{37}} \approx 9.4 \times 10^{-24}\]</span></p></li>
+<li><p><strong>100 Million Objects (<span
+class="math inline">\(10^8\)</span>):</strong> <span
+class="math display">\[P(10^8) \approx \frac{(10^8)^2}{1.063 \times
+10^{37}} \approx 9.4 \times 10^{-22}\]</span></p></li>
+</ul>
+<p>To achieve even a 50% probability of a single collision (<span
+class="math inline">\(P = 0.5\)</span>), an application would need to
+generate approximately <span class="math inline">\(2.71 \times
+10^{18}\)</span> UUIDs—equivalent to generating 1 billion UUIDs per
+second continuously for roughly 86 years.</p>
+<h3 id="prng-quality-and-implementation-factors">PRNG Quality and
+Implementation Factors</h3>
+<p>The theoretical probability assumes an ideal, uniform random number
+distribution. In Three.js, modern versions of
+<code>MathUtils.generateUUID</code> prioritize the Web Cryptography API
+(<code>crypto.randomUUID()</code> or
+<code>crypto.getRandomValues()</code>) when available. Cryptographically
+secure pseudorandom number generators (CSPRNG) satisfy strict
+statistical randomness tests, ensuring the true collision rate matches
+the mathematical expectation.</p>
+<p>In legacy or restricted JavaScript runtimes falling back to
+<code>Math.random()</code>, the entropy depends on the browser engine's
+internal pseudorandom implementation (typically xorshift128+ in modern
+V8). While non-cryptographic PRNGs can theoretically experience cycle
+loops or imperfect distribution over billions of cycles, they still
+provide sufficient spread to prevent collisions when managing millions
+of active scene entities in WebGL applications.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

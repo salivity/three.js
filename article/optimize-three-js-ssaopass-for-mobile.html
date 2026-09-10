@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimize Three.js SSAOPass for Mobile - three.js</title>
+    <meta name="description" content="Screen Space Ambient Occlusion (SSAO) significantly enhances 3D realism by simulating soft contact shadows where geometry meets, but it is notoriously GPU-intensive. On mobile devices, unoptimized post-processing easily causes thermal throttling and stee">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/optimize-three-js-ssaopass-for-mobile">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimize Three.js SSAOPass for Mobile - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/optimize-three-js-ssaopass-for-mobile" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Screen Space Ambient Occlusion (SSAO) significantly enhances 3D realism by simulating soft contact shadows where geometry meets, but it is notoriously GPU-intensive. On mobile devices, unoptimized post-processing easily causes thermal throttling and stee" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="optimize-threejs-ssaopass-for-mobile">Optimize Three.js SSAOPass
+for Mobile</h1>
+<p>Screen Space Ambient Occlusion (SSAO) significantly enhances 3D
+realism by simulating soft contact shadows where geometry meets, but it
+is notoriously GPU-intensive. On mobile devices, unoptimized
+post-processing easily causes thermal throttling and steep frame-rate
+drops. This guide outlines how to configure the <code>SSAOPass</code> in
+Three.js specifically for mobile hardware by fine-tuning the
+<code>kernelRadius</code> and sample count (<code>kernelSize</code>)
+alongside companion settings to achieve crisp contact shadows without
+sacrificing real-time performance.</p>
+<h3 id="understanding-key-ssao-parameters">Understanding Key SSAO
+Parameters</h3>
+<p>The <code>SSAOPass</code> in Three.js relies on two primary variables
+to balance visual fidelity against computational cost:</p>
+<ul>
+<li><strong><code>kernelSize</code> (Sample Count):</strong> Dictates
+how many depth samples the shader takes per fragment to compute
+occlusion. The Three.js default is typically 32. Higher values result in
+smoother, more accurate shadows, but drastically increase texture
+lookups, which cripples mobile fill rates.</li>
+<li><strong><code>kernelRadius</code>:</strong> Defines the maximum
+world-space distance from a surface within which neighboring geometry
+can cast an occlusion shadow. A larger radius samples a broader area,
+while a tighter radius concentrates the effect strictly around crevices
+and joints.</li>
+</ul>
+<h3 id="tuning-settings-for-mobile-devices">Tuning Settings for Mobile
+Devices</h3>
+<p>To maintain 60 frames per second on mobile GPUs, your goal is to
+minimize sample lookups while keeping the occlusion concentrated where
+it matters most—close contact points.</p>
+<h4 id="1-reduce-kernelsize">1. Reduce <code>kernelSize</code></h4>
+<p>Lower the sample count to <code>8</code> or <code>16</code>. A value
+of <code>8</code> provides the best balance of speed and effect for
+lower-end hardware, while <code>16</code> is ideal for mid-to-high-end
+smartphones. Avoid using 32 on mobile browsers.</p>
+<h4 id="2-restrict-kernelradius">2. Restrict
+<code>kernelRadius</code></h4>
+<p>When working with a reduced sample count, a large
+<code>kernelRadius</code> causes visible banding, noise, and floating
+shadow artifacts. By reducing <code>kernelRadius</code> to a smaller
+value (typically between <code>2</code> and <code>8</code>, depending on
+your scene's scale), samples stay dense and clustered, hiding the low
+sample count while accentuating tight contact shadows.</p>
+<h4 id="3-enable-bilateral-blur">3. Enable Bilateral Blur</h4>
+<p>Because low sample counts introduce grain, always enable the built-in
+bilateral blur pass. The blur pass is significantly cheaper
+computationally than computing extra SSAO samples and effectively
+smooths out noise.</p>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>Below is an optimized configuration setup for mobile:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { SSAOPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/SSAOPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(<span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera))<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize the pass</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ssaoPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">SSAOPass</span>(scene<span class="op">,</span> camera<span class="op">,</span> width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Mobile Optimization Settings</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>ssaoPass<span class="op">.</span><span class="at">kernelSize</span> <span class="op">=</span> <span class="dv">8</span><span class="op">;</span>         <span class="co">// Drop from 32 to 8 or 16 samples</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>ssaoPass<span class="op">.</span><span class="at">kernelRadius</span> <span class="op">=</span> <span class="dv">4</span><span class="op">;</span>       <span class="co">// Keep radius tight to prevent sample dispersion</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>ssaoPass<span class="op">.</span><span class="at">minDistance</span> <span class="op">=</span> <span class="fl">0.001</span><span class="op">;</span>    <span class="co">// Ignore objects closer than this threshold</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>ssaoPass<span class="op">.</span><span class="at">maxDistance</span> <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span>      <span class="co">// Cut off occlusion past this distance</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable blur to hide noise from the lower sample count</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>ssaoPass<span class="op">.</span><span class="at">blur</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(ssaoPass)<span class="op">;</span></span></code></pre></div>
+<h3 id="additional-optimization-half-resolution-rendering">Additional
+Optimization: Half-Resolution Rendering</h3>
+<p>If dropping the <code>kernelSize</code> to <code>8</code> does not
+resolve performance bottlenecks on budget devices, downsample the SSAO
+buffer. You can pass half the viewport dimensions to
+<code>ssaoPass.setSize(width / 2, height / 2)</code>. Rendering SSAO at
+half resolution cuts pixel-processing requirements by 75%, and the soft
+nature of ambient occlusion ensures that the reduction in resolution
+remains largely unnoticeable on high-DPI mobile screens.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

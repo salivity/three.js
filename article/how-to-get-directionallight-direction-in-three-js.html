@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Get DirectionalLight Direction in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to extract and normalize the direction vector of a DirectionalLight in Three.js. In Three.js, a directional light emits parallel light rays from its position toward the position of its target object. By retrieving the world positi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-get-directionallight-direction-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Get DirectionalLight Direction in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-get-directionallight-direction-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to extract and normalize the direction vector of a DirectionalLight in Three.js. In Three.js, a directional light emits parallel light rays from its position toward the position of its target object. By retrieving the world positi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-get-directionallight-direction-in-threejs">How to Get
+DirectionalLight Direction in Three.js</h1>
+<p>This guide explains how to extract and normalize the direction vector
+of a <code>DirectionalLight</code> in Three.js. In Three.js, a
+directional light emits parallel light rays from its position toward the
+position of its target object. By retrieving the world positions of both
+the light source and its target, you can compute and normalize the exact
+direction vector in world space for use in custom shaders, calculations,
+or scene logic.</p>
+<h3 id="understanding-directionallight-orientation">Understanding
+DirectionalLight Orientation</h3>
+<p>A <code>THREE.DirectionalLight</code> does not store its direction as
+a single rotation or Euler angle. Instead, it relies on two
+entities:</p>
+<ol type="1">
+<li><strong><code>light.position</code></strong>: The point in space
+where the light originates.</li>
+<li><strong><code>light.target</code></strong>: A
+<code>THREE.Object3D</code> representing the point the light shines
+toward (defaulting to the origin <code>(0, 0, 0)</code>).</li>
+</ol>
+<p>Because both the light and its target can be nested inside parent
+objects, you must calculate their world-space positions rather than
+relying on local coordinates.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>To calculate the normalized direction vector in which the light rays
+travel, subtract the light's world position from the target's world
+position, then normalize the result.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Ensure the scene graph matrices are up to date</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Allocate reusable Vector3 instances to prevent garbage collection overhead</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lightPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lightDirection <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Extract world coordinates for both the light and its target</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="fu">getWorldPosition</span>(lightPosition)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">target</span><span class="op">.</span><span class="fu">getWorldPosition</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Calculate direction vector: target position minus light position</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>lightDirection<span class="op">.</span><span class="fu">subVectors</span>(targetPosition<span class="op">,</span> lightPosition)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">// 5. Normalize the vector to ensure its length is exactly 1 unit</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>lightDirection<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Light Ray Direction:&#39;</span><span class="op">,</span> lightDirection)<span class="op">;</span></span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Ray Direction vs. Incident Vector:</strong> The calculation
+<code>targetPosition - lightPosition</code> yields the direction the
+light rays are traveling. If you are writing custom shaders or lighting
+calculations requiring the vector pointing <em>toward</em> the light
+source, invert the subtraction:
+<code>lightPosition.sub(targetPosition).normalize()</code>.</li>
+<li><strong>Scene Hierarchy:</strong> Always ensure
+<code>directionalLight.target</code> is added to the scene
+(<code>scene.add(directionalLight.target)</code>) if you plan to move it
+independently. If it is not part of the scene graph, its world matrix
+will not update automatically.</li>
+<li><strong>Matrix Updates:</strong> If you query the direction
+immediately after altering coordinates within the same frame, call
+<code>scene.updateMatrixWorld()</code> or
+<code>directionalLight.updateMatrixWorld()</code> prior to extracting
+world positions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

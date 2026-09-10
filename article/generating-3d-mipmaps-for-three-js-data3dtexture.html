@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generating 3D Mipmaps for Three.js Data3DTexture - three.js</title>
+    <meta name="description" content="Generating custom 3D mipmaps for a Three.js Data3DTexture requires downsampling volumetric voxel data across three dimensions using an eight-point box filter, computing accurate intermediate levels down to a $1 \times 1 \times 1$ voxel, and assigning the">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/generating-3d-mipmaps-for-three-js-data3dtexture">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Generating 3D Mipmaps for Three.js Data3DTexture - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/generating-3d-mipmaps-for-three-js-data3dtexture" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Generating custom 3D mipmaps for a Three.js Data3DTexture requires downsampling volumetric voxel data across three dimensions using an eight-point box filter, computing accurate intermediate levels down to a $1 \times 1 \times 1$ voxel, and assigning the" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="generating-3d-mipmaps-for-threejs-data3dtexture">Generating 3D
+Mipmaps for Three.js Data3DTexture</h1>
+<p>Generating custom 3D mipmaps for a Three.js
+<code>Data3DTexture</code> requires downsampling volumetric voxel data
+across three dimensions using an eight-point box filter, computing
+accurate intermediate levels down to a <span class="math inline">\(1
+\times 1 \times 1\)</span> voxel, and assigning these arrays directly to
+the texture's <code>mipmaps</code> property. This guide breaks down the
+mathematical formulation of 3D box filtering, non-power-of-two boundary
+handling, and the concrete implementation needed to pass precomputed mip
+levels into Three.js with the correct filter settings.</p>
+<h3 id="mathematical-downsampling-of-3d-volumes">Mathematical
+Downsampling of 3D Volumes</h3>
+<p>In a standard 2D texture, each successive mipmap level reduces
+dimensions by half along two axes, averaging four texels into one. In a
+3D volume, the reduction occurs across three axes (<span
+class="math inline">\(X, Y, Z\)</span>). Every step downsamples a <span
+class="math inline">\(2 \times 2 \times 2\)</span> block of voxels into
+a single voxel, meaning each downsampled value is the arithmetic mean of
+eight adjacent voxels from the previous level.</p>
+<p>Given a mip level <span class="math inline">\(L\)</span> with
+dimensions <span class="math inline">\(W_L \times H_L \times
+D_L\)</span>, the dimensions of the next level <span
+class="math inline">\(L+1\)</span> are:</p>
+<p><span class="math display">\[W_{L+1} = \max(1, \lfloor W_L / 2
+\rfloor)\]</span> <span class="math display">\[H_{L+1} = \max(1, \lfloor
+H_L / 2 \rfloor)\]</span> <span class="math display">\[D_{L+1} = \max(1,
+\lfloor D_L / 2 \rfloor)\]</span></p>
+<p>For a single-channel voxel at coordinate <span
+class="math inline">\((x, y, z)\)</span> in level <span
+class="math inline">\(L+1\)</span>, the mathematical box filter is:</p>
+<p><span class="math display">\[V_{L+1}(x, y, z) = \frac{1}{8}
+\sum_{dz=0}^{1} \sum_{dy=0}^{1} \sum_{dx=0}^{1} V_L(2x + dx, 2y + dy, 2z
++ dz)\]</span></p>
+<p>When working with multi-channel data (such as RGBA), this averaging
+must be performed independently per component.</p>
+<h3 id="handling-odd-dimensions-and-boundaries">Handling Odd Dimensions
+and Boundaries</h3>
+<p>If any dimension of the parent level is odd, an exact <span
+class="math inline">\(2 \times 2 \times 2\)</span> block cannot be
+formed at the edge. To avoid reading out-of-bounds values or biasing the
+result, clamp sample indices to the maximum index of the parent level
+(<span class="math inline">\(W_L - 1, H_L - 1, D_L - 1\)</span>) and
+normalize the sum by the actual count of valid unique samples
+contributing to that voxel:</p>
+<p><span class="math display">\[V_{L+1}(x, y, z) = \frac{1}{N}
+\sum_{dz=0}^{\min(1, D_L - 1 - 2z)} \sum_{dy=0}^{\min(1, H_L - 1 - 2y)}
+\sum_{dx=0}^{\min(1, W_L - 1 - 2x)} V_L(2x + dx, 2y + dy, 2z +
+dz)\]</span></p>
+<p>where <span class="math inline">\(N\)</span> is the total count of
+valid voxels summed in the footprint.</p>
+<h3 id="indexing-volumetric-data-in-memory">Indexing Volumetric Data in
+Memory</h3>
+<p>In Three.js, volumetric data is stored linearly in typed arrays (such
+as <code>Uint8Array</code> or <code>Float32Array</code>). For a volume
+with width <span class="math inline">\(W\)</span>, height <span
+class="math inline">\(H\)</span>, depth <span
+class="math inline">\(D\)</span>, and <span
+class="math inline">\(C\)</span> channels per voxel, the 1D index for a
+coordinate <span class="math inline">\((x, y, z, c)\)</span> is:</p>
+<p><span class="math display">\[\text{Index}(x, y, z, c) = ((z \times H
++ y) \times W + x) \times C + c\]</span></p>
+<h3 id="algorithmic-implementation">Algorithmic Implementation</h3>
+<p>Below is the complete algorithmic function for generating all
+downsampled levels from a base 3D typed array and constructing the
+mipmap hierarchy:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">generate3DMipmaps</span>(baseData<span class="op">,</span> width<span class="op">,</span> height<span class="op">,</span> depth<span class="op">,</span> channels) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> mipmaps <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Level 0 is the full-resolution source</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  mipmaps<span class="op">.</span><span class="fu">push</span>({</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">data</span><span class="op">:</span> baseData<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">width</span><span class="op">:</span> width<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">height</span><span class="op">:</span> height<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">depth</span><span class="op">:</span> depth</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> currentData <span class="op">=</span> baseData<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> currW <span class="op">=</span> width<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> currH <span class="op">=</span> height<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> currD <span class="op">=</span> depth<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">while</span> (currW <span class="op">&gt;</span> <span class="dv">1</span> <span class="op">||</span> currH <span class="op">&gt;</span> <span class="dv">1</span> <span class="op">||</span> currD <span class="op">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> nextW <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">1</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(currW <span class="op">/</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> nextH <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">1</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(currH <span class="op">/</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> nextD <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(<span class="dv">1</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(currD <span class="op">/</span> <span class="dv">2</span>))<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> nextData <span class="op">=</span> <span class="kw">new</span> baseData<span class="op">.</span><span class="fu">constructor</span>(nextW <span class="op">*</span> nextH <span class="op">*</span> nextD <span class="op">*</span> channels)<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> z <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> z <span class="op">&lt;</span> nextD<span class="op">;</span> z<span class="op">++</span>) {</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> (<span class="kw">let</span> y <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> y <span class="op">&lt;</span> nextH<span class="op">;</span> y<span class="op">++</span>) {</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> (<span class="kw">let</span> x <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> x <span class="op">&lt;</span> nextW<span class="op">;</span> x<span class="op">++</span>) {</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>          </span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>          <span class="cf">for</span> (<span class="kw">let</span> c <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> c <span class="op">&lt;</span> channels<span class="op">;</span> c<span class="op">++</span>) {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>            <span class="kw">let</span> sum <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>            <span class="kw">let</span> count <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> srcX <span class="op">=</span> x <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> srcY <span class="op">=</span> y <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> srcZ <span class="op">=</span> z <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> (<span class="kw">let</span> dz <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> dz <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> dz<span class="op">++</span>) {</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>              <span class="kw">const</span> sampleZ <span class="op">=</span> srcZ <span class="op">+</span> dz<span class="op">;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>              <span class="cf">if</span> (sampleZ <span class="op">&gt;=</span> currD) <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>              <span class="cf">for</span> (<span class="kw">let</span> dy <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> dy <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> dy<span class="op">++</span>) {</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>                <span class="kw">const</span> sampleY <span class="op">=</span> srcY <span class="op">+</span> dy<span class="op">;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> (sampleY <span class="op">&gt;=</span> currH) <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> (<span class="kw">let</span> dx <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> dx <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> dx<span class="op">++</span>) {</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>                  <span class="kw">const</span> sampleX <span class="op">=</span> srcX <span class="op">+</span> dx<span class="op">;</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>                  <span class="cf">if</span> (sampleX <span class="op">&gt;=</span> currW) <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>                  <span class="kw">const</span> srcIdx <span class="op">=</span> ((sampleZ <span class="op">*</span> currH <span class="op">+</span> sampleY) <span class="op">*</span> currW <span class="op">+</span> sampleX) <span class="op">*</span> channels <span class="op">+</span> c<span class="op">;</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>                  sum <span class="op">+=</span> currentData[srcIdx]<span class="op">;</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>                  count<span class="op">++;</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>                }</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>              }</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>            }</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>            <span class="kw">const</span> dstIdx <span class="op">=</span> ((z <span class="op">*</span> nextH <span class="op">+</span> y) <span class="op">*</span> nextW <span class="op">+</span> x) <span class="op">*</span> channels <span class="op">+</span> c<span class="op">;</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>            nextData[dstIdx] <span class="op">=</span> sum <span class="op">/</span> count<span class="op">;</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>          }</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>    mipmaps<span class="op">.</span><span class="fu">push</span>({</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>      <span class="dt">data</span><span class="op">:</span> nextData<span class="op">,</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>      <span class="dt">width</span><span class="op">:</span> nextW<span class="op">,</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>      <span class="dt">height</span><span class="op">:</span> nextH<span class="op">,</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>      <span class="dt">depth</span><span class="op">:</span> nextD</span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>    currW <span class="op">=</span> nextW<span class="op">;</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    currH <span class="op">=</span> nextH<span class="op">;</span></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>    currD <span class="op">=</span> nextD<span class="op">;</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>    currentData <span class="op">=</span> nextData<span class="op">;</span></span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> mipmaps<span class="op">;</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="integration-with-threejs-data3dtexture">Integration with
+Three.js Data3DTexture</h3>
+<p>Three.js automatically attempts to call
+<code>gl.generateMipmap(gl.TEXTURE_3D)</code> if
+<code>generateMipmaps</code> is set to <code>true</code>. When supplying
+custom calculated mipmaps, WebGL automatic mipmap generation must be
+disabled so the precomputed pyramid is transmitted directly to the
+GPU:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">64</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">64</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> depth <span class="op">=</span> <span class="dv">64</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> channels <span class="op">=</span> <span class="dv">4</span><span class="op">;</span> <span class="co">// RGBA</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseData <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(width <span class="op">*</span> height <span class="op">*</span> depth <span class="op">*</span> channels)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Populate baseData with volumetric data...</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mipmaps <span class="op">=</span> <span class="fu">generate3DMipmaps</span>(baseData<span class="op">,</span> width<span class="op">,</span> height<span class="op">,</span> depth<span class="op">,</span> channels)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Data3DTexture</span>(</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  mipmaps[<span class="dv">0</span>]<span class="op">.</span><span class="at">data</span><span class="op">,</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  mipmaps[<span class="dv">0</span>]<span class="op">.</span><span class="at">width</span><span class="op">,</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  mipmaps[<span class="dv">0</span>]<span class="op">.</span><span class="at">height</span><span class="op">,</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  mipmaps[<span class="dv">0</span>]<span class="op">.</span><span class="at">depth</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">format</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span><span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">UnsignedByteType</span><span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">mipmaps</span> <span class="op">=</span> mipmaps<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co">// Instruct Three.js to use the provided mipmap array</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">generateMipmaps</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">minFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearMipmapLinearFilter</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">magFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearFilter</span><span class="op">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<p>Disabling <code>texture.generateMipmaps</code> prevents the WebGL
+context from overwriting the CPU-generated levels, ensuring correct
+trilinear interpolation across all volumetric scale boundaries.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

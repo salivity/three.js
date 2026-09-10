@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding BufferAttribute Normalized in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the BufferAttribute.normalized property determines how standard integer typed arrays are converted into floating-point numbers when uploaded to the GPU. By default, shader attributes expect floating-point values, and setting this property to">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/understanding-bufferattribute-normalized-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding BufferAttribute Normalized in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/understanding-bufferattribute-normalized-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the BufferAttribute.normalized property determines how standard integer typed arrays are converted into floating-point numbers when uploaded to the GPU. By default, shader attributes expect floating-point values, and setting this property to" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="understanding-bufferattribute-normalized-in-threejs">Understanding
+BufferAttribute Normalized in Three.js</h1>
+<p>In Three.js, the <code>BufferAttribute.normalized</code> property
+determines how standard integer typed arrays are converted into
+floating-point numbers when uploaded to the GPU. By default, shader
+attributes expect floating-point values, and setting this property to
+<code>true</code> instructs WebGL to automatically map integer data
+ranges to normalized floating-point ranges (<code>[0.0, 1.0]</code> for
+unsigned types and <code>[-1.0, 1.0]</code> for signed types) rather
+than converting them directly into raw float equivalents.</p>
+<h3 id="the-default-behavior-direct-casting-normalized--false">The
+Default Behavior: Direct Casting (<code>normalized = false</code>)</h3>
+<p>When <code>normalized</code> is set to <code>false</code> (the
+default value), integer values stored in a typed array like
+<code>Uint8Array</code> or <code>Int16Array</code> are cast directly
+into floating-point numbers within the vertex shader.</p>
+<p>For example, if you pass a <code>Uint8Array</code> containing the
+value <code>255</code>, the GPU reads that value directly as
+<code>255.0</code>. While this may be desirable for custom shader logic,
+integer vertex IDs, or bone indices, it is unsuitable for attributes
+like vertex colors or unit vectors that shaders typically expect in unit
+ranges.</p>
+<h3 id="the-normalized-behavior-range-remapping-normalized--true">The
+Normalized Behavior: Range Remapping
+(<code>normalized = true</code>)</h3>
+<p>When <code>normalized</code> is set to <code>true</code>, the
+underlying WebGL call (<code>glVertexAttribPointer</code>) maps the
+integer values linearly across a normalized floating-point interval:</p>
+<ul>
+<li><strong>Unsigned Integers (<code>Uint8Array</code>,
+<code>Uint16Array</code>, <code>Uint32Array</code>):</strong> Mapped to
+the range <code>[0.0, 1.0]</code>. For example, in an 8-bit unsigned
+array, <code>0</code> maps to <code>0.0</code>, and <code>255</code>
+maps to <code>1.0</code>.</li>
+<li><strong>Signed Integers (<code>Int8Array</code>,
+<code>Int16Array</code>, <code>Int32Array</code>):</strong> Mapped to
+the range <code>[-1.0, 1.0]</code>. For instance, in an 8-bit signed
+array, <code>-128</code> maps to <code>-1.0</code>, and <code>127</code>
+maps to <code>1.0</code>.</li>
+</ul>
+<h3 id="practical-use-cases-and-performance-benefits">Practical Use
+Cases and Performance Benefits</h3>
+<p>The primary advantage of using normalized integer attributes is
+significant memory savings and reduced bandwidth consumption across the
+CPU-to-GPU bus:</p>
+<ol type="1">
+<li><strong>Vertex Colors:</strong> Standard RGB or RGBA vertex colors
+in Three.js are conventionally represented with a
+<code>Float32Array</code> containing values between <code>0.0</code> and
+<code>1.0</code>, consuming 4 bytes per component. By using a
+<code>Uint8Array</code> with values ranging from <code>0</code> to
+<code>255</code> and setting <code>normalized = true</code>, the GPU
+receives the identical <code>[0.0, 1.0]</code> values in the shader
+while reducing color attribute memory consumption by 75%.</li>
+<li><strong>Normals and Tangents:</strong> Surface normals represent
+directional unit vectors between <code>-1.0</code> and <code>1.0</code>.
+Storing these in an <code>Int8Array</code> or <code>Int16Array</code>
+with <code>normalized = true</code> drastically shrinks the geometry
+payload while maintaining sufficient precision for lighting
+calculations.</li>
+<li><strong>Quantized Geometry:</strong> Positions and UV coordinates
+can be quantized into fixed-point 16-bit integers
+(<code>Uint16Array</code>), saving 50% buffer memory compared to 32-bit
+floats.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example: Creating normalized vertex colors with Uint8Array</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colors <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>([</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dv">255</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span>    <span class="co">// Red -&gt; becomes vec3(1.0, 0.0, 0.0) in the shader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dv">0</span><span class="op">,</span> <span class="dv">255</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span>    <span class="co">// Green -&gt; becomes vec3(0.0, 1.0, 0.0)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">255</span>     <span class="co">// Blue -&gt; becomes vec3(0.0, 0.0, 1.0)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> colorAttribute <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(colors<span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;color&#39;</span><span class="op">,</span> colorAttribute)<span class="op">;</span></span></code></pre></div>
+<p>By leveraging <code>BufferAttribute.normalized</code>, Three.js
+allows developers to achieve compact geometry footprints, lower VRAM
+consumption, and improved rendering performance without altering
+existing shader logic.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

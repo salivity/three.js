@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Three.js WebXR local-floor for Seated VR - three.js</title>
+    <meta name="description" content="This article provides a direct guide on configuring the WebXRManager in Three.js to request a local-floor reference space, specifically tailored for seated virtual reality experiences. You will learn the necessary renderer configurations, how to set the">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/setup-three-js-webxr-local-floor-for-seated-vr">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Setup Three.js WebXR local-floor for Seated VR - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/setup-three-js-webxr-local-floor-for-seated-vr" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a direct guide on configuring the WebXRManager in Three.js to request a local-floor reference space, specifically tailored for seated virtual reality experiences. You will learn the necessary renderer configurations, how to set the" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="setup-threejs-webxr-local-floor-for-seated-vr">Setup Three.js
+WebXR local-floor for Seated VR</h1>
+<p>This article provides a direct guide on configuring the
+<code>WebXRManager</code> in Three.js to request a
+<code>local-floor</code> reference space, specifically tailored for
+seated virtual reality experiences. You will learn the necessary
+renderer configurations, how to set the reference space type, and how to
+properly adjust your scene's camera rig to align real-world seating with
+your virtual environment.</p>
+<h3 id="enabling-webxr-and-requesting-local-floor">Enabling WebXR and
+Requesting local-floor</h3>
+<p>By default, Three.js attempts to negotiate a stable reference space
+when entering an immersive session. To explicitly require
+<code>local-floor</code>, configure the <code>WebGLRenderer</code>
+instance's <code>xr</code> property (<code>WebXRManager</code>) using
+<code>setReferenceSpaceType</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { VRButton } <span class="im">from</span> <span class="st">&#39;three/addons/webxr/VRButton.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Initialize renderer</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Enable WebXR</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Explicitly request local-floor</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">setReferenceSpaceType</span>(<span class="st">&#39;local-floor&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Attach the entry button</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(VRButton<span class="op">.</span><span class="fu">createButton</span>(renderer))<span class="op">;</span></span></code></pre></div>
+<h3 id="why-use-local-floor-for-seated-experiences">Why Use local-floor
+for Seated Experiences?</h3>
+<p>A <code>local</code> reference space places the tracking origin at
+the headset's initial position upon session start, which can cause
+inconsistent eye-level heights if the user shifts or starts while
+slouching.</p>
+<p>In contrast, <code>local-floor</code> establishes the tracking origin
+(<span class="math inline">\(Y = 0\)</span>) at the physical floor
+directly below the user. This ensures:</p>
+<ul>
+<li>The user's real-world seated height is respected naturally.</li>
+<li>Virtual chairs, cockpits, or desks align correctly with the physical
+floor.</li>
+<li>Head tracking accurately maps vertical posture changes.</li>
+</ul>
+<h3 id="setting-up-a-camera-rig-for-seated-navigation">Setting Up a
+Camera Rig for Seated Navigation</h3>
+<p>Because <code>WebXRManager</code> overrides the <code>camera</code>
+object's position directly using headset telemetry, you must place the
+camera inside an empty <code>THREE.Group</code> (often called a camera
+rig) to move or orient the user within the virtual world.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the rig</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> userRig <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Group</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>userRig<span class="op">.</span><span class="fu">add</span>(camera)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(userRig)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Position the rig relative to your virtual scene (e.g., placing the user inside a vehicle)</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>userRig<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> </span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>userRig<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span></code></pre></div>
+<p>With <code>local-floor</code> active, keep
+<code>userRig.position.y</code> at the virtual floor height (<span
+class="math inline">\(Y = 0\)</span>). The headset's position relative
+to the physical floor will place the camera at the user's natural
+sitting eye level.</p>
+<h3 id="handling-fallbacks">Handling Fallbacks</h3>
+<p>If a headset does not support physical floor detection, requesting
+<code>local-floor</code> will reject the session or fail back depending
+on the browser implementation. You can catch session errors or verify
+the active reference space by listening to session start events:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;sessionstart&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> baseReferenceSpace <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getReferenceSpace</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Active Reference Space:&#39;</span><span class="op">,</span> baseReferenceSpace)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="animation-loop">Animation Loop</h3>
+<p>Always drive the rendering loop through <code>setAnimationLoop</code>
+instead of <code>requestAnimationFrame</code> to synchronize with the
+headset's native refresh rate:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setAnimationLoop</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

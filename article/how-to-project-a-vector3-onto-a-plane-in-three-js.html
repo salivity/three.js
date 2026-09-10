@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Project a Vector3 onto a Plane in Three.js - three.js</title>
+    <meta name="description" content="Projecting a 3D point (THREE.Vector3) onto a mathematical plane (THREE.Plane) in Three.js is straightforward thanks to built-in geometric utility methods. This process calculates the orthogonal projection of a point in 3D space, finding the closest point">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-project-a-vector3-onto-a-plane-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Project a Vector3 onto a Plane in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-project-a-vector3-onto-a-plane-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Projecting a 3D point (THREE.Vector3) onto a mathematical plane (THREE.Plane) in Three.js is straightforward thanks to built-in geometric utility methods. This process calculates the orthogonal projection of a point in 3D space, finding the closest point" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-project-a-vector3-onto-a-plane-in-threejs">How to Project
+a Vector3 onto a Plane in Three.js</h1>
+<p>Projecting a 3D point (<code>THREE.Vector3</code>) onto a
+mathematical plane (<code>THREE.Plane</code>) in Three.js is
+straightforward thanks to built-in geometric utility methods. This
+process calculates the orthogonal projection of a point in 3D space,
+finding the closest point that lies directly on the specified plane. By
+utilizing the <code>projectPoint()</code> method provided by the
+<code>THREE.Plane</code> class, you can obtain the resulting 3D
+coordinates aligned with the plane's surface without having to manually
+calculate dot products or normal vector scaling.</p>
+<h3 id="using-the-projectpoint-method">Using the
+<code>projectPoint</code> Method</h3>
+<p>The <code>THREE.Plane</code> class provides the
+<code>projectPoint(point, target)</code> method. It takes the original
+<code>Vector3</code> you want to project and an existing
+<code>Vector3</code> target instance where the resulting coordinates
+will be stored.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the mathematical plane</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Example: An XZ ground plane where the normal points straight up along the Y axis</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> constant <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// Distance from the origin along the normal</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>(normal<span class="op">,</span> constant)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define the 3D point to project</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> point <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">12</span><span class="op">,</span> <span class="dv">45</span><span class="op">,</span> <span class="op">-</span><span class="dv">8</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create a target vector to store the result</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> projectedPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Project the point onto the plane</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="fu">projectPoint</span>(point<span class="op">,</span> projectedPoint)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(projectedPoint)<span class="op">;</span> <span class="co">// Outputs: Vector3 { x: 12, y: 0, z: -8 }</span></span></code></pre></div>
+<h3 id="creating-planes-from-points">Creating Planes from Points</h3>
+<p>If your plane is not defined by a simple normal and constant, you can
+construct a <code>THREE.Plane</code> using existing geometry or spatial
+points:</p>
+<ul>
+<li><strong>From three coplanar points:</strong>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>()<span class="op">.</span><span class="fu">setFromCoplanarPoints</span>(pointA<span class="op">,</span> pointB<span class="op">,</span> pointC)<span class="op">;</span></span></code></pre></div></li>
+<li><strong>From a normal vector and a point on the plane:</strong>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>()<span class="op">.</span><span class="fu">setFromNormalAndCoplanarPoint</span>(normalVector<span class="op">,</span> pointOnPlane)<span class="op">;</span></span></code></pre></div></li>
+</ul>
+<p>Once created, <code>plane.projectPoint(point, projectedPoint)</code>
+works identically regardless of how the plane was initialized.</p>
+<h3 id="converting-the-3d-result-to-2d-surface-coordinates">Converting
+the 3D Result to 2D Surface Coordinates</h3>
+<p>The <code>projectPoint</code> method outputs a
+<code>THREE.Vector3</code> that lies in 3D space on the plane. If you
+need local 2D <code>(u, v)</code> coordinates on the plane itself:</p>
+<ol type="1">
+<li>Establish a 2D coordinate system on the plane using an origin point
+and two orthogonal basis vectors lying on the plane (typically derived
+using the plane's normal).</li>
+<li>Calculate the difference between the projected point and your plane
+origin.</li>
+<li>Compute the dot product of that difference vector with each of the
+two basis vectors to find the local <code>X</code> and <code>Y</code>
+(or <code>U</code> and <code>V</code>) 2D offsets.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

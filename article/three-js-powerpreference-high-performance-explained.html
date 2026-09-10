@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js powerPreference High Performance Explained - three.js</title>
+    <meta name="description" content="Setting powerPreference: "high-performance" in Three.js instructs the browser and operating system to prioritize rendering throughput and graphical capability over battery conservation. This configuration option is passed directly to the underlying HTML5">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-powerpreference-high-performance-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js powerPreference High Performance Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-powerpreference-high-performance-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Setting powerPreference: "high-performance" in Three.js instructs the browser and operating system to prioritize rendering throughput and graphical capability over battery conservation. This configuration option is passed directly to the underlying HTML5" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-powerpreference-high-performance-explained">Three.js
+powerPreference High Performance Explained</h1>
+<p>Setting <code>powerPreference: "high-performance"</code> in Three.js
+instructs the browser and operating system to prioritize rendering
+throughput and graphical capability over battery conservation. This
+configuration option is passed directly to the underlying HTML5 WebGL
+context creation call, acting as a direct request for the host device to
+utilize its most capable graphics processing unit (GPU).</p>
+<h3 id="how-it-works-under-the-hood">How It Works Under the Hood</h3>
+<p>When initializing a renderer in Three.js, you pass a configuration
+object to <code>THREE.WebGLRenderer</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">powerPreference</span><span class="op">:</span> <span class="st">&quot;high-performance&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Three.js passes this setting directly to the HTML canvas element via
+<code>canvas.getContext('webgl2', { powerPreference: 'high-performance' })</code>
+(or <code>webgl</code>).</p>
+<p>The WebGL specification defines three valid values for
+<code>powerPreference</code>:</p>
+<ul>
+<li><code>default</code>: Allows the browser and operating system to
+decide the appropriate GPU configuration.</li>
+<li><code>low-power</code>: Favors battery conservation by requesting an
+energy-efficient GPU.</li>
+<li><code>high-performance</code>: Favors execution speed and visual
+fidelity by requesting a more powerful GPU.</li>
+</ul>
+<h3 id="multi-gpu-system-switching">Multi-GPU System Switching</h3>
+<p>The primary function of
+<code>powerPreference: "high-performance"</code> is resolving hardware
+selection on dual-GPU hardware. Common examples include laptops equipped
+with both an integrated GPU (such as Intel Iris or AMD Radeon Graphics
+built into the CPU) and a discrete GPU (such as an NVIDIA GeForce or AMD
+Radeon card).</p>
+<p>When set to <code>high-performance</code>:</p>
+<ol type="1">
+<li><strong>Discrete GPU Allocation:</strong> The browser requests that
+the operating system activate and assign the discrete graphics card to
+handle the canvas context.</li>
+<li><strong>VRAM and Bandwidth Allocation:</strong> The application
+gains access to dedicated video memory (VRAM) and higher memory
+bandwidth rather than sharing unified system RAM.</li>
+<li><strong>Complex Shader Execution:</strong> Fragment and vertex
+shaders benefit from higher core counts and faster clock speeds.</li>
+</ol>
+<h3 id="it-is-a-hint-not-a-guarantee">It Is a Hint, Not a Guarantee</h3>
+<p>The <code>powerPreference</code> attribute is specified as a hint to
+the user agent (the browser). The browser and the host operating system
+retain ultimate authority over hardware allocation. The request may be
+ignored or overridden in the following scenarios:</p>
+<ul>
+<li><strong>Single-GPU Devices:</strong> On devices with only one GPU
+(such as many budget laptops, smartphones, or desktop systems without
+integrated graphics), this setting has no hardware-switching
+effect.</li>
+<li><strong>Operating System Policies:</strong> If an operating system
+is operating in a strict "Battery Saver" mode, it may force the browser
+to stay on the integrated GPU regardless of the WebGL request.</li>
+<li><strong>Browser Implementation:</strong> Certain browsers on
+specific platforms may not implement discrete GPU switching via the
+WebGL API due to driver stability concerns or sandbox restrictions.</li>
+</ul>
+<h3 id="when-to-use-high-performance">When to Use High Performance</h3>
+<ul>
+<li><strong>High-Poly Scenes:</strong> Scenes with large polygon counts,
+dense geometries, or detailed shadow maps.</li>
+<li><strong>Post-Processing Pipelines:</strong> Applications using
+complex multi-pass post-processing chains (e.g., depth of field, bloom,
+screen-space ambient occlusion).</li>
+<li><strong>WebGL Games:</strong> Fast-paced browser games requiring
+stable 60 or 120 FPS frame rates.</li>
+</ul>
+<p>For lightweight 3D banners, simple user interface components, or
+applications targeting mobile web environments, omit this setting or
+specify <code>low-power</code> to prevent excessive thermal throttling
+and battery drain.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

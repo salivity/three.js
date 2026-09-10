@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using gl_FragCoord for Three.js Screen-Space Effects - three.js</title>
+    <meta name="description" content="This guide explains how to extract and use the built-in glFragCoord variable within a Three.js fragment shader to create screen-space effects. You will learn what data glFragCoord provides, how to pass canvas resolution uniforms from Three.js to normaliz">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-gl-fragcoord-for-three-js-screen-space-effects">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using gl_FragCoord for Three.js Screen-Space Effects - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-gl-fragcoord-for-three-js-screen-space-effects" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to extract and use the built-in glFragCoord variable within a Three.js fragment shader to create screen-space effects. You will learn what data glFragCoord provides, how to pass canvas resolution uniforms from Three.js to normaliz" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-gl_fragcoord-for-threejs-screen-space-effects">Using
+gl_FragCoord for Three.js Screen-Space Effects</h1>
+<p>This guide explains how to extract and use the built-in
+<code>gl_FragCoord</code> variable within a Three.js fragment shader to
+create screen-space effects. You will learn what data
+<code>gl_FragCoord</code> provides, how to pass canvas resolution
+uniforms from Three.js to normalize your coordinates, and how to apply
+these coordinates to generate effects such as screen-aligned patterns,
+vignettes, or masks that remain static relative to the viewport.</p>
+<h3 id="understanding-gl_fragcoord">Understanding gl_FragCoord</h3>
+<p>In GLSL, <code>gl_FragCoord</code> is a built-in read-only input
+variable available in the fragment shader. It contains the
+window-relative coordinates of the current fragment:</p>
+<ul>
+<li><code>gl_FragCoord.x</code>: The horizontal pixel coordinate (from
+<code>0.5</code> to <code>viewport_width - 0.5</code>).</li>
+<li><code>gl_FragCoord.y</code>: The vertical pixel coordinate (from
+<code>0.5</code> to <code>viewport_height - 0.5</code>), originating
+from the bottom-left corner of the viewport.</li>
+<li><code>gl_FragCoord.z</code>: The fragment depth value, mapped
+between <code>0.0</code> and <code>1.0</code>.</li>
+<li><code>gl_FragCoord.w</code>: The reciprocal of the clip-space <span
+class="math inline">\(W\)</span> coordinate
+(<code>1.0 / clip.w</code>).</li>
+</ul>
+<p>Because <code>gl_FragCoord.xy</code> provides raw pixel coordinates,
+you must normalize them against the viewport dimensions to map them to a
+standard <code>[0.0, 1.0]</code> UV coordinate space.</p>
+<h3 id="passing-resolution-via-uniforms">Passing Resolution via
+Uniforms</h3>
+<p>To normalize <code>gl_FragCoord.xy</code>, pass the canvas resolution
+to your shader using a <code>THREE.Vector2</code> uniform. When
+instantiating a <code>THREE.ShaderMaterial</code>, define
+<code>u_resolution</code> and account for the device pixel ratio.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> resolution <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">*</span> <span class="bu">window</span><span class="op">.</span><span class="at">devicePixelRatio</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span> <span class="op">*</span> <span class="bu">window</span><span class="op">.</span><span class="at">devicePixelRatio</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uniforms</span><span class="op">:</span> {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">u_resolution</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> resolution }</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vertexShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="vs">      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span><span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">fragmentShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="vs">    uniform vec2 u_resolution;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="vs">      // Normalize gl_FragCoord to [0.0, 1.0] range</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="vs">      vec2 screenUV = gl_FragCoord.xy / u_resolution;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="vs">      // Output a screen-space gradient</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="vs">      gl_FragColor = vec4(screenUV.x, screenUV.y, 0.5, 1.0);</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="handling-window-resizing">Handling Window Resizing</h3>
+<p>Because <code>gl_FragCoord</code> tracks window pixels, dynamic
+resizing requires updating the <code>u_resolution</code> uniform
+whenever the renderer resizes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> pixelRatio <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getPixelRatio</span>()<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setSize</span>(width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> width <span class="op">/</span> height<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  customMaterial<span class="op">.</span><span class="at">uniforms</span><span class="op">.</span><span class="at">u_resolution</span><span class="op">.</span><span class="at">value</span><span class="op">.</span><span class="fu">set</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    width <span class="op">*</span> pixelRatio<span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    height <span class="op">*</span> pixelRatio</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="practical-screen-space-effect-examples">Practical Screen-Space
+Effect Examples</h3>
+<h4 id="1-screen-space-vignette">1. Screen-Space Vignette</h4>
+<p>You can use the normalized coordinates to darken the edges of the
+display regardless of mesh rotation or camera position:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">vec2</span> u_resolution<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vec2</span> screenUV <span class="op">=</span> <span class="bu">gl_FragCoord</span><span class="op">.</span><span class="fu">xy</span> <span class="op">/</span> u_resolution<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Center coordinates to [-0.5, 0.5]</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vec2</span> uv <span class="op">=</span> screenUV <span class="op">-</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate distance from center</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">float</span> dist <span class="op">=</span> <span class="bu">length</span><span class="op">(</span>uv<span class="op">);</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Create vignette falloff</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">float</span> vignette <span class="op">=</span> <span class="bu">smoothstep</span><span class="op">(</span><span class="fl">0.7</span><span class="op">,</span> <span class="fl">0.2</span><span class="op">,</span> dist<span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span><span class="dt">vec3</span><span class="op">(</span>vignette<span class="op">),</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="2-screen-space-dither-or-halftone-pattern">2. Screen-Space
+Dither or Halftone Pattern</h4>
+<p>Because <code>gl_FragCoord</code> operates directly on pixel units,
+you can create fixed-size patterns without normalising:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Generates a checkerboard pattern based on screen pixels</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">float</span> pattern <span class="op">=</span> <span class="bu">mod</span><span class="op">(</span><span class="bu">floor</span><span class="op">(</span><span class="bu">gl_FragCoord</span><span class="op">.</span><span class="fu">x</span><span class="op">)</span> <span class="op">+</span> <span class="bu">floor</span><span class="op">(</span><span class="bu">gl_FragCoord</span><span class="op">.</span><span class="fu">y</span><span class="op">),</span> <span class="fl">2.0</span><span class="op">);</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">if</span> <span class="op">(</span>pattern <span class="op">&lt;</span> <span class="fl">1.0</span><span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">discard</span><span class="op">;</span> <span class="co">// Creates a screen-door transparency effect</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span><span class="fl">1.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="important-considerations">Important Considerations</h3>
+<ul>
+<li><strong>Pixel Density:</strong> If
+<code>renderer.setPixelRatio(...)</code> is used,
+<code>gl_FragCoord</code> scales with the backing buffer resolution
+rather than CSS pixels. Always multiply your CSS dimensions by
+<code>renderer.getPixelRatio()</code> when setting
+<code>u_resolution</code>.</li>
+<li><strong>Origin Differences:</strong> WebGL defines
+<code>(0, 0)</code> at the bottom-left corner of the screen. If your
+effect expects the top-left corner as the origin, invert the Y axis
+using <code>screenUV.y = 1.0 - screenUV.y</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js BVHLoader Animation File Format - three.js</title>
+    <meta name="description" content="This article provides an overview of the specific format and structural requirements needed to load baked animation sequences using the BVHLoader in Three.js. It covers the required Biovision Hierarchy (BVH) file structure, specifically detailing the HIE">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-bvhloader-animation-file-format">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js BVHLoader Animation File Format - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-bvhloader-animation-file-format" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the specific format and structural requirements needed to load baked animation sequences using the BVHLoader in Three.js. It covers the required Biovision Hierarchy (BVH) file structure, specifically detailing the HIE" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-bvhloader-animation-file-format">Three.js BVHLoader
+Animation File Format</h1>
+<p>This article provides an overview of the specific format and
+structural requirements needed to load baked animation sequences using
+the <code>BVHLoader</code> in Three.js. It covers the required Biovision
+Hierarchy (BVH) file structure, specifically detailing the
+<code>HIERARCHY</code> tree, channel definitions, and the baked
+<code>MOTION</code> block, ensuring seamless parsing into a Three.js
+<code>Skeleton</code> and <code>AnimationClip</code>.</p>
+<h3 id="the-bvh-file-structure">The BVH File Structure</h3>
+<p>The <code>BVHLoader</code> expects an ASCII text file with the
+<code>.bvh</code> extension. The file is divided into two mandatory
+sequential sections: <code>HIERARCHY</code> and <code>MOTION</code>.</p>
+<h3 id="1-the-hierarchy-block">1. The HIERARCHY Block</h3>
+<p>The <code>HIERARCHY</code> block defines the skeletal structure,
+joint relationships, and channel mappings.</p>
+<ul>
+<li><strong>ROOT and JOINT Definitions:</strong> The skeleton must start
+with a single <code>ROOT</code> node, followed by recursive child
+<code>JOINT</code> declarations, bounded by curly braces
+<code>{}</code>.</li>
+<li><strong>OFFSET:</strong> Every joint requires an
+<code>OFFSET X Y Z</code> specifying its position relative to its parent
+joint in local space (the rest/bind pose).</li>
+<li><strong>CHANNELS:</strong> Defines which transformation values
+appear in the motion block and their exact evaluation order.
+<ul>
+<li>The <code>ROOT</code> bone typically defines six channels:
+<code>CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation</code>
+(or another specified axis order).</li>
+<li>Child <code>JOINT</code> elements typically define three rotation
+channels: <code>CHANNELS 3 Zrotation Xrotation Yrotation</code>.</li>
+</ul></li>
+<li><strong>End Site:</strong> Terminal bones end with an
+<code>End Site</code> block that contains only an <code>OFFSET</code>
+and no channels.</li>
+</ul>
+<pre class="text"><code>HIERARCHY
+ROOT Hips
+{
+    OFFSET 0.00 0.00 0.00
+    CHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation
+    JOINT Chest
+    {
+        OFFSET 0.00 5.00 0.00
+        CHANNELS 3 Zrotation Xrotation Yrotation
+        End Site
+        {
+            OFFSET 0.00 5.00 0.00
+        }
+    }
+}</code></pre>
+<h3 id="2-the-motion-block">2. The MOTION Block</h3>
+<p>The <code>MOTION</code> block contains the baked frame-by-frame
+transformation data. In a baked animation, every frame contains
+explicit, absolute keyframe values without procedural interpolation or
+dynamic physics parameters.</p>
+<ul>
+<li><strong>Frames:</strong> An integer line indicating the total number
+of frames: <code>Frames: &lt;count&gt;</code>.</li>
+<li><strong>Frame Time:</strong> A float line specifying the sample
+rate/delta time in seconds per frame:
+<code>Frame Time: &lt;seconds&gt;</code> (e.g., <code>0.0333333</code>
+for 30 FPS or <code>0.0166667</code> for 60 FPS).</li>
+<li><strong>Data Rows:</strong> Each subsequent line represents a single
+baked frame containing space-separated floating-point values. The count
+and order of values on each line must strictly match the cumulative
+channel declarations from the <code>HIERARCHY</code> block traversed in
+depth-first order.</li>
+</ul>
+<pre class="text"><code>MOTION
+Frames: 2
+Frame Time: 0.0333333
+0.0 1.0 0.0 0.0 0.0 0.0 10.0 0.0 -5.0
+0.0 1.1 0.0 0.0 2.0 0.0 12.0 1.0 -4.0</code></pre>
+<h3 id="threejs-parser-requirements-and-behavior">Three.js Parser
+Requirements and Behavior</h3>
+<p>When <code>BVHLoader</code> processes this format:</p>
+<ol type="1">
+<li><strong>Euler Rotation Order:</strong> The parser reads the channel
+order declared per joint (such as <code>Zrotation</code>,
+<code>Xrotation</code>, <code>Yrotation</code>) and constructs internal
+Euler rotation objects with the corresponding order (e.g.,
+<code>"ZXY"</code>). These are automatically converted into a
+<code>QuaternionKeyframeTrack</code> for performance and
+continuity.</li>
+<li><strong>Translation Tracks:</strong> Translation data is converted
+into a <code>VectorKeyframeTrack</code> referencing the bone names.</li>
+<li><strong>Output Object:</strong> The loader returns a JavaScript
+object with two properties:
+<ul>
+<li><code>result.skeleton</code>: A <code>THREE.Skeleton</code>
+reconstructed from the hierarchy offsets and bone hierarchy.</li>
+<li><code>result.clip</code>: A <code>THREE.AnimationClip</code>
+containing all translation and quaternion tracks mapped across the
+timeline according to the specified <code>Frame Time</code>.</li>
+</ul></li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God Rays Post-Processing in Three.js EffectComposer - three.js</title>
+    <meta name="description" content="God rays, or volumetric light scattering, add dramatic atmosphere and realism to 3D scenes by simulating light shafts breaking through occluding geometry. This article explains how to implement the God Rays post-processing effect in Three.js using an Eff">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/god-rays-post-processing-in-three-js-effectcomposer">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="God Rays Post-Processing in Three.js EffectComposer - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/god-rays-post-processing-in-three-js-effectcomposer" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="God rays, or volumetric light scattering, add dramatic atmosphere and realism to 3D scenes by simulating light shafts breaking through occluding geometry. This article explains how to implement the God Rays post-processing effect in Three.js using an Eff" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="god-rays-post-processing-in-threejs-effectcomposer">God Rays
+Post-Processing in Three.js EffectComposer</h1>
+<p>God rays, or volumetric light scattering, add dramatic atmosphere and
+realism to 3D scenes by simulating light shafts breaking through
+occluding geometry. This article explains how to implement the God Rays
+post-processing effect in Three.js using an <code>EffectComposer</code>.
+You will learn how to configure the light source mesh, set up the
+necessary render passes, customize the effect parameters, and optimize
+the render loop for smooth performance.</p>
+<hr />
+<h3 id="core-principles-of-god-rays">Core Principles of God Rays</h3>
+<p>The God Rays effect is a screen-space shader effect. Instead of
+calculating true atmospheric photon scattering throughout 3D volume, it
+casts rays outward from the screen position of a designated light
+emitter mesh. Any objects positioned between the camera and this light
+source act as occluders, blocking the scattering effect and casting
+volumetric shadows toward the viewer.</p>
+<hr />
+<h3 id="implementation-with-threejs-and-postprocessing">Implementation
+with Three.js and <code>postprocessing</code></h3>
+<p>While Three.js provides lower-level shader chunks in its addons, the
+modern standard for volumetric light scattering in Three.js is the
+<code>postprocessing</code> library
+(<code>pmndrs/postprocessing</code>), which provides a complete,
+hardware-accelerated <code>GodRaysEffect</code> built specifically for
+Three.js scenes.</p>
+<h4 id="1-installation">1. Installation</h4>
+<p>Install the library into your project:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install three postprocessing</span></code></pre></div>
+<h4 id="2-setting-up-the-scene-and-light-emitter">2. Setting Up the
+Scene and Light Emitter</h4>
+<p>Create your standard Three.js scene and add a dedicated mesh to serve
+as the light source. This mesh represents the origin of the rays (such
+as a sun or lamp).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer<span class="op">,</span> RenderPass<span class="op">,</span> EffectPass<span class="op">,</span> GodRaysEffect } <span class="im">from</span> <span class="st">&#39;postprocessing&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Scene, Camera, and Renderer setup</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">powerPreference</span><span class="op">:</span> <span class="st">&#39;high-performance&#39;</span><span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">antialias</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencil</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depth</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the Light Emitter Mesh</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sunGeo <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SphereGeometry</span>(<span class="fl">1.5</span><span class="op">,</span> <span class="dv">32</span><span class="op">,</span> <span class="dv">32</span>)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sunMat <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffddaa</span><span class="op">,</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sunMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(sunGeo<span class="op">,</span> sunMat)<span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>sunMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="op">-</span><span class="dv">15</span>)<span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(sunMesh)<span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create an Occluder (blocking geometry)</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> obstacleGeo <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> obstacleMat <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x333333</span> })<span class="op">;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> obstacle <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(obstacleGeo<span class="op">,</span> obstacleMat)<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>obstacle<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(obstacle)<span class="op">;</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">// Add ambient light for the occluder</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ambientLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AmbientLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">0.4</span>)<span class="op">;</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(ambientLight)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="configuring-the-effectcomposer-and-passes">Configuring the
+EffectComposer and Passes</h3>
+<p>The <code>EffectComposer</code> manages the rendering pipeline. To
+display god rays, you need two passes:</p>
+<ol type="1">
+<li><strong><code>RenderPass</code></strong>: Renders the standard
+scene.</li>
+<li><strong><code>EffectPass</code></strong>: Applies the
+<code>GodRaysEffect</code> targeting the light emitter mesh.</li>
+</ol>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize EffectComposer</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Add standard render pass</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(renderPass)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Configure GodRaysEffect</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> godRaysEffect <span class="op">=</span> <span class="kw">new</span> <span class="fu">GodRaysEffect</span>(camera<span class="op">,</span> sunMesh<span class="op">,</span> {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">height</span><span class="op">:</span> <span class="dv">480</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">kernelSize</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">density</span><span class="op">:</span> <span class="fl">0.96</span><span class="op">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">decay</span><span class="op">:</span> <span class="fl">0.93</span><span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">weight</span><span class="op">:</span> <span class="fl">0.4</span><span class="op">,</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">exposure</span><span class="op">:</span> <span class="fl">0.6</span><span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">samples</span><span class="op">:</span> <span class="dv">60</span><span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="dt">clampMax</span><span class="op">:</span> <span class="fl">1.0</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Add EffectPass containing the GodRaysEffect</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effectPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectPass</span>(camera<span class="op">,</span> godRaysEffect)<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(effectPass)<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="effect-parameters-explained">Effect Parameters Explained</h3>
+<ul>
+<li><strong><code>density</code></strong>: Controls the spacing and
+spread between ray steps. Higher values pull the rays closer to the
+emitter.</li>
+<li><strong><code>decay</code></strong>: Controls how quickly the ray
+intensity dissipates as it travels away from the source. Values between
+<code>0.9</code> and <code>0.98</code> produce natural-looking
+falloff.</li>
+<li><strong><code>weight</code></strong>: The intensity added by each
+ray sample.</li>
+<li><strong><code>exposure</code></strong>: Overall brightness of the
+scattered light result.</li>
+<li><strong><code>samples</code></strong>: Number of texture lookups
+along the ray path. Higher numbers (e.g., <code>60</code> to
+<code>100</code>) yield smoother rays without banding, but require more
+GPU performance.</li>
+<li><strong><code>clampMax</code></strong>: Caps the maximum brightness
+to prevent blown-out highlights.</li>
+</ul>
+<hr />
+<h3 id="the-render-loop-and-resizing">The Render Loop and Resizing</h3>
+<p>Replace standard <code>renderer.render(scene, camera)</code> calls
+with <code>composer.render()</code> inside the requestAnimationFrame
+loop. Update the composer when the window resizes to preserve correct
+aspect ratio and buffer dimensions.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Optional: rotate the occluder to see dynamic light shafts</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  obstacle<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span> <span class="op">+=</span> <span class="fl">0.01</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  composer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="optimization-best-practices">Optimization Best Practices</h3>
+<ul>
+<li><strong>Off-Screen Visibility</strong>: Screen-space god rays can
+cause visual artifacts when the light emitter moves outside the camera
+frustum. If the emitter goes off-screen, decrease
+<code>godRaysEffect.intensity</code> or blend it out to avoid hard
+clipping.</li>
+<li><strong>Resolution Scaling</strong>: Use the <code>height</code>
+parameter in the effect options (e.g., <code>480</code> or
+<code>720</code>) to render the scattering pass at a lower resolution
+than native display size. Light rays naturally blur, so rendering them
+at reduced resolution saves significant GPU fill rate with minimal
+visual loss.</li>
+<li><strong>Sample Count</strong>: Keep <code>samples</code> within the
+<code>30</code>–<code>60</code> range on mobile or
+performance-constrained hardware to maintain 60 frames per second.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

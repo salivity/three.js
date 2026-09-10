@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fit Vector3 Points to OrthographicCamera in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to mathematically map an array of arbitrary 3D points (THREE.Vector3) to a THREE.OrthographicCamera so that every point stays within view regardless of camera orientation or canvas dimensions. To achieve this, the points are trans">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fit-vector3-points-to-orthographiccamera-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fit Vector3 Points to OrthographicCamera in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fit-vector3-points-to-orthographiccamera-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to mathematically map an array of arbitrary 3D points (THREE.Vector3) to a THREE.OrthographicCamera so that every point stays within view regardless of camera orientation or canvas dimensions. To achieve this, the points are trans" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fit-vector3-points-to-orthographiccamera-in-threejs">Fit Vector3
+Points to OrthographicCamera in Three.js</h1>
+<p>This guide explains how to mathematically map an array of arbitrary
+3D points (<code>THREE.Vector3</code>) to a
+<code>THREE.OrthographicCamera</code> so that every point stays within
+view regardless of camera orientation or canvas dimensions. To achieve
+this, the points are transformed into the camera’s local view space to
+calculate an aligned bounding box, adjusted to match the viewport's
+aspect ratio, and applied directly to the camera's frustum
+boundaries.</p>
+<hr />
+<h3 id="step-1-transform-points-into-camera-view-space">Step 1:
+Transform Points into Camera View Space</h3>
+<p>Calculating an axis-aligned bounding box (AABB) in world space is
+insufficient if the camera is tilted or rotated. Instead, every point
+must be mapped into the camera's local coordinate space (view space). In
+Three.js, this is achieved by multiplying each point by the camera's
+inverse world matrix (<code>camera.matrixWorldInverse</code>).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> viewPoints <span class="op">=</span> points<span class="op">.</span><span class="fu">map</span>(p <span class="kw">=&gt;</span> p<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorldInverse</span>))<span class="op">;</span></span></code></pre></div>
+<p>In view space, the camera sits at the origin <span
+class="math inline">\((0, 0, 0)\)</span>, the X-axis points right, the
+Y-axis points up, and the camera looks along the negative Z-axis.</p>
+<hr />
+<h3 id="step-2-compute-view-space-bounds">Step 2: Compute View-Space
+Bounds</h3>
+<p>Iterate over the transformed points to find the minimum and maximum
+extents along the <span class="math inline">\(X\)</span>, <span
+class="math inline">\(Y\)</span>, and <span
+class="math inline">\(Z\)</span> axes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> minX <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxX <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> minY <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxY <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> minZ <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxZ <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">const</span> p <span class="kw">of</span> viewPoints) {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">x</span> <span class="op">&lt;</span> minX) minX <span class="op">=</span> p<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">x</span> <span class="op">&gt;</span> maxX) maxX <span class="op">=</span> p<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">y</span> <span class="op">&lt;</span> minY) minY <span class="op">=</span> p<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">y</span> <span class="op">&gt;</span> maxY) maxY <span class="op">=</span> p<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">z</span> <span class="op">&lt;</span> minZ) minZ <span class="op">=</span> p<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (p<span class="op">.</span><span class="at">z</span> <span class="op">&gt;</span> maxZ) maxZ <span class="op">=</span> p<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> maxX <span class="op">-</span> minX<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> maxY <span class="op">-</span> minY<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> centerX <span class="op">=</span> (minX <span class="op">+</span> maxX) <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> centerY <span class="op">=</span> (minY <span class="op">+</span> maxY) <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="step-3-match-the-viewport-aspect-ratio">Step 3: Match the
+Viewport Aspect Ratio</h3>
+<p>An orthographic camera's view frustum must match the aspect ratio of
+the rendering canvas (<span class="math inline">\(A =
+\text{viewportWidth} / \text{viewportHeight}\)</span>). If the bounding
+box aspect ratio does not match the viewport, points on the narrower
+dimension will be clipped.</p>
+<p>Compare the bounding box aspect ratio <span class="math inline">\((W
+/ H)\)</span> to the viewport aspect ratio (<span
+class="math inline">\(A\)</span>):</p>
+<ul>
+<li>If <span class="math inline">\(\frac{W}{H} &gt; A\)</span>, the
+bounding box is wider than the viewport. Set the visible width to <span
+class="math inline">\(W\)</span> and expand the visible height to <span
+class="math inline">\(W / A\)</span>.</li>
+<li>If <span class="math inline">\(\frac{W}{H} \le A\)</span>, the
+bounding box is taller than the viewport. Set the visible height to
+<span class="math inline">\(H\)</span> and expand the visible width to
+<span class="math inline">\(H \times A\)</span>.</li>
+</ul>
+<p>Multiply by a padding multiplier (e.g., <code>1.1</code> for a 10%
+margin) to prevent points on the edge from touching the viewport
+boundaries:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boxAspect <span class="op">=</span> width <span class="op">/</span> height<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> halfWidth<span class="op">,</span> halfHeight<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (boxAspect <span class="op">&gt;</span> viewportAspect) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    halfWidth <span class="op">=</span> (width <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> padding<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    halfHeight <span class="op">=</span> (halfWidth <span class="op">/</span> viewportAspect)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    halfHeight <span class="op">=</span> (height <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> padding<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    halfWidth <span class="op">=</span> (halfHeight <span class="op">*</span> viewportAspect)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h3 id="step-4-apply-bounds-and-update-camera-matrix">Step 4: Apply
+Bounds and Update Camera Matrix</h3>
+<p>Set the frustum extents relative to the computed center coordinate
+(<code>centerX</code>, <code>centerY</code>), configure the
+<code>near</code> and <code>far</code> planes based on the <span
+class="math inline">\(Z\)</span> extents, and invoke
+<code>updateProjectionMatrix()</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">left</span> <span class="op">=</span> centerX <span class="op">-</span> halfWidth<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">right</span> <span class="op">=</span> centerX <span class="op">+</span> halfWidth<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">top</span> <span class="op">=</span> centerY <span class="op">+</span> halfHeight<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> centerY <span class="op">-</span> halfHeight<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// In view space, objects in front of the camera have negative Z values</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> depthPadding <span class="op">=</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="op">-</span>maxZ <span class="op">-</span> depthPadding<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="op">-</span>minZ <span class="op">+</span> depthPadding<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<hr />
+<h3 id="complete-implementation-function">Complete Implementation
+Function</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">fitPointsToOrthographicCamera</span>(points<span class="op">,</span> camera<span class="op">,</span> viewportAspect<span class="op">,</span> padding <span class="op">=</span> <span class="fl">1.1</span>) {</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>points <span class="op">||</span> points<span class="op">.</span><span class="at">length</span> <span class="op">===</span> <span class="dv">0</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> minX <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxX <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> minY <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxY <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> minZ <span class="op">=</span> <span class="kw">Infinity</span><span class="op">,</span> maxZ <span class="op">=</span> <span class="op">-</span><span class="kw">Infinity</span><span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> tempVec <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> points<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        tempVec<span class="op">.</span><span class="fu">copy</span>(points[i])<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">x</span> <span class="op">&lt;</span> minX) minX <span class="op">=</span> tempVec<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">x</span> <span class="op">&gt;</span> maxX) maxX <span class="op">=</span> tempVec<span class="op">.</span><span class="at">x</span><span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">y</span> <span class="op">&lt;</span> minY) minY <span class="op">=</span> tempVec<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">y</span> <span class="op">&gt;</span> maxY) maxY <span class="op">=</span> tempVec<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">z</span> <span class="op">&lt;</span> minZ) minZ <span class="op">=</span> tempVec<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (tempVec<span class="op">.</span><span class="at">z</span> <span class="op">&gt;</span> maxZ) maxZ <span class="op">=</span> tempVec<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> width <span class="op">=</span> maxX <span class="op">-</span> minX <span class="op">||</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> height <span class="op">=</span> maxY <span class="op">-</span> minY <span class="op">||</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> centerX <span class="op">=</span> (minX <span class="op">+</span> maxX) <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> centerY <span class="op">=</span> (minY <span class="op">+</span> maxY) <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> boxAspect <span class="op">=</span> width <span class="op">/</span> height<span class="op">;</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> halfWidth<span class="op">,</span> halfHeight<span class="op">;</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (boxAspect <span class="op">&gt;</span> viewportAspect) {</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        halfWidth <span class="op">=</span> (width <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> padding<span class="op">;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>        halfHeight <span class="op">=</span> halfWidth <span class="op">/</span> viewportAspect<span class="op">;</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>        halfHeight <span class="op">=</span> (height <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> padding<span class="op">;</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>        halfWidth <span class="op">=</span> halfHeight <span class="op">*</span> viewportAspect<span class="op">;</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">left</span> <span class="op">=</span> centerX <span class="op">-</span> halfWidth<span class="op">;</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">right</span> <span class="op">=</span> centerX <span class="op">+</span> halfWidth<span class="op">;</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">top</span> <span class="op">=</span> centerY <span class="op">+</span> halfHeight<span class="op">;</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> centerY <span class="op">-</span> halfHeight<span class="op">;</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> depthPadding <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>((maxZ <span class="op">-</span> minZ) <span class="op">*</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">near</span> <span class="op">=</span> <span class="op">-</span>maxZ <span class="op">-</span> depthPadding<span class="op">;</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">far</span> <span class="op">=</span> <span class="op">-</span>minZ <span class="op">+</span> depthPadding<span class="op">;</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

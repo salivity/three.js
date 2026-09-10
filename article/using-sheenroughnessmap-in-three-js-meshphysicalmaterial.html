@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using sheenRoughnessMap in Three.js MeshPhysicalMaterial - three.js</title>
+    <meta name="description" content="This article provides a practical guide on using the sheenRoughnessMap property on a MeshPhysicalMaterial in Three.js. You will learn how sheen properties simulate fabric fuzziness, how the roughness map modulates this effect across a surface at a micros">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-sheenroughnessmap-in-three-js-meshphysicalmaterial">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using sheenRoughnessMap in Three.js MeshPhysicalMaterial - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-sheenroughnessmap-in-three-js-meshphysicalmaterial" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a practical guide on using the sheenRoughnessMap property on a MeshPhysicalMaterial in Three.js. You will learn how sheen properties simulate fabric fuzziness, how the roughness map modulates this effect across a surface at a micros" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-sheenroughnessmap-in-threejs-meshphysicalmaterial">Using
+sheenRoughnessMap in Three.js MeshPhysicalMaterial</h1>
+<p>This article provides a practical guide on using the
+<code>sheenRoughnessMap</code> property on a
+<code>MeshPhysicalMaterial</code> in Three.js. You will learn how sheen
+properties simulate fabric fuzziness, how the roughness map modulates
+this effect across a surface at a microscopic level, and how to
+configure textures and materials in code for realistic cloth
+rendering.</p>
+<h2 id="understanding-sheen-and-sheen-roughness">Understanding Sheen and
+Sheen Roughness</h2>
+<p>In physically based rendering (PBR), the sheen layer simulates the
+backscattering of light caused by microscopic fibers on fabrics such as
+velvet, satin, and cotton. While the base roughness of a material
+dictates standard specular reflections, sheen roughness specifically
+dictates how blurry or sharp the microfiber reflection appears.</p>
+<p>By applying a <code>sheenRoughnessMap</code>, you can break up
+uniform highlights across your fabric. Areas with higher roughness
+scatter light broadly, appearing softer and fuzzier, while areas with
+lower roughness produce tighter, sharper specular highlights along
+grazing angles.</p>
+<h2 id="texture-channel-requirements">Texture Channel Requirements</h2>
+<p>In Three.js, <code>sheenRoughnessMap</code> reads values to scale the
+scalar <code>sheenRoughness</code> property.</p>
+<ul>
+<li><strong>Color Space:</strong> Roughness data is non-color data.
+Always set the texture's <code>colorSpace</code> to
+<code>THREE.NoColorSpace</code> (or
+<code>THREE.LinearSRGBColorSpace</code>) to prevent gamma correction
+from distorting the roughness values.</li>
+<li><strong>Texture Channel:</strong> Depending on your pipeline,
+<code>sheenRoughnessMap</code> typically samples the alpha channel of
+the assigned texture. Ensure your texture export matches this convention
+or supplies a dedicated grayscale map.</li>
+</ul>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<p>To enable and control sheen fuzziness using a texture map,
+instantiate a <code>MeshPhysicalMaterial</code> and configure the sheen
+properties:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Initialize the TextureLoader</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Load the sheen roughness map</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sheenRoughnessTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;textures/fabric_sheen_roughness.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure linear color space for data maps</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>sheenRoughnessTexture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NoColorSpace</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>sheenRoughnessTexture<span class="op">.</span><span class="at">wrapS</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">RepeatWrapping</span><span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sheenRoughnessTexture<span class="op">.</span><span class="at">wrapT</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">RepeatWrapping</span><span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create the MeshPhysicalMaterial</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fabricMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0x224488</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.8</span><span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Enable Sheen</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheen</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span> <span class="co">// Multiplier for the sheen layer strength</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheenColor</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="bn">0xffffff</span>)<span class="op">,</span> <span class="co">// Color of the microfibers</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheenRoughness</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span> <span class="co">// Scalar multiplier applied to the map</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">sheenRoughnessMap</span><span class="op">:</span> sheenRoughnessTexture <span class="co">// Dictates variation in fuzziness</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Apply to a mesh</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">64</span><span class="op">,</span> <span class="dv">64</span>)<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clothMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> fabricMaterial)<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(clothMesh)<span class="op">;</span></span></code></pre></div>
+<h2 id="key-properties-to-balance">Key Properties to Balance</h2>
+<ul>
+<li><strong><code>sheen</code></strong>: Serves as the master switch and
+weight (from <code>0.0</code> to <code>1.0</code>) for the effect. It
+must be greater than zero for the <code>sheenRoughnessMap</code> to
+produce visible results.</li>
+<li><strong><code>sheenRoughness</code></strong>: Acts as a uniform
+multiplier for the values read from <code>sheenRoughnessMap</code>. If
+this is set to <code>0.0</code>, the roughness map will have no
+effect.</li>
+<li><strong><code>sheenColor</code> or
+<code>sheenColorMap</code></strong>: Dictates the tint of the scattered
+light. Combining a <code>sheenColorMap</code> for color variation with a
+<code>sheenRoughnessMap</code> provides the highest level of realism for
+patterned fabrics, wear patterns, or localized micro-abrasions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

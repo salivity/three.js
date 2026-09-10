@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access WebXR Hand Tracking Joints in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to access and extract individual joint transformations—such as position, orientation, and radius—from a hand tracked via WebXR in Three.js. By configuring the WebXR manager, retrieving hand controller instances, and querying">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/access-webxr-hand-tracking-joints-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Access WebXR Hand Tracking Joints in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/access-webxr-hand-tracking-joints-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to access and extract individual joint transformations—such as position, orientation, and radius—from a hand tracked via WebXR in Three.js. By configuring the WebXR manager, retrieving hand controller instances, and querying" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="access-webxr-hand-tracking-joints-in-threejs">Access WebXR Hand
+Tracking Joints in Three.js</h1>
+<p>This article explains how to access and extract individual joint
+transformations—such as position, orientation, and radius—from a hand
+tracked via WebXR in Three.js. By configuring the WebXR manager,
+retrieving hand controller instances, and querying specific named joints
+during the render loop, you can drive custom mechanics, gesture
+recognition, or interactive physics in your immersive 3D
+applications.</p>
+<h2 id="enabling-webxr-hand-tracking">Enabling WebXR Hand Tracking</h2>
+<p>To use hand tracking in Three.js, ensure your WebGL renderer has
+WebXR enabled and is added to an active session that supports the
+hand-tracking feature.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span></code></pre></div>
+<p>When requesting the WebXR session (often handled via
+<code>VRButton.createButton(renderer, { optionalFeatures: ['hand-tracking'] })</code>),
+the browser requests access to the underlying hardware's hand-tracking
+data.</p>
+<h2 id="getting-the-hand-instances">Getting the Hand Instances</h2>
+<p>Three.js abstracts WebXR hands through
+<code>renderer.xr.getHand(index)</code>. The index corresponds to the
+input source index (<code>0</code> for the first detected hand,
+<code>1</code> for the second).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hand0 <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getHand</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hand0)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hand1 <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getHand</span>(<span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hand1)<span class="op">;</span></span></code></pre></div>
+<p>When a hand is tracked, Three.js populates the <code>joints</code>
+property on the <code>hand</code> object. This property maps standard
+WebXR joint identifiers to Three.js <code>Group</code> or
+<code>Bone</code> objects, which are automatically updated each frame
+with the latest spatial transformations.</p>
+<h2 id="standard-joint-names">Standard Joint Names</h2>
+<p>WebXR defines 25 standard joints for each hand. The most commonly
+used identifiers include:</p>
+<ul>
+<li><strong>Wrist:</strong> <code>'wrist'</code></li>
+<li><strong>Thumb:</strong> <code>'thumb-metacarpal'</code>,
+<code>'thumb-phalanx-proximal'</code>,
+<code>'thumb-phalanx-distal'</code>, <code>'thumb-tip'</code></li>
+<li><strong>Index Finger:</strong>
+<code>'index-finger-metacarpal'</code>,
+<code>'index-finger-phalanx-proximal'</code>,
+<code>'index-finger-phalanx-intermediate'</code>,
+<code>'index-finger-phalanx-distal'</code>,
+<code>'index-finger-tip'</code></li>
+<li><strong>Middle Finger:</strong>
+<code>'middle-finger-metacarpal'</code>,
+<code>'middle-finger-phalanx-proximal'</code>,
+<code>'middle-finger-phalanx-intermediate'</code>,
+<code>'middle-finger-phalanx-distal'</code>,
+<code>'middle-finger-tip'</code></li>
+<li><strong>Ring Finger:</strong> <code>'ring-finger-metacarpal'</code>,
+<code>'ring-finger-phalanx-proximal'</code>,
+<code>'ring-finger-phalanx-intermediate'</code>,
+<code>'ring-finger-phalanx-distal'</code>,
+<code>'ring-finger-tip'</code></li>
+<li><strong>Pinky Finger:</strong>
+<code>'pinky-finger-metacarpal'</code>,
+<code>'pinky-finger-phalanx-proximal'</code>,
+<code>'pinky-finger-phalanx-intermediate'</code>,
+<code>'pinky-finger-phalanx-distal'</code>,
+<code>'pinky-finger-tip'</code></li>
+</ul>
+<h2 id="reading-transformations-via-threejs-joint-objects">Reading
+Transformations via Three.js Joint Objects</h2>
+<p>Once hand tracking is active, access specific joints directly through
+the <code>joints</code> dictionary of the hand instance. Each joint
+provides standard Three.js transformation properties:
+<code>position</code>, <code>quaternion</code>, <code>rotation</code>,
+and <code>matrixWorld</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> indexTipPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> indexTipQuaternion <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Quaternion</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">checkJointData</span>(hand) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Verify that joints are populated and the specific joint exists</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> indexTip <span class="op">=</span> hand<span class="op">.</span><span class="at">joints</span>[<span class="st">&#39;index-finger-tip&#39;</span>]<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (indexTip) {</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read local transformation</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> localPosition <span class="op">=</span> indexTip<span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> localRotation <span class="op">=</span> indexTip<span class="op">.</span><span class="at">quaternion</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read world transformation</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    indexTip<span class="op">.</span><span class="fu">getWorldPosition</span>(indexTipPosition)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    indexTip<span class="op">.</span><span class="fu">getWorldQuaternion</span>(indexTipQuaternion)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read joint radius (in meters) if provided by the device</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> jointRadius <span class="op">=</span> indexTip<span class="op">.</span><span class="at">jointRadius</span><span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Index Tip World Position: </span><span class="sc">${</span>indexTipPosition<span class="op">.</span><span class="at">x</span><span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>indexTipPosition<span class="op">.</span><span class="at">y</span><span class="sc">}</span><span class="vs">, </span><span class="sc">${</span>indexTipPosition<span class="op">.</span><span class="at">z</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="reading-joint-data-in-the-render-loop">Reading Joint Data in the
+Render Loop</h2>
+<p>Place the extraction logic inside the WebXR-compatible animation loop
+(<code>setAnimationLoop</code>) to monitor transformations on every
+frame:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setAnimationLoop</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Check the left or right hand</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (hand0<span class="op">.</span><span class="at">visible</span>) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> wrist <span class="op">=</span> hand0<span class="op">.</span><span class="at">joints</span>[<span class="st">&#39;wrist&#39;</span>]<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indexTip <span class="op">=</span> hand0<span class="op">.</span><span class="at">joints</span>[<span class="st">&#39;index-finger-tip&#39;</span>]<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (wrist <span class="op">&amp;&amp;</span> indexTip) {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> distance <span class="op">=</span> wrist<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(indexTip<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Perform gameplay mechanics or gesture detection using the distance</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="low-level-access-via-native-webxr-frame">Low-Level Access via
+Native WebXR Frame</h2>
+<p>If direct access to the raw WebXR data is required instead of
+Three.js object wrappers, use <code>renderer.xr.getFrame()</code> and
+the native <code>XRHand</code> interface:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setAnimationLoop</span>((timestamp<span class="op">,</span> frame) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (frame) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> referenceSpace <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getReferenceSpace</span>()<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> session <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getSession</span>()<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">const</span> inputSource <span class="kw">of</span> session<span class="op">.</span><span class="at">inputSources</span>) {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (inputSource<span class="op">.</span><span class="at">hand</span>) {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> indexTipJoint <span class="op">=</span> inputSource<span class="op">.</span><span class="at">hand</span><span class="op">.</span><span class="fu">get</span>(<span class="st">&#39;index-finger-tip&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> jointPose <span class="op">=</span> frame<span class="op">.</span><span class="fu">getJointPose</span>(indexTipJoint<span class="op">,</span> referenceSpace)<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (jointPose) {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>          <span class="kw">const</span> { x<span class="op">,</span> y<span class="op">,</span> z } <span class="op">=</span> jointPose<span class="op">.</span><span class="at">transform</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>          <span class="kw">const</span> orientation <span class="op">=</span> jointPose<span class="op">.</span><span class="at">transform</span><span class="op">.</span><span class="at">orientation</span><span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>          <span class="kw">const</span> radius <span class="op">=</span> jointPose<span class="op">.</span><span class="at">radius</span><span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>For most use cases, querying <code>hand.joints[jointName]</code>
+through the standard Three.js hand object is the most efficient and
+idiomatic approach.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

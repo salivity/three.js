@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Depth Buffer Texture in Post-Processing - three.js</title>
+    <meta name="description" content="Extracting the depth buffer in Three.js allows you to implement advanced screen-space post-processing effects such as depth of field, screen-space ambient occlusion (SSAO), and distance-based fog. By attaching a THREE.DepthTexture instance directly to a">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-depth-buffer-texture-in-post-processing">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Depth Buffer Texture in Post-Processing - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-depth-buffer-texture-in-post-processing" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extracting the depth buffer in Three.js allows you to implement advanced screen-space post-processing effects such as depth of field, screen-space ambient occlusion (SSAO), and distance-based fog. By attaching a THREE.DepthTexture instance directly to a" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-depth-buffer-texture-in-post-processing">Three.js Depth
+Buffer Texture in Post-Processing</h1>
+<p>Extracting the depth buffer in Three.js allows you to implement
+advanced screen-space post-processing effects such as depth of field,
+screen-space ambient occlusion (SSAO), and distance-based fog. By
+attaching a <code>THREE.DepthTexture</code> instance directly to a
+<code>THREE.WebGLRenderTarget</code>, Three.js automatically records
+z-buffer data during the primary render pass. This guide explains how to
+configure a render target with a depth texture, pass that texture to a
+custom post-processing shader, and linearize the non-linear depth values
+inside the fragment shader.</p>
+<h3 id="1-create-a-render-target-with-a-depth-texture">1. Create a
+Render Target with a Depth Texture</h3>
+<p>To capture depth, instantiate a <code>THREE.DepthTexture</code> and
+assign it to the <code>depthTexture</code> property of your
+<code>THREE.WebGLRenderTarget</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the depth texture</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> depthTexture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DepthTexture</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>depthTexture<span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">UnsignedShortType</span><span class="op">;</span> <span class="co">// Alternatively, THREE.FloatType for higher precision</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the render target and assign the depth texture</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height<span class="op">,</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthTexture</span><span class="op">:</span> depthTexture<span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthBuffer</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Using <code>THREE.UnsignedShortType</code> provides 16-bit depth
+precision, which is generally sufficient for most effects. If you
+require higher precision for large view frustums or complex
+calculations, use <code>THREE.FloatType</code> or
+<code>THREE.UnsignedIntType</code>.</p>
+<h3 id="2-configure-the-custom-post-processing-shader">2. Configure the
+Custom Post-Processing Shader</h3>
+<p>WebGL stores depth buffer values non-linearly due to perspective
+projection. To use depth values effectively in world space, you must
+linearize the sample inside the fragment shader using the camera's near
+and far clipping planes.</p>
+<h4 id="vertex-shader">Vertex Shader</h4>
+<p>A simple full-screen quad vertex shader:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec2</span> vUv<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    vUv <span class="op">=</span> uv<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">gl_Position</span> <span class="op">=</span> projectionMatrix <span class="op">*</span> modelViewMatrix <span class="op">*</span> <span class="dt">vec4</span><span class="op">(</span>position<span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h4 id="fragment-shader">Fragment Shader</h4>
+<p>Sample the depth texture and convert the perspective depth to a
+linear value between <code>0.0</code> and <code>1.0</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include &lt;packing&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec2</span> vUv<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">sampler2D</span> tDiffuse<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">sampler2D</span> tDepth<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">float</span> cameraNear<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">float</span> cameraFar<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Converts non-linear WebGL depth to linear view-space depth</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="dt">float</span> <span class="fu">readDepth</span><span class="op">(</span><span class="dt">sampler2D</span> depthSampler<span class="op">,</span> <span class="dt">vec2</span> coord<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> fragCoordZ <span class="op">=</span> <span class="dt">texture2D</span><span class="op">(</span>depthSampler<span class="op">,</span> coord<span class="op">).</span><span class="fu">x</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> viewZ <span class="op">=</span> <span class="fu">perspectiveDepthToViewZ</span><span class="op">(</span>fragCoordZ<span class="op">,</span> cameraNear<span class="op">,</span> cameraFar<span class="op">);</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">return</span> <span class="fu">viewZToOrthographicDepth</span><span class="op">(</span>viewZ<span class="op">,</span> cameraNear<span class="op">,</span> cameraFar<span class="op">);</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec4</span> sceneColor <span class="op">=</span> <span class="dt">texture2D</span><span class="op">(</span>tDiffuse<span class="op">,</span> vUv<span class="op">);</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> depth <span class="op">=</span> <span class="fu">readDepth</span><span class="op">(</span>tDepth<span class="op">,</span> vUv<span class="op">);</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Example: visualize depth as grayscale</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span><span class="dt">vec3</span><span class="op">(</span>depth<span class="op">),</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="3-build-the-post-processing-scene">3. Build the Post-Processing
+Scene</h3>
+<p>Create a secondary scene containing a full-screen quad mapped with a
+<code>THREE.ShaderMaterial</code> that consumes the depth texture.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> postCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> postScene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> postMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vertexShader</span><span class="op">:</span> <span class="bu">document</span><span class="op">.</span><span class="fu">getElementById</span>(<span class="st">&#39;vertexShader&#39;</span>)<span class="op">.</span><span class="at">textContent</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">fragmentShader</span><span class="op">:</span> <span class="bu">document</span><span class="op">.</span><span class="fu">getElementById</span>(<span class="st">&#39;fragmentShader&#39;</span>)<span class="op">.</span><span class="at">textContent</span><span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uniforms</span><span class="op">:</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">tDiffuse</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> renderTarget<span class="op">.</span><span class="at">texture</span> }<span class="op">,</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">tDepth</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> renderTarget<span class="op">.</span><span class="at">depthTexture</span> }<span class="op">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">cameraNear</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> camera<span class="op">.</span><span class="at">near</span> }<span class="op">,</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">cameraFar</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> camera<span class="op">.</span><span class="at">far</span> }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> postQuad <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">,</span> postMaterial)<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>postScene<span class="op">.</span><span class="fu">add</span>(postQuad)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-execute-the-render-loop">4. Execute the Render Loop</h3>
+<p>In your animation loop, render the main scene to the custom render
+target first. Then render the post-processing scene directly to the
+canvas.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 1. Render main scene into the render target to populate color and depth textures</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(renderTarget)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 2. Render post-processing quad to the screen (default framebuffer)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(<span class="kw">null</span>)<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(postScene<span class="op">,</span> postCamera)<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="5-handling-window-resizes">5. Handling Window Resizes</h3>
+<p>Ensure both the color buffer and the depth texture scale whenever the
+viewport changes:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> width <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> height <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> width <span class="op">/</span> height<span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setSize</span>(width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  renderTarget<span class="op">.</span><span class="fu">setSize</span>(width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

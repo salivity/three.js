@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free 360 Tumbling with Three.js TrackballControls - three.js</title>
+    <meta name="description" content="This guide explains how to configure TrackballControls in Three.js to allow unrestricted, 360-degree tumbling across all rotational axes. By default, controls like OrbitControls lock the camera's orientation to a fixed world up vector (usually the positi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/free-360-tumbling-with-three-js-trackballcontrols">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Free 360 Tumbling with Three.js TrackballControls - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/free-360-tumbling-with-three-js-trackballcontrols" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to configure TrackballControls in Three.js to allow unrestricted, 360-degree tumbling across all rotational axes. By default, controls like OrbitControls lock the camera's orientation to a fixed world up vector (usually the positi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="free-360-tumbling-with-threejs-trackballcontrols">Free 360
+Tumbling with Three.js TrackballControls</h1>
+<p>This guide explains how to configure <code>TrackballControls</code>
+in Three.js to allow unrestricted, 360-degree tumbling across all
+rotational axes. By default, controls like <code>OrbitControls</code>
+lock the camera's orientation to a fixed world up vector (usually the
+positive Y-axis) to prevent flipping. By properly implementing
+<code>TrackballControls</code>, you can decouple the camera from this
+fixed orientation and achieve full spherical freedom.</p>
+<h3 id="understanding-up-vector-independence">Understanding Up Vector
+Independence</h3>
+<p>Unlike <code>OrbitControls</code>, which constrains polar angles to
+avoid gimbal lock and maintains <code>camera.up = (0, 1, 0)</code>,
+<code>TrackballControls</code> uses quaternion-based rotations around a
+virtual sphere. It dynamically updates both the camera's position and
+its internal <code>up</code> vector relative to the target. To preserve
+this complete freedom, you must avoid resetting <code>camera.up</code>
+in your render loop and ensure rolling maneuvers are permitted.</p>
+<h3 id="implementation-steps">Implementation Steps</h3>
+<h4 id="1-import-and-initialize-trackballcontrols">1. Import and
+Initialize TrackballControls</h4>
+<p>Import the controls module from the Three.js add-ons directory and
+instantiate it using your camera and the WebGL renderer's DOM
+element:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { TrackballControls } <span class="im">from</span> <span class="st">&#39;three/addons/controls/TrackballControls.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup Camera</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize Controls</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> controls <span class="op">=</span> <span class="kw">new</span> <span class="fu">TrackballControls</span>(camera<span class="op">,</span> renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-configure-key-properties-for-smooth-tumbling">2. Configure Key
+Properties for Smooth Tumbling</h4>
+<p>To enable fluid, unconstrained tumbling across all axes:</p>
+<ul>
+<li>Ensure <code>noRoll</code> remains <code>false</code> (default).
+Setting this to <code>true</code> restricts view-axis rotation.</li>
+<li>Adjust <code>rotateSpeed</code> to your desired sensitivity.</li>
+<li>Configure damping using <code>dynamicDampingFactor</code> if smooth
+inertial tumbling is desired.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure rotational freedom</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">noRoll</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">noPan</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">noZoom</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Rotational sensitivity</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">rotateSpeed</span> <span class="op">=</span> <span class="fl">3.0</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable inertia/damping</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">staticMoving</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>controls<span class="op">.</span><span class="at">dynamicDampingFactor</span> <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span></span></code></pre></div>
+<h4 id="3-update-controls-in-the-animation-loop">3. Update Controls in
+the Animation Loop</h4>
+<p><code>TrackballControls</code> requires continuous calculation every
+frame. Call <code>controls.update()</code> inside your
+<code>requestAnimationFrame</code> loop.</p>
+<p><strong>Important:</strong> Do not call <code>camera.lookAt()</code>
+or assign values to <code>camera.up</code> anywhere in the animation
+loop. Doing so overrides the tumbling calculations and forces the camera
+back to a fixed orientation.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update controls state</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  controls<span class="op">.</span><span class="fu">update</span>()<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="preventing-axis-snapping">Preventing Axis Snapping</h3>
+<p>If the camera snaps back to an upright position during interaction,
+check for these common issues:</p>
+<ul>
+<li><strong>Third-Party Code Resetting Camera Up:</strong> Ensure no
+post-processing passes or helper utilities reset
+<code>camera.up.set(0, 1, 0)</code>.</li>
+<li><strong>LookAt Overwrites:</strong> Avoid calling
+<code>camera.lookAt()</code> after user interaction begins, as
+<code>TrackballControls.target</code> handles aiming internally. Change
+<code>controls.target</code> directly if you need to reposition the
+pivot point.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

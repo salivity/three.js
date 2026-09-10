@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control CSS2DRenderer z-index in Three.js - three.js</title>
+    <meta name="description" content="Controlling the stacking order (z-index) of HTML elements managed by the Three.js CSS2DRenderer can be challenging because the renderer dynamically modifies DOM hierarchy and styles based on 3D coordinates and camera distance. By default, CSS2DRenderer d">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/control-css2drenderer-z-index-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Control CSS2DRenderer z-index in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/control-css2drenderer-z-index-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Controlling the stacking order (z-index) of HTML elements managed by the Three.js CSS2DRenderer can be challenging because the renderer dynamically modifies DOM hierarchy and styles based on 3D coordinates and camera distance. By default, CSS2DRenderer d" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="control-css2drenderer-z-index-in-threejs">Control CSS2DRenderer
+z-index in Three.js</h1>
+<p>Controlling the stacking order (<code>z-index</code>) of HTML
+elements managed by the Three.js <code>CSS2DRenderer</code> can be
+challenging because the renderer dynamically modifies DOM hierarchy and
+styles based on 3D coordinates and camera distance. By default,
+<code>CSS2DRenderer</code> depth-sorts objects relative to the
+projection plane and re-appends DOM nodes to simulate visual depth. To
+strictly enforce a custom <code>z-index</code> on these elements, you
+must override this automatic behavior by manipulating the element’s CSS
+stacking context, enforcing properties during the render loop, or using
+separated rendering layers.</p>
+<h3 id="understanding-the-default-behavior">Understanding the Default
+Behavior</h3>
+<p>In Three.js, <code>CSS2DRenderer</code> maintains an internal
+<code>renderList</code>. In each render cycle, it computes the
+<code>distanceToProjectionPlane</code> for each <code>CSS2DObject</code>
+and sorts the list from furthest to nearest. It then appends each
+object’s DOM element sequentially to the renderer's wrapper
+container.</p>
+<p>Because elements are absolutely positioned siblings within the same
+parent <code>&lt;div&gt;</code>, their visual stacking order is dictated
+by two factors:</p>
+<ol type="1">
+<li>Their order in the DOM tree (furthest elements are appended first,
+nearest are appended last).</li>
+<li>Any explicit <code>z-index</code> applied to the elements.</li>
+</ol>
+<p>When multiple elements overlap at similar depths, or when you want a
+background element to visually appear in front regardless of 3D
+distance, relying on DOM reordering fails.</p>
+<hr />
+<h3 id="method-1-assigning-explicit-z-index-with-css">Method 1:
+Assigning Explicit <code>z-index</code> with CSS</h3>
+<p>Because <code>CSS2DObject</code> creates an element with
+<code>position: absolute;</code>, assigning an explicit integer
+<code>z-index</code> overrides the natural DOM order (document order
+only determines stacking when elements share the same
+<code>z-index</code>).</p>
+<p>Apply the <code>z-index</code> directly to the
+<code>CSS2DObject</code>'s root element:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> labelDiv <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;div&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>labelDiv<span class="op">.</span><span class="at">className</span> <span class="op">=</span> <span class="st">&#39;custom-label&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>labelDiv<span class="op">.</span><span class="at">textContent</span> <span class="op">=</span> <span class="st">&#39;High Priority Element&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Force an explicit z-index on the root element</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>labelDiv<span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">zIndex</span> <span class="op">=</span> <span class="st">&#39;1000&#39;</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> labelObject <span class="op">=</span> <span class="kw">new</span> <span class="fu">CSS2DObject</span>(labelDiv)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(labelObject)<span class="op">;</span></span></code></pre></div>
+<p>To prevent other CSS classes or updates from clearing it, you can
+declare it in your stylesheet using <code>!important</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode css"><code class="sourceCode css"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">.custom-label</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">position</span><span class="ch">:</span> <span class="dv">absolute</span><span class="op">;</span> <span class="co">/* Ensures CSS positioning rules apply */</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1000</span> <span class="at">!important</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">.background-label</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">position</span><span class="ch">:</span> <span class="dv">absolute</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">z-index</span><span class="ch">:</span> <span class="dv">1</span> <span class="at">!important</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Elements with <code>z-index: 1000</code> will always render above
+elements with lower values, regardless of camera distance or DOM
+insertion order.</p>
+<hr />
+<h3 id="method-2-dynamic-enforcement-in-the-render-loop">Method 2:
+Dynamic Enforcement in the Render Loop</h3>
+<p>If elements require dynamic stacking (for example, distance-based
+rendering with custom priority tiers), update the <code>z-index</code>
+inside the <code>requestAnimationFrame</code> loop prior to calling
+<code>css2DRenderer.render()</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Calculate priority or evaluate condition</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">shouldStayOnTop</span>(customObject)) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        customObject<span class="op">.</span><span class="at">element</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">zIndex</span> <span class="op">=</span> <span class="st">&#39;9999&#39;</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Base z-index on distance to prevent default DOM collisions</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> distance <span class="op">=</span> camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(customObject<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        customObject<span class="op">.</span><span class="at">element</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">zIndex</span> <span class="op">=</span> <span class="vs">`</span><span class="sc">${</span><span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(<span class="dv">10000</span> <span class="op">-</span> distance)<span class="sc">}</span><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    css2DRenderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Mapping the camera distance to an integer <code>z-index</code>
+maintains fine-grained depth order without letting DOM append-order
+inconsistencies disrupt element visibility.</p>
+<hr />
+<h3
+id="method-3-multiple-css2drenderer-instances-for-strict-layering">Method
+3: Multiple <code>CSS2DRenderer</code> Instances for Strict
+Layering</h3>
+<p>When managing distinct categories of labels (such as interactive UI
+overlays that must strictly sit above general world-space annotations),
+overriding <code>z-index</code> per element can lead to style
+maintenance issues. A clean architectural approach is using multiple
+<code>CSS2DRenderer</code> instances.</p>
+<ol type="1">
+<li><strong>Create two renderer containers</strong> and give the overlay
+container a higher <code>z-index</code>:</li>
+</ol>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Base 2D Renderer for world labels</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldRenderer <span class="op">=</span> <span class="kw">new</span> <span class="fu">CSS2DRenderer</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>worldRenderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>worldRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">position</span> <span class="op">=</span> <span class="st">&#39;absolute&#39;</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>worldRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> <span class="st">&#39;0px&#39;</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>worldRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">zIndex</span> <span class="op">=</span> <span class="st">&#39;1&#39;</span><span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(worldRenderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Overlay 2D Renderer for UI markers</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> overlayRenderer <span class="op">=</span> <span class="kw">new</span> <span class="fu">CSS2DRenderer</span>()<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>overlayRenderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>overlayRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">position</span> <span class="op">=</span> <span class="st">&#39;absolute&#39;</span><span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>overlayRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">top</span> <span class="op">=</span> <span class="st">&#39;0px&#39;</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>overlayRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">zIndex</span> <span class="op">=</span> <span class="st">&#39;2&#39;</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>overlayRenderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">style</span><span class="op">.</span><span class="at">pointerEvents</span> <span class="op">=</span> <span class="st">&#39;none&#39;</span><span class="op">;</span> <span class="co">// Allow events to pass through if needed</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(overlayRenderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span></code></pre></div>
+<ol start="2" type="1">
+<li><strong>Separate elements by scene or visibility layers</strong>,
+then render both in your animation loop:</li>
+</ol>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    webGLRenderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    worldRenderer<span class="op">.</span><span class="fu">render</span>(worldScene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    overlayRenderer<span class="op">.</span><span class="fu">render</span>(overlayScene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This isolates the stacking contexts completely, guaranteeing that
+everything rendered by the <code>overlayRenderer</code> appears above
+elements handled by the <code>worldRenderer</code>.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

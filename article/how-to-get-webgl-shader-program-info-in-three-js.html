@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Get WebGL Shader Program Info in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to access, inspect, and extract active shader program information using Three.js's underlying WebGLPrograms manager. By accessing the compiled WebGLProgram instances tracked by the renderer, developers can retrieve GLSL source cod">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-get-webgl-shader-program-info-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Get WebGL Shader Program Info in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-get-webgl-shader-program-info-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to access, inspect, and extract active shader program information using Three.js's underlying WebGLPrograms manager. By accessing the compiled WebGLProgram instances tracked by the renderer, developers can retrieve GLSL source cod" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-get-webgl-shader-program-info-in-threejs">How to Get
+WebGL Shader Program Info in Three.js</h1>
+<p>This guide explains how to access, inspect, and extract active shader
+program information using Three.js's underlying
+<code>WebGLPrograms</code> manager. By accessing the compiled
+<code>WebGLProgram</code> instances tracked by the renderer, developers
+can retrieve GLSL source code, active uniforms, vertex attributes, and
+compilation diagnostics for debugging rendering pipelines and optimizing
+GPU performance.</p>
+<h3 id="ensure-shaders-are-compiled">Ensure Shaders Are Compiled</h3>
+<p>Three.js compiles shader programs lazily on demand. Before program
+data can be extracted, the renderer must compile the shaders by either
+executing a render call or manually precompiling the scene.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Force compilation without rendering a full frame</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">compile</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Or run a standard render loop iteration</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span></code></pre></div>
+<h3 id="accessing-cached-programs-via-rendererinfoprograms">Accessing
+Cached Programs via <code>renderer.info.programs</code></h3>
+<p>The <code>WebGLPrograms</code> class maintains an internal cache of
+all active shader configurations. Three.js exposes this cache directly
+through the <code>renderer.info.programs</code> array. Each entry in
+this array is an instance of <code>WebGLProgram</code> created by the
+<code>WebGLPrograms</code> factory.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> activePrograms <span class="op">=</span> renderer<span class="op">.</span><span class="at">info</span><span class="op">.</span><span class="at">programs</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>activePrograms<span class="op">.</span><span class="fu">forEach</span>((program) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Program ID: </span><span class="sc">${</span>program<span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Program Name/Type: </span><span class="sc">${</span>program<span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Cache Key: </span><span class="sc">${</span>program<span class="op">.</span><span class="at">cacheKey</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Used count: </span><span class="sc">${</span>program<span class="op">.</span><span class="at">usedTimes</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="extracting-uniforms-attributes-and-glsl-source">Extracting
+Uniforms, Attributes, and GLSL Source</h3>
+<p>Each <code>WebGLProgram</code> wrapper object provides methods and
+properties to query the compiled state, uniforms, attributes, and raw
+shader source:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>activePrograms<span class="op">.</span><span class="fu">forEach</span>((program) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Retrieve GLSL source strings</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> vertexShaderSource <span class="op">=</span> program<span class="op">.</span><span class="at">vertexShader</span><span class="op">.</span><span class="at">content</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> fragmentShaderSource <span class="op">=</span> program<span class="op">.</span><span class="at">fragmentShader</span><span class="op">.</span><span class="at">content</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Retrieve uniform definitions and active locations</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> uniforms <span class="op">=</span> program<span class="op">.</span><span class="fu">getUniforms</span>()<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Uniforms:&#39;</span><span class="op">,</span> uniforms)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Retrieve attribute locations</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> attributes <span class="op">=</span> program<span class="op">.</span><span class="fu">getAttributes</span>()<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Attributes:&#39;</span><span class="op">,</span> attributes)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Get the underlying native WebGLProgram object</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> glProgram <span class="op">=</span> program<span class="op">.</span><span class="at">program</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="querying-the-webgl-context-directly">Querying the WebGL Context
+Directly</h3>
+<p>If low-level hardware diagnostics are required, query the native
+<code>WebGLRenderingContext</code> using the
+<code>program.program</code> reference exposed by
+<code>WebGLProgram</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gl <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getContext</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>activePrograms<span class="op">.</span><span class="fu">forEach</span>((program) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> glProgram <span class="op">=</span> program<span class="op">.</span><span class="at">program</span><span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read total number of active uniforms</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> activeUniformsCount <span class="op">=</span> gl<span class="op">.</span><span class="fu">getProgramParameter</span>(glProgram<span class="op">,</span> gl<span class="op">.</span><span class="at">ACTIVE_UNIFORMS</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> activeUniformsCount<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> uniformInfo <span class="op">=</span> gl<span class="op">.</span><span class="fu">getActiveUniform</span>(glProgram<span class="op">,</span> i)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> location <span class="op">=</span> gl<span class="op">.</span><span class="fu">getUniformLocation</span>(glProgram<span class="op">,</span> uniformInfo<span class="op">.</span><span class="at">name</span>)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Uniform #</span><span class="sc">${</span>i<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>uniformInfo<span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs"> | Type: </span><span class="sc">${</span>uniformInfo<span class="op">.</span><span class="at">type</span><span class="sc">}</span><span class="vs"> | Size: </span><span class="sc">${</span>uniformInfo<span class="op">.</span><span class="at">size</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read total number of active attributes</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> activeAttribsCount <span class="op">=</span> gl<span class="op">.</span><span class="fu">getProgramParameter</span>(glProgram<span class="op">,</span> gl<span class="op">.</span><span class="at">ACTIVE_ATTRIBUTES</span>)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> activeAttribsCount<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> attribInfo <span class="op">=</span> gl<span class="op">.</span><span class="fu">getActiveAttrib</span>(glProgram<span class="op">,</span> i)<span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> location <span class="op">=</span> gl<span class="op">.</span><span class="fu">getAttribLocation</span>(glProgram<span class="op">,</span> attribInfo<span class="op">.</span><span class="at">name</span>)<span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Attribute #</span><span class="sc">${</span>i<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>attribInfo<span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs"> | Location: </span><span class="sc">${</span>location<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="accessing-material-specific-programs">Accessing
+Material-Specific Programs</h3>
+<p>To inspect the program of a specific mesh or material rather than
+iterating through the entire cache, use the
+<code>renderer.properties</code> API to retrieve the associated
+program:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialProperties <span class="op">=</span> renderer<span class="op">.</span><span class="at">properties</span><span class="op">.</span><span class="fu">get</span>(mesh<span class="op">.</span><span class="at">material</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materialProgram <span class="op">=</span> materialProperties<span class="op">.</span><span class="at">currentProgram</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (materialProgram) {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Material Program ID:&#39;</span><span class="op">,</span> materialProgram<span class="op">.</span><span class="at">id</span>)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Material Uniforms:&#39;</span><span class="op">,</span> materialProgram<span class="op">.</span><span class="fu">getUniforms</span>())<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

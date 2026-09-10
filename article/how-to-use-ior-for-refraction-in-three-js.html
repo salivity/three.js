@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use IOR for Refraction in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to use the ior (Index of Refraction) property in Three.js to realistically distort background visuals through transparent surfaces. By combining MeshPhysicalMaterial, physical transmission, and an environment map or background sce">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-ior-for-refraction-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use IOR for Refraction in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-ior-for-refraction-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to use the ior (Index of Refraction) property in Three.js to realistically distort background visuals through transparent surfaces. By combining MeshPhysicalMaterial, physical transmission, and an environment map or background sce" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-ior-for-refraction-in-threejs">How to Use IOR for
+Refraction in Three.js</h1>
+<p>This guide explains how to use the <code>ior</code> (Index of
+Refraction) property in Three.js to realistically distort background
+visuals through transparent surfaces. By combining
+<code>MeshPhysicalMaterial</code>, physical transmission, and an
+environment map or background scene, you can simulate optical physics
+like glass, water, and gems with accurate light-bending behavior.</p>
+<h3 id="1-enable-physical-transmission">1. Enable Physical
+Transmission</h3>
+<p>To make a surface distort the scene behind it, you must use
+<code>THREE.MeshPhysicalMaterial</code> instead of
+<code>MeshStandardMaterial</code>. Set <code>transmission</code> to near
+<code>1.0</code> and lower the <code>roughness</code> to keep the
+surface clear.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transmission</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.05</span><span class="op">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transparent</span><span class="op">:</span> <span class="kw">false</span> <span class="co">// Set to false; transmission handles optical transparency</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-ior-property">2. Configure the IOR Property</h3>
+<p>The <code>ior</code> property implements Snell’s Law to determine how
+sharply rays bend as they enter and exit the object. Standard values
+include:</p>
+<ul>
+<li><strong>Air:</strong> 1.0</li>
+<li><strong>Water:</strong> 1.333</li>
+<li><strong>Glass:</strong> 1.5</li>
+<li><strong>Diamond:</strong> 2.417</li>
+</ul>
+<p>Apply your desired index directly to the material:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">ior</span> <span class="op">=</span> <span class="fl">1.5</span><span class="op">;</span> <span class="co">// Simulates standard crown glass</span></span></code></pre></div>
+<h3 id="3-set-material-thickness">3. Set Material Thickness</h3>
+<p>Three.js uses the <code>thickness</code> property to calculate how
+far a refracted ray travels inside the mesh before exiting. Without
+thickness, the distortion will appear flat or non-existent because the
+renderer cannot determine the volume of the geometry.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">thickness</span> <span class="op">=</span> <span class="fl">1.2</span><span class="op">;</span> <span class="co">// Defines the volume&#39;s depth in world units</span></span></code></pre></div>
+<h3 id="4-provide-a-visual-background-to-distort">4. Provide a Visual
+Background to Distort</h3>
+<p>Three.js calculates refraction by rendering the scene behind the
+refractive mesh into an internal transmission render target. For the
+distortion to be visible, ensure there are objects behind the mesh or
+assign an environment map to the scene.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Load an HDR environment map for realistic background refraction</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> <span class="fu">RGBELoader</span>()<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;environment.hdr&#39;</span><span class="op">,</span> (texture) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  texture<span class="op">.</span><span class="at">mapping</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">EquirectangularReflectionMapping</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  scene<span class="op">.</span><span class="at">background</span> <span class="op">=</span> texture<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  scene<span class="op">.</span><span class="at">environment</span> <span class="op">=</span> texture<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="5-fine-tune-dispersion-and-chromatic-aberration">5. Fine-Tune
+Dispersion and Chromatic Aberration</h3>
+<p>In modern versions of Three.js (r163+), you can enhance visual
+fidelity by enabling <code>dispersion</code>. This splits the refracted
+light into spectral colors based on the IOR, creating chromatic
+aberration around the edges of the distortion.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">dispersion</span> <span class="op">=</span> <span class="fl">0.05</span><span class="op">;</span> <span class="co">// Adds subtle rainbow fringing along refractions</span></span></code></pre></div>
+<h3 id="complete-implementation">Complete Implementation</h3>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">SphereGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">64</span><span class="op">,</span> <span class="dv">64</span>)<span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> physicalMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshPhysicalMaterial</span>({</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">transmission</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">thickness</span><span class="op">:</span> <span class="fl">1.5</span><span class="op">,</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">ior</span><span class="op">:</span> <span class="fl">1.52</span><span class="op">,</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">dispersion</span><span class="op">:</span> <span class="fl">0.02</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> physicalMaterial)<span class="op">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(sphere)<span class="op">;</span></span></code></pre></div>
+<p>Ensure your renderer has tone mapping and appropriate color space
+settings enabled
+(<code>renderer.outputColorSpace = THREE.SRGBColorSpace</code>) to
+preserve contrast and realism in the refracted light.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using positionLocal for Three.js WebGPU Displacement - three.js</title>
+    <meta name="description" content="In Three.js WebGPU and the Three.js Shading Language (TSL), the positionLocal node represents an object's raw vertex coordinates in local model space before any matrix transformations occur. When implementing vertex displacement, positionLocal functions">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-positionlocal-for-three-js-webgpu-displacement">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using positionLocal for Three.js WebGPU Displacement - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-positionlocal-for-three-js-webgpu-displacement" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js WebGPU and the Three.js Shading Language (TSL), the positionLocal node represents an object's raw vertex coordinates in local model space before any matrix transformations occur. When implementing vertex displacement, positionLocal functions" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-positionlocal-for-threejs-webgpu-displacement">Using
+positionLocal for Three.js WebGPU Displacement</h1>
+<p>In Three.js WebGPU and the Three.js Shading Language (TSL), the
+<code>positionLocal</code> node represents an object's raw vertex
+coordinates in local model space before any matrix transformations
+occur. When implementing vertex displacement, <code>positionLocal</code>
+functions both as the spatial reference point for computing procedural
+offsets and as the base vector to which those calculated displacements
+are applied. Modifying or referencing this node enables developers to
+dynamically alter a mesh's geometry on the GPU while maintaining the
+integrity of standard transformation pipelines.</p>
+<h3 id="accessing-untransformed-coordinates">Accessing Untransformed
+Coordinates</h3>
+<p>In traditional WebGL GLSL pipelines, displacement begins by reading
+the mesh's <code>attribute vec3 position</code>. In the WebGPU node
+architecture, <code>positionLocal</code> provides direct access to this
+same attribute. Because these coordinates are relative to the mesh's
+origin and unaffected by world positioning, rotation, or scale, they
+offer a consistent coordinate space. This makes
+<code>positionLocal</code> essential for sampling displacement maps,
+procedural noise functions, or trigonometric waves, as sampling based on
+local coordinates ensures that the displacement pattern remains pinned
+to the mesh when the object moves through a scene.</p>
+<h3 id="acting-as-the-displacement-base">Acting as the Displacement
+Base</h3>
+<p>The primary functional role of <code>positionLocal</code> during
+vertex displacement is serving as the baseline to which displacement
+offsets are added. To alter vertex positions, developers typically
+calculate a displacement vector—often by multiplying the vertex normal
+(<code>normalLocal</code>) by a scalar value or noise output—and add it
+directly to <code>positionLocal</code>.</p>
+<p>For example, a common displacement expression in TSL follows this
+pattern:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> displacement <span class="op">=</span> normalLocal<span class="op">.</span><span class="fu">mul</span>(noiseValue)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">positionNode</span> <span class="op">=</span> positionLocal<span class="op">.</span><span class="fu">add</span>(displacement)<span class="op">;</span></span></code></pre></div>
+<p>By assigning this combined node to the material's
+<code>positionNode</code>, the material pipeline substitutes the
+original static vertex coordinates with the displaced version.</p>
+<h3 id="integration-with-the-transformation-pipeline">Integration with
+the Transformation Pipeline</h3>
+<p>After <code>positionLocal</code> is augmented with displacement
+offsets, the node system automatically handles the downstream matrix
+transformations. The displaced local position is passed into the
+model-view-projection matrix chain, converting the custom local
+positions into clip space for rasterization. Because
+<code>positionLocal</code> sits at the very beginning of the vertex
+processing stage, displacing geometry via this node guarantees that
+depth calculations, shadow map generation, and bounding volume updates
+conform properly to the deformed mesh.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

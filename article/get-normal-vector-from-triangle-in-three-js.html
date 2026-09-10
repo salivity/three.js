@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Normal Vector from Triangle in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to extract the normal vector of a face directly from a THREE.Triangle object in Three.js. By utilizing the built-in .getNormal() method, you can compute a normalized vector perpendicular to the triangle's surface based on its thre">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/get-normal-vector-from-triangle-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Get Normal Vector from Triangle in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/get-normal-vector-from-triangle-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to extract the normal vector of a face directly from a THREE.Triangle object in Three.js. By utilizing the built-in .getNormal() method, you can compute a normalized vector perpendicular to the triangle's surface based on its thre" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="get-normal-vector-from-triangle-in-threejs">Get Normal Vector
+from Triangle in Three.js</h1>
+<p>This guide explains how to extract the normal vector of a face
+directly from a <code>THREE.Triangle</code> object in Three.js. By
+utilizing the built-in <code>.getNormal()</code> method, you can compute
+a normalized vector perpendicular to the triangle's surface based on its
+three vertices. The following sections cover the exact syntax, code
+implementation, and important considerations regarding vertex winding
+order.</p>
+<h3 id="using-the-getnormal-method">Using the <code>getNormal()</code>
+Method</h3>
+<p>The <code>THREE.Triangle</code> class includes a direct method called
+<code>.getNormal()</code>. It calculates the face normal using the cross
+product of the triangle's edge vectors and writes the normalized result
+into a target <code>THREE.Vector3</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the three vertices of the triangle</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the Triangle instance</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> triangle <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Triangle</span>(vA<span class="op">,</span> vB<span class="op">,</span> vC)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiate a target vector to store the result</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract the normal vector</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>triangle<span class="op">.</span><span class="fu">getNormal</span>(normal)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(normal)<span class="op">;</span> <span class="co">// Output: Vector3 { x: 0, y: 0, z: 1 }</span></span></code></pre></div>
+<h3 id="static-method-alternative">Static Method Alternative</h3>
+<p>If you do not need to persist a <code>THREE.Triangle</code> instance,
+Three.js provides a static equivalent via
+<code>THREE.Triangle.getNormal()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="at">Triangle</span><span class="op">.</span><span class="fu">getNormal</span>(vA<span class="op">,</span> vB<span class="op">,</span> vC<span class="op">,</span> normal)<span class="op">;</span></span></code></pre></div>
+<p>This calculates the normal directly from three <code>Vector3</code>
+points without instantiating a <code>Triangle</code> object.</p>
+<h3 id="vertex-order-and-normal-direction">Vertex Order and Normal
+Direction</h3>
+<p>The direction of the normal vector depends strictly on the winding
+order of the vertices (<span class="math inline">\(a \to b \to
+c\)</span>). Three.js adheres to the right-hand rule:</p>
+<ul>
+<li><strong>Counter-Clockwise (CCW):</strong> When vertices are defined
+counter-clockwise relative to the viewer, the normal points outward
+toward the viewer.</li>
+<li><strong>Clockwise (CW):</strong> When defined clockwise, the normal
+points away from the viewer.</li>
+</ul>
+<p>If your resulting normal points in the opposite direction of what you
+expect, reverse the order of the second and third vertices (e.g., pass
+<span class="math inline">\(a, c, b\)</span> instead of <span
+class="math inline">\(a, b, c\)</span>).</p>
+<h3 id="performance-tip">Performance Tip</h3>
+<p>The <code>target</code> parameter is mandatory. Instead of creating a
+new <code>THREE.Vector3</code> inside tight loops or render functions,
+allocate a single <code>target</code> vector outside the loop and reuse
+it to minimize memory allocation and prevent unnecessary garbage
+collection overhead.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Camera Frustum Planes in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to extract the six boundary planes of a camera's view frustum using the THREE.Frustum class in Three.js. You will learn how to initialize a frustum, calculate the combined view-projection matrix from any perspective or orthograp">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/extract-camera-frustum-planes-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Extract Camera Frustum Planes in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/extract-camera-frustum-planes-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to extract the six boundary planes of a camera's view frustum using the THREE.Frustum class in Three.js. You will learn how to initialize a frustum, calculate the combined view-projection matrix from any perspective or orthograp" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="extract-camera-frustum-planes-in-threejs">Extract Camera Frustum
+Planes in Three.js</h1>
+<p>This article explains how to extract the six boundary planes of a
+camera's view frustum using the <code>THREE.Frustum</code> class in
+Three.js. You will learn how to initialize a frustum, calculate the
+combined view-projection matrix from any perspective or orthographic
+camera, update the frustum with that matrix, and read the resulting
+individual <code>THREE.Plane</code> instances for use in custom culling
+or collision checks.</p>
+<h2 id="1-prerequisites-and-matrix-synchronization">1. Prerequisites and
+Matrix Synchronization</h2>
+<p>To extract accurate frustum planes, the camera's transformation and
+projection matrices must reflect its latest position, orientation, and
+lens settings. If the camera has moved or changed its aspect ratio,
+update these matrices first:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span></code></pre></div>
+<h2 id="2-compute-the-view-projection-matrix">2. Compute the
+View-Projection Matrix</h2>
+<p>The <code>Frustum</code> class derives its boundaries from the
+camera's combined view-projection matrix. You obtain this by multiplying
+the camera's projection matrix by its inverse world matrix
+(<code>matrixWorldInverse</code>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> projectionMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>projectionMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span> camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span></code></pre></div>
+<h2 id="3-populate-the-frustum">3. Populate the Frustum</h2>
+<p>Instantiate a <code>THREE.Frustum</code> object and invoke
+<code>setFromProjectionMatrix()</code> using the combined matrix:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frustum <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Frustum</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(projectionMatrix)<span class="op">;</span></span></code></pre></div>
+<p>This method automatically extracts, calculates, and normalizes the
+six bounding planes in world space.</p>
+<h2 id="4-access-the-individual-planes">4. Access the Individual
+Planes</h2>
+<p>The extracted planes are stored in the <code>frustum.planes</code>
+array. Three.js defines them at the following zero-based indices:</p>
+<ul>
+<li><strong><code>frustum.planes[0]</code></strong>: Right plane</li>
+<li><strong><code>frustum.planes[1]</code></strong>: Left plane</li>
+<li><strong><code>frustum.planes[2]</code></strong>: Bottom plane</li>
+<li><strong><code>frustum.planes[3]</code></strong>: Top plane</li>
+<li><strong><code>frustum.planes[4]</code></strong>: Far plane</li>
+<li><strong><code>frustum.planes[5]</code></strong>: Near plane</li>
+</ul>
+<p>Each entry in the array is a <code>THREE.Plane</code> object
+containing a <code>normal</code> vector (<code>THREE.Vector3</code>)
+pointing inward toward the visible volume and a signed
+<code>constant</code> (<code>number</code>).</p>
+<h2 id="5-complete-implementation-example">5. Complete Implementation
+Example</h2>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getCameraFrustumPlanes</span>(camera) {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Ensure matrices are up to date</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Combine projection matrix and view matrix</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> viewProjectionMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  viewProjectionMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span> camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Initialize and update the frustum</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> frustum <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Frustum</span>()<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(viewProjectionMatrix)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Return a labeled reference to each plane</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">right</span><span class="op">:</span>  frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">0</span>]<span class="op">,</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">left</span><span class="op">:</span>   frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">1</span>]<span class="op">,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">bottom</span><span class="op">:</span> frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">2</span>]<span class="op">,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="dt">top</span><span class="op">:</span>    frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">3</span>]<span class="op">,</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="dt">far</span><span class="op">:</span>    frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">4</span>]<span class="op">,</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="dt">near</span><span class="op">:</span>   frustum<span class="op">.</span><span class="at">planes</span>[<span class="dv">5</span>]<span class="op">,</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="dt">rawArray</span><span class="op">:</span> frustum<span class="op">.</span><span class="at">planes</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> planes <span class="op">=</span> <span class="fu">getCameraFrustumPlanes</span>(camera)<span class="op">;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co">// Access properties:</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Near plane normal:&#39;</span><span class="op">,</span> planes<span class="op">.</span><span class="at">near</span><span class="op">.</span><span class="at">normal</span>)<span class="op">;</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;Near plane distance:&#39;</span><span class="op">,</span> planes<span class="op">.</span><span class="at">near</span><span class="op">.</span><span class="at">constant</span>)<span class="op">;</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="co">// Test an arbitrary point in space against a plane:</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> point <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">10</span>)<span class="op">;</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> distanceToNear <span class="op">=</span> planes<span class="op">.</span><span class="at">near</span><span class="op">.</span><span class="fu">distanceToPoint</span>(point)<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

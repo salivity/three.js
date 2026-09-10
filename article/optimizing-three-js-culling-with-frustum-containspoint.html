@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizing Three.js Culling with Frustum containsPoint - three.js</title>
+    <meta name="description" content="In high-complexity Three.js applications, standard view-frustum culling can strain the CPU when transforming and recomputing detailed bounding volumes for thousands of meshes or dynamically deformed geometries. This article outlines how to implement a tw">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/optimizing-three-js-culling-with-frustum-containspoint">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimizing Three.js Culling with Frustum containsPoint - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/optimizing-three-js-culling-with-frustum-containspoint" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In high-complexity Three.js applications, standard view-frustum culling can strain the CPU when transforming and recomputing detailed bounding volumes for thousands of meshes or dynamically deformed geometries. This article outlines how to implement a tw" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="optimizing-threejs-culling-with-frustum-containspoint">Optimizing
+Three.js Culling with Frustum containsPoint</h1>
+<p>In high-complexity Three.js applications, standard view-frustum
+culling can strain the CPU when transforming and recomputing detailed
+bounding volumes for thousands of meshes or dynamically deformed
+geometries. This article outlines how to implement a two-stage culling
+optimization that uses <code>Frustum.containsPoint()</code> as an
+early-acceptance gate. By testing an object's pre-existing center point
+first, you can instantly flag clearly visible objects and bypass
+expensive bounding-box calculations and world-matrix updates for the
+majority of the scene.</p>
+<h3 id="the-problem-with-default-bounding-calculations">The Problem with
+Default Bounding Calculations</h3>
+<p>By default, Three.js updates a mesh’s world matrix and evaluates
+<code>frustum.intersectsSphere(sphere)</code> against the object's
+<code>geometry.boundingSphere</code>. For complex meshes, geometries
+requiring updated <code>computeBoundingBox()</code> calls (such as morph
+targets or procedurally updated buffers), or scenes with thousands of
+nodes, these matrix transformations and bounds evaluations create
+measurable frame-time overhead on the main thread.</p>
+<h3 id="the-fast-accept-strategy">The Fast-Accept Strategy</h3>
+<p>A point-in-frustum test requires only six dot-product operations
+against the frustum's bounding planes. If an object’s central world
+coordinate is fully contained within the frustum, and the object is
+small relative to the field of view, the mesh is guaranteed to be
+partially or completely visible.</p>
+<p>By using <code>Frustum.containsPoint()</code> as a "fast-accept"
+test, you can:</p>
+<ol type="1">
+<li>Mark the object as visible immediately if the point resides inside
+the frustum.</li>
+<li>Only compute expensive, precise bounding volumes (such as
+regenerated bounding boxes or complex intersection routines) if the
+point test fails, because the mesh may still partially overlap the
+frustum boundaries.</li>
+</ol>
+<h3 id="implementation">Implementation</h3>
+<p>To bypass the engine's internal culling and run this check manually,
+set <code>frustumCulled = false</code> on target meshes and execute the
+test during the render loop or inside a pre-render update pass.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frustum <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Frustum</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> projScreenMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshWorldPos <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">cullScene</span>(camera<span class="op">,</span> dynamicMeshes) {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update the frustum from the camera matrices</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  projScreenMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span> camera<span class="op">.</span><span class="at">matrixWorldInverse</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(projScreenMatrix)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> dynamicMeshes<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> mesh <span class="op">=</span> dynamicMeshes[i]<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Retrieve world position of the object&#39;s pivot or center</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    mesh<span class="op">.</span><span class="fu">getWorldPosition</span>(meshWorldPos)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Step 1: Rapid Point Check (Fast-Accept)</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (frustum<span class="op">.</span><span class="fu">containsPoint</span>(meshWorldPos)) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>      mesh<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>      <span class="cf">continue</span><span class="op">;</span> <span class="co">// Skip expensive bounds recalculation</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Step 2: Fallback to Precise Intersection Test</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Only execute heavy bounds calculations when the center point is outside</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingBox</span>) {</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>      mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Transform bounding box to world space for the boundary test</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> worldBox <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingBox</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">applyMatrix4</span>(mesh<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    mesh<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> frustum<span class="op">.</span><span class="fu">intersectsBox</span>(worldBox)<span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="critical-considerations">Critical Considerations</h3>
+<ul>
+<li><strong>Conservative Fast-Accept:</strong> This pattern operates as
+a fast-accept, not a fast-reject. If <code>containsPoint</code> returns
+<code>false</code>, you cannot discard the mesh immediately; its
+geometry may still overlap the frustum edge.</li>
+<li><strong>Anchor Positioning:</strong> Ensure the test point
+represents the true center of the geometry rather than an offset origin.
+You can pre-calculate the local bounding center during asset loading and
+transform that specific point to world space to prevent premature
+fallbacks.</li>
+<li><strong>Garbage Collection:</strong> Avoid allocating temporary
+<code>Vector3</code> or <code>Matrix4</code> instances inside the loop.
+Reuse static scratch variables to eliminate per-frame garbage collection
+pauses.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

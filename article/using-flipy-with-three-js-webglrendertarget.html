@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using flipY with Three.js WebGLRenderTarget - three.js</title>
+    <meta name="description" content="Rendering scenes to a WebGLRenderTarget in Three.js often results in vertically inverted textures due to discrepancies between standard image coordinate systems and WebGL framebuffer orientation. This article explains why the flipY property does not beha">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-flipy-with-three-js-webglrendertarget">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using flipY with Three.js WebGLRenderTarget - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-flipy-with-three-js-webglrendertarget" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering scenes to a WebGLRenderTarget in Three.js often results in vertically inverted textures due to discrepancies between standard image coordinate systems and WebGL framebuffer orientation. This article explains why the flipY property does not beha" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-flipy-with-threejs-webglrendertarget">Using flipY with
+Three.js WebGLRenderTarget</h1>
+<p>Rendering scenes to a <code>WebGLRenderTarget</code> in Three.js
+often results in vertically inverted textures due to discrepancies
+between standard image coordinate systems and WebGL framebuffer
+orientation. This article explains why the <code>flipY</code> property
+does not behave on <code>WebGLRenderTarget</code> textures the way it
+does on standard textures and provides practical, efficient solutions to
+ensure your rendered textures display with the correct vertical
+orientation.</p>
+<h3 id="why-flipy-does-not-work-on-webglrendertarget">Why flipY Does Not
+Work on WebGLRenderTarget</h3>
+<p>When loading external images via <code>TextureLoader</code>, Three.js
+sets <code>texture.flipY = true</code> by default. Under the hood, WebGL
+handles this during the CPU-to-GPU memory transfer using the WebGL state
+command:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>gl<span class="op">.</span><span class="fu">pixelStorei</span>(gl<span class="op">.</span><span class="at">UNPACK_FLIP_Y_WEBGL</span><span class="op">,</span> <span class="kw">true</span>)<span class="op">;</span></span></code></pre></div>
+<p>This unpack parameter only affects data transferred from CPU memory
+(such as an <code>Image</code>, <code>Canvas</code>, or
+<code>ImageData</code>) into GPU memory.</p>
+<p>A <code>WebGLRenderTarget</code>, however, allocates a Framebuffer
+Object (FBO) directly in GPU memory. Because the pixels are rendered
+directly by the GPU, no pixel unpack operation takes place.
+Consequently, modifying <code>renderTarget.texture.flipY = true</code>
+has no effect on how the raw texture data is written or sampled. The
+texture’s coordinate origin remains at the bottom-left corner <span
+class="math inline">\((0, 0)\)</span>, matching native OpenGL screen
+coordinates.</p>
+<h3 id="solution-1-invert-uv-coordinates-via-texture-transform">Solution
+1: Invert UV Coordinates via Texture Transform</h3>
+<p>The most performant and standard way to flip the orientation of a
+render target texture without re-rendering is to adjust its matrix
+transformation. You can achieve this by modifying the
+<code>repeat</code> and <code>offset</code> properties on the
+texture.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(width<span class="op">,</span> height)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Set up the target texture mapping</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> renderTarget<span class="op">.</span><span class="at">texture</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">wrapS</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ClampToEdgeWrapping</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">wrapT</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ClampToEdgeWrapping</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Invert the vertical axis</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">repeat</span><span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">offset</span><span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span></code></pre></div>
+<p>When this texture is applied to standard materials (like
+<code>MeshBasicMaterial</code> or <code>MeshStandardMaterial</code>),
+Three.js automatically incorporates the <code>offset</code> and
+<code>repeat</code> matrices into the vertex shader, sampling the
+texture right-side up.</p>
+<h3 id="solution-2-invert-coordinates-in-custom-shaders">Solution 2:
+Invert Coordinates in Custom Shaders</h3>
+<p>If you are sampling the render target within a custom
+<code>ShaderMaterial</code> or <code>RawShaderMaterial</code>, manually
+invert the vertical component of the texture coordinate (UV) in the
+fragment shader.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">sampler2D</span> uRenderTargetTexture<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec2</span> vUv<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Invert the Y-axis UV coordinate</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec2</span> correctedUv <span class="op">=</span> <span class="dt">vec2</span><span class="op">(</span>vUv<span class="op">.</span><span class="fu">x</span><span class="op">,</span> <span class="fl">1.0</span> <span class="op">-</span> vUv<span class="op">.</span><span class="fu">y</span><span class="op">);</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec4</span> color <span class="op">=</span> <span class="dt">texture2D</span><span class="op">(</span>uRenderTargetTexture<span class="op">,</span> correctedUv<span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> color<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>This approach avoids altering the texture's transformation properties
+and is ideal for custom post-processing pipelines.</p>
+<h3
+id="solution-3-render-pass-flipping-with-orthographic-camera">Solution
+3: Render Pass Flipping with Orthographic Camera</h3>
+<p>If you are using an intermediate render target to perform
+post-processing or screen-space blitting, you can flip the output at the
+projection stage. By rendering a full-screen quad using a reversed
+orthographic camera, the output geometry inverts naturally during the
+rasterization stage:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Top and bottom values inverted: top = -1, bottom = 1</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> blitCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> blitQuad <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">,</span> blitMaterial)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Render pass to target or screen</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(<span class="kw">null</span>)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(blitQuad<span class="op">,</span> blitCamera)<span class="op">;</span></span></code></pre></div>
+<h3 id="summary-of-best-practices">Summary of Best Practices</h3>
+<ul>
+<li>Do not rely on <code>renderTarget.texture.flipY = true</code>
+because it does not trigger a GPU-side texture flip.</li>
+<li>Use <code>texture.repeat.y = -1</code> combined with
+<code>texture.offset.y = 1</code> when assigning render target textures
+to built-in Three.js materials.</li>
+<li>Use <code>vec2(uv.x, 1.0 - uv.y)</code> when sampling render targets
+inside custom fragment shaders.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

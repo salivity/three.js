@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scale Three.js OutlinePass Edge Thickness by Distance - three.js</title>
+    <meta name="description" content="This article explains how to dynamically calculate and scale the edgeThickness property of the Three.js OutlinePass so that the outline around a 3D object maintains a consistent physical or relative size regardless of camera distance. By calculating the">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/scale-three-js-outlinepass-edge-thickness-by-distance">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Scale Three.js OutlinePass Edge Thickness by Distance - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/scale-three-js-outlinepass-edge-thickness-by-distance" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to dynamically calculate and scale the edgeThickness property of the Three.js OutlinePass so that the outline around a 3D object maintains a consistent physical or relative size regardless of camera distance. By calculating the" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="scale-threejs-outlinepass-edge-thickness-by-distance">Scale
+Three.js OutlinePass Edge Thickness by Distance</h1>
+<p>This article explains how to dynamically calculate and scale the
+<code>edgeThickness</code> property of the Three.js
+<code>OutlinePass</code> so that the outline around a 3D object
+maintains a consistent physical or relative size regardless of camera
+distance. By calculating the distance from the camera to the target
+object and adjusting the post-processing outline thickness in your
+render loop, you can prevent outlines from appearing disproportionately
+thick or thin as the camera moves.</p>
+<h2 id="the-screen-space-problem">The Screen-Space Problem</h2>
+<p>In Three.js, <code>OutlinePass</code> generates selection outlines
+using a post-processing blur shader that operates directly in screen
+space (pixel coordinates). Because the default
+<code>edgeThickness</code> value is defined in texels rather than world
+units, an object moving away from the perspective camera shrinks in
+screen size while its outline retains a fixed pixel width. This causes
+the outline to overpower distant objects and appear negligible on
+close-up objects.</p>
+<h2 id="the-distance-scaling-formula">The Distance Scaling Formula</h2>
+<p>To make an outline scale naturally with perspective—behaving like
+fixed world-space geometry—the screen-space <code>edgeThickness</code>
+must be proportional to the object's projected size on screen.</p>
+<p>For a perspective camera, the projected height of an object is
+inversely proportional to its distance from the camera and is influenced
+by the camera's field of view (FOV):</p>
+<p><span class="math display">\[\text{Scale Factor} = \frac{1}{2 \cdot
+\tan\left(\frac{\text{FOV} \cdot \pi}{360}\right) \cdot
+\text{distance}}\]</span></p>
+<p>Applying this to <code>edgeThickness</code>:</p>
+<p><span class="math display">\[\text{edgeThickness} =
+\text{baseThickness} \cdot
+\left(\frac{\text{referenceDistance}}{\text{currentDistance}}\right)\]</span></p>
+<p>Where:</p>
+<ul>
+<li><code>baseThickness</code> is your desired outline thickness at a
+known reference distance.</li>
+<li><code>referenceDistance</code> is the distance at which the outline
+looks optimal.</li>
+<li><code>currentDistance</code> is the Euclidean distance between the
+camera and the target mesh.</li>
+</ul>
+<h2 id="implementation-in-threejs">Implementation in Three.js</h2>
+<p>Calculate the distance to your selected object and update
+<code>outlinePass.edgeThickness</code> within the animation loop before
+rendering.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Configuration</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> BASE_THICKNESS <span class="op">=</span> <span class="fl">2.5</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> REFERENCE_DISTANCE <span class="op">=</span> <span class="fl">10.0</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> MIN_THICKNESS <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> MAX_THICKNESS <span class="op">=</span> <span class="fl">6.0</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateOutlineThickness</span>(outlinePass<span class="op">,</span> camera<span class="op">,</span> targetObject) {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>targetObject <span class="op">||</span> <span class="op">!</span>outlinePass<span class="op">.</span><span class="at">selectedObjects</span><span class="op">.</span><span class="at">length</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Get the world position of the target object</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> targetPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    targetObject<span class="op">.</span><span class="fu">getWorldPosition</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Compute distance from the camera to the object</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> distance <span class="op">=</span> camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Prevent division by zero</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (distance <span class="op">&lt;=</span> <span class="fl">0.001</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Calculate perspective-scaled thickness</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> scaledThickness <span class="op">=</span> BASE_THICKNESS <span class="op">*</span> (REFERENCE_DISTANCE <span class="op">/</span> distance)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Clamp the value to prevent visual artifacts in the blur pass</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    outlinePass<span class="op">.</span><span class="at">edgeThickness</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">clamp</span>(</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        scaledThickness<span class="op">,</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>        MIN_THICKNESS<span class="op">,</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>        MAX_THICKNESS</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    )<span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co">// Render loop integration</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (outlinePass<span class="op">.</span><span class="at">selectedObjects</span><span class="op">.</span><span class="at">length</span> <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>        <span class="fu">updateOutlineThickness</span>(outlinePass<span class="op">,</span> camera<span class="op">,</span> outlinePass<span class="op">.</span><span class="at">selectedObjects</span>[<span class="dv">0</span>])<span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    composer<span class="op">.</span><span class="fu">render</span>()<span class="op">;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="handling-multiple-selected-objects">Handling Multiple Selected
+Objects</h2>
+<p>If your <code>OutlinePass.selectedObjects</code> array contains
+multiple meshes located at varying depths, calculating the distance to a
+single object will distort the appearance of outlines on others. To
+address this:</p>
+<ol type="1">
+<li><strong>Use Bounding Spheres:</strong> Calculate a unified
+<code>THREE.Box3</code> or <code>THREE.Sphere</code> containing all
+selected objects, then measure the distance from the camera to the
+bounding center.</li>
+<li><strong>Multiple Outline Passes:</strong> Split objects at
+significantly different depths into separate <code>OutlinePass</code>
+instances, updating each pass's <code>edgeThickness</code>
+independently.</li>
+</ol>
+<h2 id="clamping-and-shader-limits">Clamping and Shader Limits</h2>
+<p>The <code>OutlinePass</code> blur shader samples neighboring pixels
+based on <code>edgeThickness</code>. Setting <code>edgeThickness</code>
+below <code>1.0</code> may cause lines to disappear or shimmer due to
+subpixel rasterization limits, while setting it too high (typically
+above <code>6.0</code> to <code>8.0</code>, depending on render
+resolution) will produce noticeable sampling gaps and banding artifacts
+rather than a smooth border. Always clamp the resulting thickness
+between practical visual bounds.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector2 Manhattan Length in Three.js Grid Pathfinding - three.js</title>
+    <meta name="description" content="In Three.js, the Vector2.manhattanLength method calculates the sum of the absolute horizontal and vertical components of a 2D vector ($|x| + |y|$). When developing grid-based pathfinding systems, such as the A (A-Star) or Breadth-First Search algorithms,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/vector2-manhattan-length-in-three-js-grid-pathfinding">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Vector2 Manhattan Length in Three.js Grid Pathfinding - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/vector2-manhattan-length-in-three-js-grid-pathfinding" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the Vector2.manhattanLength method calculates the sum of the absolute horizontal and vertical components of a 2D vector ($|x| + |y|$). When developing grid-based pathfinding systems, such as the A (A-Star) or Breadth-First Search algorithms," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="vector2-manhattan-length-in-threejs-grid-pathfinding">Vector2
+Manhattan Length in Three.js Grid Pathfinding</h1>
+<p>In Three.js, the <code>Vector2.manhattanLength</code> method
+calculates the sum of the absolute horizontal and vertical components of
+a 2D vector (<span class="math inline">\(|x| + |y|\)</span>). When
+developing grid-based pathfinding systems, such as the A* (A-Star) or
+Breadth-First Search algorithms, this method serves as an essential tool
+for measuring grid-aligned distance and computing heuristic estimates.
+Because standard grid movement is typically restricted to orthogonal
+directions—up, down, left, and
+right—<code>Vector2.manhattanLength</code> provides the exact step count
+between coordinates, bypassing the geometric inaccuracies and
+performance overhead associated with standard Euclidean distance
+formulas.</p>
+<h3 id="understanding-manhattan-distance">Understanding Manhattan
+Distance</h3>
+<p>Unlike standard Euclidean length, which measures the straight-line
+distance across space using the Pythagorean theorem (<span
+class="math inline">\(\sqrt{x^2 + y^2}\)</span>), Manhattan distance
+represents the distance traversed strictly along perpendicular grid
+axes. In Three.js, <code>Vector2.length()</code> provides the Euclidean
+distance, while <code>Vector2.manhattanLength()</code> provides the
+orthogonal distance.</p>
+<p>For an agent traversing a discrete grid without diagonal traversal,
+Euclidean distance produces a diagonal line that cuts through grid
+cells, underestimating the actual number of steps needed. Manhattan
+length directly reflects the physical constraints of a 4-directional
+grid by measuring movement exclusively along horizontal and vertical
+steps.</p>
+<h3 id="serving-as-an-admissible-a-heuristic">Serving as an Admissible
+A* Heuristic</h3>
+<p>The primary application of <code>Vector2.manhattanLength</code> in
+pathfinding is within the heuristic function <span
+class="math inline">\(h(n)\)</span> of the A* algorithm. The A*
+algorithm evaluates nodes using the formula:</p>
+<p><span class="math display">\[f(n) = g(n) + h(n)\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(g(n)\)</span> is the exact cost to reach
+the current node from the start.</li>
+<li><span class="math inline">\(h(n)\)</span> is the estimated remaining
+cost to reach the goal.</li>
+</ul>
+<p>To guarantee that A* finds the shortest path, the heuristic <span
+class="math inline">\(h(n)\)</span> must be <em>admissible</em>, meaning
+it must never overestimate the true remaining distance. In a
+4-directional grid without obstacles, the exact number of steps to reach
+the target is the Manhattan distance. Using
+<code>Vector2.manhattanLength</code> ensures the heuristic is both
+admissible and consistent (monotonic), guaranteeing an optimal path
+while minimizing unnecessary node explorations.</p>
+<p>To calculate the heuristic between a current grid node and a target
+node in Three.js:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> currentPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(node<span class="op">.</span><span class="at">x</span><span class="op">,</span> node<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(target<span class="op">.</span><span class="at">x</span><span class="op">,</span> target<span class="op">.</span><span class="at">y</span>)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate the remaining distance heuristic</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> h <span class="op">=</span> currentPosition<span class="op">.</span><span class="fu">sub</span>(targetPosition)<span class="op">.</span><span class="fu">manhattanLength</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-optimization">Performance Optimization</h3>
+<p>Pathfinding algorithms often evaluate hundreds or thousands of
+prospective nodes per search. Standard length calculations rely on
+<code>Math.sqrt()</code>, a computationally demanding operation when
+executed repeatedly in real-time loops.</p>
+<p><code>Vector2.manhattanLength</code> relies solely on absolute values
+and basic addition:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(<span class="kw">this</span><span class="op">.</span><span class="at">x</span>) <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(<span class="kw">this</span><span class="op">.</span><span class="at">y</span>)</span></code></pre></div>
+<p>By eliminating floating-point square root operations,
+<code>Vector2.manhattanLength</code> significantly reduces CPU cycles
+during heuristic evaluation, enabling higher frame rates and more
+scalable AI path calculation in Three.js applications.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

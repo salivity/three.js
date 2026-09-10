@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js TetrahedronGeometry Explained - three.js</title>
+    <meta name="description" content="In Three.js, TetrahedronGeometry serves as the most fundamental volumetric primitive, providing a lightweight foundation for 3D meshes by enclosing space using the absolute minimum number of vertices and faces. This article explains how the class functio">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-tetrahedrongeometry-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js TetrahedronGeometry Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-tetrahedrongeometry-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, TetrahedronGeometry serves as the most fundamental volumetric primitive, providing a lightweight foundation for 3D meshes by enclosing space using the absolute minimum number of vertices and faces. This article explains how the class functio" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-tetrahedrongeometry-explained">Three.js
+TetrahedronGeometry Explained</h1>
+<p>In Three.js, <code>TetrahedronGeometry</code> serves as the most
+fundamental volumetric primitive, providing a lightweight foundation for
+3D meshes by enclosing space using the absolute minimum number of
+vertices and faces. This article explains how the class functions,
+breaks down its constructor parameters, details its underlying vertex
+structure, and explores its practical applications in WebGL
+development.</p>
+<h3 id="the-simplest-3d-volumetric-primitive">The Simplest 3D Volumetric
+Primitive</h3>
+<p>In Euclidean geometry, just as a triangle is the minimal 2D shape
+required to enclose an area, a tetrahedron is the simplest polyhedron
+capable of enclosing a three-dimensional volume. It is one of the five
+classical convex regular polyhedra, known as Platonic solids, consisting
+of four triangular faces, six straight edges, and four vertex corners.
+Because it is mathematically impossible to enclose a 3D volume with
+fewer than four planar surfaces, <code>TetrahedronGeometry</code>
+represents the lowest computational footprint for any true 3D solid in
+the Three.js library.</p>
+<h3 id="constructor-syntax-and-parameters">Constructor Syntax and
+Parameters</h3>
+<p>Instantiating a tetrahedron in Three.js requires calling the
+<code>TetrahedronGeometry</code> constructor, which accepts two optional
+arguments:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TetrahedronGeometry</span>(radius<span class="op">,</span> detail)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>radius</code> (Float):</strong> Determines the overall
+scale by measuring the distance from the local origin to each of the
+four outer vertices. The default value is <code>1</code>.</li>
+<li><strong><code>detail</code> (Integer):</strong> Controls the level
+of subdivision applied to the geometry. The default value is
+<code>0</code>, which generates the baseline four-faced Platonic solid.
+Increasing this value recursively divides each triangular face into
+smaller triangles and projects the resulting vertices outward to the
+specified radius. As <code>detail</code> increases, the shape
+progressively transforms into a geodesic sphere.</li>
+</ul>
+<h3 id="internal-buffer-and-vertex-construction">Internal Buffer and
+Vertex Construction</h3>
+<p>Under the hood, <code>TetrahedronGeometry</code> extends
+<code>PolyhedronGeometry</code>, which generates a standard Three.js
+<code>BufferGeometry</code>.</p>
+<p>When created with a <code>detail</code> setting of <code>0</code>,
+the geometry defines four equilateral triangular faces. To support
+correct surface shading, Three.js generates non-indexed geometry where
+each of the four faces contains three distinct vertices, resulting in a
+buffer of 12 vertices rather than 4 shared ones. This unshared layout
+ensures that each face has its own unique surface normal vector,
+producing the sharp, crisp edges characteristic of flat-shaded polyhedra
+when paired with lighting-dependent materials like
+<code>MeshStandardMaterial</code> or <code>MeshPhongMaterial</code>. UV
+texture coordinates are also automatically generated, mapping the 2D
+texture plane across the four triangular facets.</p>
+<h3 id="performance-benefits-and-common-use-cases">Performance Benefits
+and Common Use Cases</h3>
+<p>Because of its minimal complexity, <code>TetrahedronGeometry</code>
+is one of the most efficient primitives available for rendering solid
+forms:</p>
+<ul>
+<li><strong>Massive Particle Systems:</strong> When instanced using
+<code>InstancedMesh</code>, tetrahedra provide a clear sense of volume
+and rotation in 3D space with significantly fewer draw calls and vertex
+shader calculations than cubes or spheres.</li>
+<li><strong>Low-Poly Design:</strong> It serves as an ideal base
+geometry for stylized, angular art styles, representing crystals, rocks,
+space debris, or abstract geometric patterns.</li>
+<li><strong>Geodesic Generation:</strong> By scaling the
+<code>detail</code> parameter, developers can generate lightweight,
+uniform spherical structures without the polar distortion typical of
+standard latitude-longitude sphere meshes
+(<code>SphereGeometry</code>).</li>
+<li><strong>Physics Collisions:</strong> It functions as a lightweight
+convex hull representation for simplified physical interactions,
+enabling fast collision detection in interactive scenes.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

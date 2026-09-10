@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Object3D Layers: Hide Objects From Cameras - three.js</title>
+    <meta name="description" content="In Three.js, managing which objects are rendered by which cameras can be efficiently achieved using the Object3D.layers property. This article explains how the underlying 32-layer bitmask system works, how to assign meshes and cameras to specific layers,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-object3d-layers-hide-objects-from-cameras">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Object3D Layers: Hide Objects From Cameras - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-object3d-layers-hide-objects-from-cameras" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, managing which objects are rendered by which cameras can be efficiently achieved using the Object3D.layers property. This article explains how the underlying 32-layer bitmask system works, how to assign meshes and cameras to specific layers," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-object3d-layers-hide-objects-from-cameras">Three.js
+Object3D Layers: Hide Objects From Cameras</h1>
+<p>In Three.js, managing which objects are rendered by which cameras can
+be efficiently achieved using the <code>Object3D.layers</code> property.
+This article explains how the underlying 32-layer bitmask system works,
+how to assign meshes and cameras to specific layers, and how to toggle
+layer visibility to create selective rendering pipelines, such as user
+interfaces, split-screens, or minimaps.</p>
+<h3 id="how-threejs-layers-work">How Three.js Layers Work</h3>
+<p>Every instance of <code>Object3D</code> (including meshes, lights,
+and cameras) possesses a <code>layers</code> property, which is an
+instance of <code>THREE.Layers</code>. Three.js supports up to 32
+distinct layers, indexed from <code>0</code> to <code>31</code>.</p>
+<p>Internally, layers use a 32-bit integer bitmask. When a camera
+renders a scene, it checks whether its own layer mask intersects with
+the layer mask of each object. An object is only drawn if:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>(camera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="at">mask</span> <span class="op">&amp;</span> object<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="at">mask</span>) <span class="op">!==</span> <span class="dv">0</span></span></code></pre></div>
+<p>By default, all objects and cameras belong exclusively to layer
+<code>0</code>.</p>
+<h3 id="key-layer-methods">Key Layer Methods</h3>
+<p>The <code>THREE.Layers</code> object provides four primary
+methods:</p>
+<ul>
+<li><code>set(channel)</code>: Clears all current layers and assigns the
+entity solely to the specified layer channel (0 to 31).</li>
+<li><code>enable(channel)</code>: Adds the specified layer channel
+without removing existing ones.</li>
+<li><code>disable(channel)</code>: Removes the specified layer channel
+from the mask.</li>
+<li><code>toggle(channel)</code>: Flips the state of the specified layer
+channel.</li>
+</ul>
+<h3 id="setting-up-selective-visibility">Setting Up Selective
+Visibility</h3>
+<p>To hide specific objects from a specific camera, you assign the
+objects and the camera to different layers.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create meshes</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mainSceneMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> materialA)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uiMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> materialB)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Assign layers to objects</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// mainSceneMesh stays on default layer 0</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>uiMesh<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">1</span>)<span class="op">;</span> <span class="co">// uiMesh is now ONLY on layer 1</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Configure cameras</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uiCamera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">OrthographicCamera</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// worldCamera is on layer 0 by default, so it cannot see uiMesh</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// uiCamera is configured to see ONLY layer 1</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>uiCamera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<p>In this setup, <code>worldCamera</code> will ignore
+<code>uiMesh</code> entirely because their bitmasks do not overlap.</p>
+<h3 id="multi-layer-visibility">Multi-Layer Visibility</h3>
+<p>A camera or an object can exist on multiple layers at the same time.
+If a secondary camera needs to view both default world objects and user
+interface elements, enable multiple layers:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable layer 1 while keeping layer 0 active</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>worldCamera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">enable</span>(<span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<p>Now, <code>worldCamera</code> renders objects located on layer
+<code>0</code>, layer <code>1</code>, or both.</p>
+<h3 id="recursive-layer-assignment">Recursive Layer Assignment</h3>
+<p>Assigning a layer to a parent <code>Object3D</code> (such as a
+<code>THREE.Group</code> or an imported glTF scene) does not
+automatically propagate to its children. To apply a layer to an entire
+hierarchy, traverse the object tree:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>modelGroup<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isObject3D</span>) {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Using <code>Object3D.layers</code> eliminates the overhead of
+manually toggling <code>object.visible = true/false</code> before and
+after distinct camera render passes.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL 2 Transform Feedback with Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to obtain the underlying WebGL2RenderingContext from a Three.js WebGLRenderer and leverage it to execute WebGL 2.0 Transform Feedback operations. You will learn how to bypass Three.js abstraction layers safely, configure raw trans">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/webgl-2-transform-feedback-with-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="WebGL 2 Transform Feedback with Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/webgl-2-transform-feedback-with-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to obtain the underlying WebGL2RenderingContext from a Three.js WebGLRenderer and leverage it to execute WebGL 2.0 Transform Feedback operations. You will learn how to bypass Three.js abstraction layers safely, configure raw trans" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="webgl-2-transform-feedback-with-threejs">WebGL 2 Transform
+Feedback with Three.js</h1>
+<p>This guide explains how to obtain the underlying
+<code>WebGL2RenderingContext</code> from a Three.js
+<code>WebGLRenderer</code> and leverage it to execute WebGL 2.0
+Transform Feedback operations. You will learn how to bypass Three.js
+abstraction layers safely, configure raw transform feedback shaders and
+buffers, synchronize state between custom WebGL operations and Three.js,
+and build a high-performance GPU particle or simulation pass directly
+inside your render loop.</p>
+<h3 id="1-extracting-the-webgl-20-context">1. Extracting the WebGL 2.0
+Context</h3>
+<p>To execute WebGL 2.0 operations like Transform Feedback, you must
+ensure that Three.js initializes a WebGL 2 context, which is the default
+in modern versions of Three.js. You can access the raw context using the
+<code>getContext()</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setSize</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract raw WebGL2 context</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gl <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getContext</span>()<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span>(gl <span class="kw">instanceof</span> WebGL2RenderingContext)) {</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&#39;WebGL 2.0 is not supported or not enabled.&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="2-setting-up-raw-transform-feedback-shaders">2. Setting Up Raw
+Transform Feedback Shaders</h3>
+<p>Transform feedback requires capturing output varyings from the vertex
+shader before rasterization. Because Three.js abstracts shader
+compilation, compiling this specific simulation shader directly with the
+raw WebGL context provides direct control over
+<code>gl.transformFeedbackVaryings</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">createTransformFeedbackProgram</span>(gl<span class="op">,</span> vsSource<span class="op">,</span> fsSource<span class="op">,</span> varyings) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vs <span class="op">=</span> gl<span class="op">.</span><span class="fu">createShader</span>(gl<span class="op">.</span><span class="at">VERTEX_SHADER</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">shaderSource</span>(vs<span class="op">,</span> vsSource)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">compileShader</span>(vs)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fs <span class="op">=</span> gl<span class="op">.</span><span class="fu">createShader</span>(gl<span class="op">.</span><span class="at">FRAGMENT_SHADER</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">shaderSource</span>(fs<span class="op">,</span> fsSource)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">compileShader</span>(fs)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> program <span class="op">=</span> gl<span class="op">.</span><span class="fu">createProgram</span>()<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">attachShader</span>(program<span class="op">,</span> vs)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">attachShader</span>(program<span class="op">,</span> fs)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Specify the varyings to record into output buffers</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">transformFeedbackVaryings</span>(program<span class="op">,</span> varyings<span class="op">,</span> gl<span class="op">.</span><span class="at">SEPARATE_ATTRIBS</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">linkProgram</span>(program)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> program<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> simVsSource <span class="op">=</span> <span class="vs">`#version 300 es</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="vs">in vec3 a_position;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="vs">in vec3 a_velocity;</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="vs">out vec3 v_position;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="vs">out vec3 v_velocity;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="vs">uniform float u_deltaTime;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="vs">void main() {</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="vs">    v_velocity = a_velocity + vec3(0.0, -9.8, 0.0) * u_deltaTime;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="vs">    v_position = a_position + v_velocity * u_deltaTime;</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="vs">}</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> simFsSource <span class="op">=</span> <span class="vs">`#version 300 es</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="vs">precision mediump float;</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="vs">void main() {</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="vs">    discard; // Fragment processing is not needed for the compute pass</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="vs">}</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="vs">`</span><span class="op">;</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> simProgram <span class="op">=</span> <span class="fu">createTransformFeedbackProgram</span>(</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">,</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>  simVsSource<span class="op">,</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>  simFsSource<span class="op">,</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>  [<span class="st">&#39;v_position&#39;</span><span class="op">,</span> <span class="st">&#39;v_velocity&#39;</span>]</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-allocating-ping-pong-buffers-and-feedback-objects">3.
+Allocating Ping-Pong Buffers and Feedback Objects</h3>
+<p>Transform feedback typically utilizes a ping-pong technique where one
+buffer provides read data while the other captures write data,
+alternating roles each frame.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> count <span class="op">=</span> <span class="dv">10000</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positions <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(count <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velocities <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(count <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> count <span class="op">*</span> <span class="dv">3</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  positions[i] <span class="op">=</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">random</span>() <span class="op">-</span> <span class="fl">0.5</span>) <span class="op">*</span> <span class="dv">10</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  velocities[i] <span class="op">=</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">random</span>() <span class="op">-</span> <span class="fl">0.5</span>) <span class="op">*</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Create buffers</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">makeBuffer</span>(gl<span class="op">,</span> data) {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> buf <span class="op">=</span> gl<span class="op">.</span><span class="fu">createBuffer</span>()<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBuffer</span>(gl<span class="op">.</span><span class="at">ARRAY_BUFFER</span><span class="op">,</span> buf)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bufferData</span>(gl<span class="op">.</span><span class="at">ARRAY_BUFFER</span><span class="op">,</span> data<span class="op">,</span> gl<span class="op">.</span><span class="at">DYNAMIC_COPY</span>)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> buf<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> posBufA <span class="op">=</span> <span class="fu">makeBuffer</span>(gl<span class="op">,</span> positions)<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> posBufB <span class="op">=</span> <span class="fu">makeBuffer</span>(gl<span class="op">,</span> positions)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velBufA <span class="op">=</span> <span class="fu">makeBuffer</span>(gl<span class="op">,</span> velocities)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velBufB <span class="op">=</span> <span class="fu">makeBuffer</span>(gl<span class="op">,</span> velocities)<span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> currentRead <span class="op">=</span> { <span class="dt">pos</span><span class="op">:</span> posBufA<span class="op">,</span> <span class="dt">vel</span><span class="op">:</span> velBufA }<span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> currentWrite <span class="op">=</span> { <span class="dt">pos</span><span class="op">:</span> posBufB<span class="op">,</span> <span class="dt">vel</span><span class="op">:</span> velBufB }<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="co">// Create Transform Feedback object</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> transformFeedback <span class="op">=</span> gl<span class="op">.</span><span class="fu">createTransformFeedback</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="4-interfacing-buffers-with-threejs">4. Interfacing Buffers with
+Three.js</h3>
+<p>To render the computed data using Three.js materials, wrap one or
+both of the raw WebGL buffers in a Three.js
+<code>BufferGeometry</code>.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dummyPositions <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(count <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign a BufferAttribute to give Three.js the layout</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(dummyPositions<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PointsMaterial</span>({ <span class="dt">size</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span> <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ffcc</span> })<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Points</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(points)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">60</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> <span class="dv">15</span><span class="op">;</span></span></code></pre></div>
+<h3 id="5-managing-state-in-the-render-loop">5. Managing State in the
+Render Loop</h3>
+<p>Three.js tracks and caches WebGL state internally. Modifying the
+state directly with raw WebGL calls will desynchronize the Three.js
+state tracker. Call <code>renderer.resetState()</code> immediately after
+your raw WebGL passes to ensure Three.js rebinds its pipeline
+appropriately.</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> posLoc <span class="op">=</span> gl<span class="op">.</span><span class="fu">getAttribLocation</span>(simProgram<span class="op">,</span> <span class="st">&#39;a_position&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> velLoc <span class="op">=</span> gl<span class="op">.</span><span class="fu">getAttribLocation</span>(simProgram<span class="op">,</span> <span class="st">&#39;a_velocity&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> dtLoc <span class="op">=</span> gl<span class="op">.</span><span class="fu">getUniformLocation</span>(simProgram<span class="op">,</span> <span class="st">&#39;u_deltaTime&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> lastTime <span class="op">=</span> <span class="bu">performance</span><span class="op">.</span><span class="fu">now</span>()<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> now <span class="op">=</span> <span class="bu">performance</span><span class="op">.</span><span class="fu">now</span>()<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> (now <span class="op">-</span> lastTime) <span class="op">/</span> <span class="dv">1000</span><span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  lastTime <span class="op">=</span> now<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// --- Step 1: Raw WebGL Transform Feedback Pass ---</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">useProgram</span>(simProgram)<span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">uniform1f</span>(dtLoc<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Bind input attributes</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBuffer</span>(gl<span class="op">.</span><span class="at">ARRAY_BUFFER</span><span class="op">,</span> currentRead<span class="op">.</span><span class="at">pos</span>)<span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">enableVertexAttribArray</span>(posLoc)<span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">vertexAttribPointer</span>(posLoc<span class="op">,</span> <span class="dv">3</span><span class="op">,</span> gl<span class="op">.</span><span class="at">FLOAT</span><span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBuffer</span>(gl<span class="op">.</span><span class="at">ARRAY_BUFFER</span><span class="op">,</span> currentRead<span class="op">.</span><span class="at">vel</span>)<span class="op">;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">enableVertexAttribArray</span>(velLoc)<span class="op">;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">vertexAttribPointer</span>(velLoc<span class="op">,</span> <span class="dv">3</span><span class="op">,</span> gl<span class="op">.</span><span class="at">FLOAT</span><span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Bind output buffers to transform feedback targets</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindTransformFeedback</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK</span><span class="op">,</span> transformFeedback)<span class="op">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBufferBase</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK_BUFFER</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> currentWrite<span class="op">.</span><span class="at">pos</span>)<span class="op">;</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBufferBase</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK_BUFFER</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> currentWrite<span class="op">.</span><span class="at">vel</span>)<span class="op">;</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Execute simulation pass</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">enable</span>(gl<span class="op">.</span><span class="at">RASTERIZER_DISCARD</span>)<span class="op">;</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">beginTransformFeedback</span>(gl<span class="op">.</span><span class="at">POINTS</span>)<span class="op">;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">drawArrays</span>(gl<span class="op">.</span><span class="at">POINTS</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> count)<span class="op">;</span></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">endTransformFeedback</span>()<span class="op">;</span></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">disable</span>(gl<span class="op">.</span><span class="at">RASTERIZER_DISCARD</span>)<span class="op">;</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Unbind feedback targets</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBufferBase</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK_BUFFER</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="kw">null</span>)<span class="op">;</span></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindBufferBase</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK_BUFFER</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="kw">null</span>)<span class="op">;</span></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>  gl<span class="op">.</span><span class="fu">bindTransformFeedback</span>(gl<span class="op">.</span><span class="at">TRANSFORM_FEEDBACK</span><span class="op">,</span> <span class="kw">null</span>)<span class="op">;</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>  <span class="co">// --- Step 2: Swap Buffers ---</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> temp <span class="op">=</span> currentRead<span class="op">;</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>  currentRead <span class="op">=</span> currentWrite<span class="op">;</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>  currentWrite <span class="op">=</span> temp<span class="op">;</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// --- Step 3: Synchronize Buffer to Three.js Geometry ---</span></span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> posAttr <span class="op">=</span> geometry<span class="op">.</span><span class="fu">getAttribute</span>(<span class="st">&#39;position&#39;</span>)<span class="op">;</span></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Inject the raw buffer into Three.js internal WebGLAttributes cache</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> attrData <span class="op">=</span> renderer<span class="op">.</span><span class="at">properties</span><span class="op">.</span><span class="fu">get</span>(posAttr)<span class="op">;</span></span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (attrData <span class="op">&amp;&amp;</span> attrData<span class="op">.</span><span class="at">__webglBuffer</span>) {</span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>    attrData<span class="op">.</span><span class="at">__webglBuffer</span> <span class="op">=</span> currentRead<span class="op">.</span><span class="at">pos</span><span class="op">;</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>  <span class="co">// --- Step 4: Reset State and Render Scene ---</span></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">resetState</span>()<span class="op">;</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

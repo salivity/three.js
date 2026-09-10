@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Frustum Culling with Sphere in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to implement fast, coarse frustum culling in Three.js using the THREE.Sphere mathematical object. By testing a lightweight bounding sphere against a camera's view frustum, you can quickly discard off-screen objects and avoid cos">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fast-frustum-culling-with-sphere-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fast Frustum Culling with Sphere in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fast-frustum-culling-with-sphere-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to implement fast, coarse frustum culling in Three.js using the THREE.Sphere mathematical object. By testing a lightweight bounding sphere against a camera's view frustum, you can quickly discard off-screen objects and avoid cos" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fast-frustum-culling-with-sphere-in-threejs">Fast Frustum
+Culling with Sphere in Three.js</h1>
+<p>This article explains how to implement fast, coarse frustum culling
+in Three.js using the <code>THREE.Sphere</code> mathematical object. By
+testing a lightweight bounding sphere against a camera's view frustum,
+you can quickly discard off-screen objects and avoid costly render
+operations or complex geometry-level intersection tests.</p>
+<h2 id="why-use-bounding-spheres-for-frustum-checks">Why Use Bounding
+Spheres for Frustum Checks</h2>
+<p>Three.js includes automatic frustum culling on a per-object basis,
+but manual, coarse-grained culling is essential when managing custom
+rendering pipelines, particle collections, instanced meshes, or
+hierarchical scene nodes.</p>
+<p>Testing a sphere against a frustum is computationally inexpensive. A
+view frustum consists of six planes. A sphere intersection test only
+requires computing the dot product between the sphere's center and each
+plane's normal, followed by a comparison of that distance against the
+sphere's radius. If the sphere is completely behind any single plane, it
+is immediately discarded.</p>
+<h2 id="essential-components">Essential Components</h2>
+<p>Manual sphere-frustum culling in Three.js relies on three core
+classes:</p>
+<ol type="1">
+<li><code>THREE.Frustum</code>: Represents the six-sided viewing pyramid
+of the camera.</li>
+<li><code>THREE.Matrix4</code>: Used to combine the camera's projection
+and view matrices.</li>
+<li><code>THREE.Sphere</code>: Represents the bounding volume in 3D
+space with a <code>center</code> (<code>THREE.Vector3</code>) and a
+<code>radius</code> (float).</li>
+</ol>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-initialize-the-frustum-and-helper-variables">1. Initialize the
+Frustum and Helper Variables</h3>
+<p>To avoid allocating new memory inside the animation loop, instantiate
+your mathematical objects once outside your render loop.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> frustum <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Frustum</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> projScreenMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldSphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="2-update-the-frustum-from-the-camera">2. Update the Frustum from
+the Camera</h3>
+<p>The frustum must be updated whenever the camera moves or changes its
+projection parameters (e.g., field of view or aspect ratio). Compute the
+combined view-projection matrix and extract the frustum planes:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateFrustum</span>(camera) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  projScreenMatrix<span class="op">.</span><span class="fu">multiplyMatrices</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    camera<span class="op">.</span><span class="at">matrixWorldInverse</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  frustum<span class="op">.</span><span class="fu">setFromProjectionMatrix</span>(projScreenMatrix)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="3-obtain-the-world-space-bounding-sphere">3. Obtain the
+World-Space Bounding Sphere</h3>
+<p>Geometries in Three.js calculate bounding spheres in local space via
+<code>geometry.computeBoundingSphere()</code>. To test against the
+world-space camera frustum, transform the local sphere by the object's
+world matrix:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure the local bounding sphere exists</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span>mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span>) {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Copy the local sphere and transform it to world space</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>worldSphere<span class="op">.</span><span class="fu">copy</span>(mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>worldSphere<span class="op">.</span><span class="fu">applyMatrix4</span>(mesh<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-execute-the-intersection-test">4. Execute the Intersection
+Test</h3>
+<p>Use <code>frustum.intersectsSphere()</code> to perform the visibility
+check. Based on the boolean result, toggle object visibility, skip
+animations, or filter draw lists.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> isVisible <span class="op">=</span> frustum<span class="op">.</span><span class="fu">intersectsSphere</span>(worldSphere)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> isVisible<span class="op">;</span></span></code></pre></div>
+<h2 id="complete-example-in-the-render-loop">Complete Example in the
+Render Loop</h2>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 1. Update camera matrices and frustum</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">updateFrustum</span>(camera)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 2. Perform coarse culling on a list of objects</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> objects<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> obj <span class="op">=</span> objects[i]<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Ensure the world matrix is up to date</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    obj<span class="op">.</span><span class="fu">updateMatrixWorld</span>()<span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Transform bounding sphere to world coordinates</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    worldSphere<span class="op">.</span><span class="fu">copy</span>(obj<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">boundingSphere</span>)<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    worldSphere<span class="op">.</span><span class="fu">applyMatrix4</span>(obj<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check intersection</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (frustum<span class="op">.</span><span class="fu">intersectsSphere</span>(worldSphere)) {</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>      obj<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Perform expensive tasks (e.g., updates, LOD selection) here</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>      obj<span class="op">.</span><span class="at">visible</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ul>
+<li><strong>Avoid Reallocation:</strong> Always reuse pre-allocated
+instances of <code>THREE.Frustum</code>, <code>THREE.Matrix4</code>, and
+<code>THREE.Sphere</code> inside the animation loop to prevent garbage
+collection spikes.</li>
+<li><strong>Hierarchical Culling:</strong> Group nearby objects under a
+single parent with a larger bounding sphere. If the parent sphere fails
+the frustum check, you can skip checking all child objects
+entirely.</li>
+<li><strong>Static Objects:</strong> If an object does not move, compute
+its world-space bounding sphere once and cache it, removing the need to
+call <code>applyMatrix4</code> on every frame.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

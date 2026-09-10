@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimize Raycasting on 1M+ InstancedMesh in Three.js - three.js</title>
+    <meta name="description" content="Raycasting against an InstancedMesh with over one million instances causes severe CPU bottlenecks in Three.js because the default implementation performs an $O(N)$ linear scan, evaluating matrix transformations and geometry intersections for every instan">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/optimize-raycasting-on-1m-instancedmesh-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Optimize Raycasting on 1M+ InstancedMesh in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/optimize-raycasting-on-1m-instancedmesh-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Raycasting against an InstancedMesh with over one million instances causes severe CPU bottlenecks in Three.js because the default implementation performs an $O(N)$ linear scan, evaluating matrix transformations and geometry intersections for every instan" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="optimize-raycasting-on-1m-instancedmesh-in-threejs">Optimize
+Raycasting on 1M+ InstancedMesh in Three.js</h1>
+<p>Raycasting against an <code>InstancedMesh</code> with over one
+million instances causes severe CPU bottlenecks in Three.js because the
+default implementation performs an <span
+class="math inline">\(O(N)\)</span> linear scan, evaluating matrix
+transformations and geometry intersections for every instance. To
+maintain interactive frame rates, developers must bypass standard
+raycaster routines in favor of mathematical optimizations. This article
+details how to reduce this workload from linear to logarithmic or
+constant time using spatial hierarchies, local-space ray inversion,
+analytical bounding primitives, and GPU-driven picking.</p>
+<h2 id="the-mathematical-bottleneck-of-native-raycasting">The
+Mathematical Bottleneck of Native Raycasting</h2>
+<p>In Three.js, executing <code>Raycaster.intersectObject()</code> on an
+<code>InstancedMesh</code> forces the CPU to iterate through all <span
+class="math inline">\(N\)</span> instances (<span
+class="math inline">\(N &gt; 1,000,000\)</span>). For each instance
+<span class="math inline">\(i\)</span>, the engine retrieves the
+instance matrix <span class="math inline">\(\mathbf{M}_i\)</span>,
+computes its inverse <span
+class="math inline">\(\mathbf{M}_i^{-1}\)</span>, transforms the
+world-space ray into local space, and checks for intersection against
+geometry faces.</p>
+<p>Performing one million <span class="math inline">\(4 \times
+4\)</span> matrix operations and subsequent bounding tests on the main
+JavaScript thread will routinely exceed the 16.6ms frame budget,
+dropping the application to sub-interactive frame rates.</p>
+<h2 id="step-1-inverse-ray-transformation-local-space-testing">Step 1:
+Inverse Ray Transformation (Local-Space Testing)</h2>
+<p>Transforming geometry vertices into world space for intersection
+testing is computationally expensive. The optimal approach is to
+transform the single world-space ray into each instance's local
+coordinate system:</p>
+<p>Given a ray with origin <span
+class="math inline">\(\mathbf{o}\)</span> and normalized direction <span
+class="math inline">\(\mathbf{d}\)</span>:</p>
+<p><span class="math display">\[\mathbf{o}_{\text{local}} =
+\mathbf{M}_i^{-1} \begin{bmatrix} \mathbf{o} \\ 1 \end{bmatrix}, \quad
+\mathbf{d}_{\text{local}} = \mathbf{M}_i^{-1} \begin{bmatrix} \mathbf{d}
+\\ 0 \end{bmatrix}\]</span></p>
+<p>Because the direction vector is a direction, the translation
+component of <span class="math inline">\(\mathbf{M}_i^{-1}\)</span> is
+ignored (<span class="math inline">\(w = 0\)</span>). After transforming
+the direction, normalize <span
+class="math inline">\(\mathbf{d}_{\text{local}}\)</span> to compute
+accurate hit distances, or retain its magnitude to simplify distance
+scaling calculations:</p>
+<p><span class="math display">\[t_{\text{world}} = t_{\text{local}}
+\cdot \|\mathbf{d}_{\text{local}}\|\]</span></p>
+<h2 id="step-2-spatial-partitioning-with-a-world-space-bvh">Step 2:
+Spatial Partitioning with a World-Space BVH</h2>
+<p>To avoid evaluating one million matrices, partition the instance
+positions using a spatial data structure such as a Bounding Volume
+Hierarchy (BVH) or an Octree. This reduces query complexity from <span
+class="math inline">\(O(N)\)</span> to <span
+class="math inline">\(O(\log N)\)</span>.</p>
+<ol type="1">
+<li><strong>AABB Construction:</strong> For each instance, compute an
+Axis-Aligned Bounding Box (AABB) in world space: <span
+class="math display">\[\mathbf{c}_{\text{world}} = \mathbf{M}_i
+\mathbf{c}_{\text{local}}\]</span> Expand the box dimensions based on
+the instance scale factors derived from the matrix.</li>
+<li><strong>Ray-AABB Slab Test:</strong> Traverse the BVH using the
+Kay-Kajiya slab method. For a ray and an axis-aligned box defined by
+minimum bounds <span class="math inline">\(\mathbf{p}_{\min}\)</span>
+and maximum bounds <span
+class="math inline">\(\mathbf{p}_{\max}\)</span>: <span
+class="math display">\[t_{1, \text{axis}} = \frac{p_{\min, \text{axis}}
+- o_{\text{axis}}}{d_{\text{axis}}}, \quad t_{2, \text{axis}} =
+\frac{p_{\max, \text{axis}} - o_{\text{axis}}}{d_{\text{axis}}}\]</span>
+<span class="math display">\[t_{\text{enter}} = \max(\min(t_{1,x},
+t_{2,x}), \min(t_{1,y}, t_{2,y}), \min(t_{1,z}, t_{2,z}))\]</span> <span
+class="math display">\[t_{\text{exit}} = \min(\max(t_{1,x}, t_{2,x}),
+\max(t_{1,y}, t_{2,y}), \max(t_{1,z}, t_{2,z}))\]</span> An intersection
+occurs if <span class="math inline">\(t_{\text{enter}} \le
+t_{\text{exit}}\)</span> and <span class="math inline">\(t_{\text{exit}}
+\ge 0\)</span>.</li>
+</ol>
+<p>Traversing the BVH isolates candidate instances down from <span
+class="math inline">\(1,000,000\)</span> to fewer than <span
+class="math inline">\(10\)</span> per frame.</p>
+<h2 id="step-3-analytical-bounding-sphere-early-exit">Step 3: Analytical
+Bounding Sphere Early-Exit</h2>
+<p>Before running detailed triangle-level intersection tests on the
+remaining candidates, run an analytical ray-sphere test.</p>
+<p>Represent the bounding sphere at center <span
+class="math inline">\(\mathbf{c}\)</span> with radius <span
+class="math inline">\(r\)</span>:</p>
+<ol type="1">
+<li>Compute the vector from the ray origin to the center: <span
+class="math inline">\(\mathbf{v} = \mathbf{c} -
+\mathbf{o}\)</span>.</li>
+<li>Project <span class="math inline">\(\mathbf{v}\)</span> onto the ray
+direction: <span class="math inline">\(t_{\text{projection}} =
+\mathbf{v} \cdot \mathbf{d}\)</span>.</li>
+<li>Calculate the squared perpendicular distance from the sphere center
+to the ray: <span class="math display">\[d_{\perp}^2 = \|\mathbf{v}\|^2
+- (t_{\text{projection}})^2\]</span></li>
+<li>If <span class="math inline">\(d_{\perp}^2 &gt; r^2\)</span>, the
+ray misses the sphere entirely, avoiding local matrix inversion and mesh
+analysis.</li>
+</ol>
+<h2 id="step-4-the-hardware-alternative-gpu-color-id-picking">Step 4:
+The Hardware Alternative: GPU Color-ID Picking</h2>
+<p>When instances exceed several millions or geometry undergoes dynamic
+GPU deformation, analytical CPU raycasting can be replaced with GPU
+picking.</p>
+<ol type="1">
+<li>Create an off-screen <code>WebGLRenderTarget</code> with a
+dimensions of <span class="math inline">\(1 \times 1\)</span> pixel,
+centered at the cursor coordinate.</li>
+<li>Use an override material on the <code>InstancedMesh</code> that
+encodes the <code>gl_InstanceID</code> into RGB values: <span
+class="math display">\[R = \lfloor \text{id} / 65536 \rfloor \pmod{256}
+/ 255.0\]</span> <span class="math display">\[G = \lfloor \text{id} /
+256 \rfloor \pmod{256} / 255.0\]</span> <span class="math display">\[B =
+(\text{id} \pmod{256}) / 255.0\]</span></li>
+<li>Render the scene using a scissor test constrained to the <span
+class="math inline">\(1 \times 1\)</span> target area.</li>
+<li>Read the single pixel using <code>gl.readPixels()</code>: <span
+class="math display">\[\text{Instance ID} = (R \times 65536) + (G \times
+256) + B\]</span></li>
+</ol>
+<p>This approach operates in <span class="math inline">\(O(1)\)</span>
+CPU time, moving matrix transformations and depth testing entirely to
+the GPU rasterization pipeline.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

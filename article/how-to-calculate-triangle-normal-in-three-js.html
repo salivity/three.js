@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Calculate Triangle Normal in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, determining the geometric normal of a triangular face is essential for custom lighting calculations, physics interactions, and mesh manipulation. This guide explains how to define a triangle using 3D vector coordinates and utilize the built-">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-calculate-triangle-normal-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Calculate Triangle Normal in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-calculate-triangle-normal-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, determining the geometric normal of a triangular face is essential for custom lighting calculations, physics interactions, and mesh manipulation. This guide explains how to define a triangle using 3D vector coordinates and utilize the built-" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-calculate-triangle-normal-in-threejs">How to Calculate
+Triangle Normal in Three.js</h1>
+<p>In Three.js, determining the geometric normal of a triangular face is
+essential for custom lighting calculations, physics interactions, and
+mesh manipulation. This guide explains how to define a triangle using 3D
+vector coordinates and utilize the built-in
+<code>Triangle.getNormal()</code> method to compute its normalized
+perpendicular vector accurately and efficiently.</p>
+<h2 id="understanding-the-geometric-normal">Understanding the Geometric
+Normal</h2>
+<p>A geometric normal is a unit vector that points directly
+perpendicular to the flat surface of a triangle. Three.js uses a
+right-handed coordinate system and follows the counter-clockwise winding
+rule by default. This means that the order in which you define vertices
+(A, B, C) determines whether the normal points forward or backward
+relative to your viewpoint.</p>
+<p>The normal is mathematically computed using the cross product of two
+edges formed by the triangle's vertices:</p>
+<p><span class="math display">\[\vec{N} = \frac{(\vec{B} - \vec{A})
+\times (\vec{C} - \vec{A})}{\|(\vec{B} - \vec{A}) \times (\vec{C} -
+\vec{A})\|}\]</span></p>
+<p>Three.js abstracts this calculation entirely through the
+<code>getNormal</code> method of the <code>THREE.Triangle</code>
+class.</p>
+<h2 id="implementing-trianglegetnormal">Implementing
+<code>Triangle.getNormal()</code></h2>
+<p>The <code>getNormal()</code> method requires a target
+<code>THREE.Vector3</code> object passed as an argument. The calculated
+normal values are written directly into this target vector, preventing
+unnecessary garbage collection caused by creating new objects.</p>
+<h3 id="code-example">Code Example</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define the three vertices of the triangle</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertexA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertexB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertexC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Instantiate the Triangle using the three vertices</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> triangle <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Triangle</span>(vertexA<span class="op">,</span> vertexB<span class="op">,</span> vertexC)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Create a target vector to store the result</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetNormal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Calculate the normal</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>triangle<span class="op">.</span><span class="fu">getNormal</span>(targetNormal)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Output the normalized result</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(targetNormal)<span class="op">;</span> </span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: THREE.Vector3 { x: 0, y: 0, z: 1 }</span></span></code></pre></div>
+<h2 id="extracting-normals-directly-from-a-buffergeometry">Extracting
+Normals Directly from a BufferGeometry</h2>
+<p>If you are working with an existing <code>BufferGeometry</code>, you
+can extract face normals using <code>Triangle.getNormal()</code> by
+querying the geometry’s <code>position</code> attribute.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">computeFaceNormal</span>(geometry<span class="op">,</span> faceIndex) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vA <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vB <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> vC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Assuming non-indexed geometry where each face consists of 3 sequential vertices</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> i <span class="op">=</span> faceIndex <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  vA<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  vB<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i <span class="op">+</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  vC<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> i <span class="op">+</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> triangle <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Triangle</span>(vA<span class="op">,</span> vB<span class="op">,</span> vC)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> triangle<span class="op">.</span><span class="fu">getNormal</span>(normal)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="key-considerations">Key Considerations</h2>
+<ul>
+<li><strong>Vertex Winding:</strong> Defining vertices in clockwise
+order inverts the direction of the normal vector. Ensure your vertices
+are arranged counter-clockwise relative to the intended outer
+surface.</li>
+<li><strong>Degenerate Triangles:</strong> If all three vertices are
+collinear or share identical positions, the triangle has an area of
+zero. In this scenario, <code>getNormal()</code> cannot compute a valid
+cross product and will return a vector of <code>(0, 0, 0)</code>.</li>
+<li><strong>Memory Management:</strong> When computing normals
+repeatedly inside an animation or render loop, define the
+<code>targetNormal</code> vector once outside the loop and reuse it to
+maintain optimal performance.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

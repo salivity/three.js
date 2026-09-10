@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How FontLoader Converts JSON to TextGeometry in Three.js - three.js</title>
+    <meta name="description" content="This article explains how Three.js processes typography, detailing the pipeline where FontLoader parses a Typeface JSON file into two-dimensional vector paths and how TextGeometry transforms those paths into 3D extrusions. You will learn how font glyph c">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-fontloader-converts-json-to-textgeometry-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How FontLoader Converts JSON to TextGeometry in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-fontloader-converts-json-to-textgeometry-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how Three.js processes typography, detailing the pipeline where FontLoader parses a Typeface JSON file into two-dimensional vector paths and how TextGeometry transforms those paths into 3D extrusions. You will learn how font glyph c" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-fontloader-converts-json-to-textgeometry-in-threejs">How
+FontLoader Converts JSON to TextGeometry in Three.js</h1>
+<p>This article explains how Three.js processes typography, detailing
+the pipeline where <code>FontLoader</code> parses a Typeface JSON file
+into two-dimensional vector paths and how <code>TextGeometry</code>
+transforms those paths into 3D extrusions. You will learn how font glyph
+commands are interpreted into vector shapes, how inner holes like those
+in the letters "O" and "B" are handled, and how the underlying extrusion
+engine generates a renderable 3D mesh.</p>
+<h3 id="the-typeface-json-structure">The Typeface JSON Structure</h3>
+<p>Before conversion begins, TrueType (<code>.ttf</code>) or OpenType
+(<code>.otf</code>) fonts are converted into a JSON format using tools
+like <code>facetype.js</code>. This JSON file stores font metrics and
+individual glyph definitions instead of rasterized textures.</p>
+<p>A typical glyph object in the JSON contains:</p>
+<ul>
+<li><strong><code>ha</code> (Horizontal Advance):</strong> The
+horizontal distance the cursor advances after rendering the glyph.</li>
+<li><strong><code>x_min</code>, <code>x_max</code>, <code>y_min</code>,
+<code>y_max</code>:</strong> Bounding box coordinates for the
+glyph.</li>
+<li><strong><code>o</code> (Outline string):</strong> A sequence of
+vector path drawing commands, similar to SVG paths.</li>
+</ul>
+<p>These outline commands represent discrete geometric instructions:</p>
+<ul>
+<li><code>m</code>: Move to (<code>moveTo</code>)</li>
+<li><code>l</code>: Line to (<code>lineTo</code>)</li>
+<li><code>q</code>: Quadratic Bézier curve
+(<code>quadraticCurveTo</code>)</li>
+<li><code>b</code>: Cubic Bézier curve (<code>bezierCurveTo</code>)</li>
+</ul>
+<h3 id="step-1-parsing-with-fontloader">Step 1: Parsing with
+FontLoader</h3>
+<p><code>FontLoader</code> loads the JSON file via
+<code>FileLoader</code> and passes the parsed JSON object to the
+<code>Font</code> class constructor
+(<code>three/addons/loaders/FontLoader.js</code>).</p>
+<p>The <code>Font</code> instance acts as a layout and translation
+engine. It does not create 3D meshes directly; instead, it exposes the
+<code>generateShapes()</code> method, which converts a string of text
+into an array of <code>THREE.Shape</code> objects.</p>
+<h3 id="step-2-converting-path-commands-into-shapepaths">Step 2:
+Converting Path Commands into ShapePaths</h3>
+<p>When <code>font.generateShapes(text, size)</code> is called, the
+loader performs the following layout and conversion process:</p>
+<ol type="1">
+<li><strong>Scale Calculation:</strong> A scale factor is calculated by
+dividing the desired <code>size</code> by the font's internal resolution
+(<code>unitsPerEm</code>).</li>
+<li><strong>String Traversal:</strong> The method iterates through each
+character in the input string, applying kerning and advancing the
+horizontal offset using each glyph's <code>ha</code> attribute.</li>
+<li><strong>Command Execution:</strong> For each character, the outline
+commands are parsed and converted into a <code>THREE.ShapePath</code>
+object:
+<ul>
+<li>An <code>m x y</code> command starts a new sub-path at the scaled
+coordinates.</li>
+<li>An <code>l x y</code> command calls
+<code>path.lineTo(x, y)</code>.</li>
+<li>A <code>q x1 y1 x y</code> command calls
+<code>path.quadraticCurveTo(controlX, controlY, x, y)</code>.</li>
+<li>A <code>b x1 y1 x2 y2 x y</code> command calls
+<code>path.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, x, y)</code>.</li>
+</ul></li>
+</ol>
+<h3 id="step-3-determining-solids-and-holes">Step 3: Determining Solids
+and Holes</h3>
+<p>A character can consist of multiple closed outlines. For example, the
+letter "O" consists of an outer boundary and an inner boundary.</p>
+<p><code>THREE.ShapePath.toShapes()</code> processes these closed paths
+to separate solid geometry from voids:</p>
+<ol type="1">
+<li><strong>Winding Order (Orientation):</strong> The engine checks the
+orientation of each path loop using the Shoelace formula to compute the
+signed area. Typically, clockwise paths represent solid outer
+boundaries, while counter-clockwise paths represent interior cutouts (or
+vice versa, depending on configuration).</li>
+<li><strong>Point Inclusion Tests:</strong> For ambiguous cases, the
+algorithm runs ray-casting point-in-polygon tests to detect whether one
+loop is nested entirely inside another.</li>
+<li><strong>Hole Association:</strong> If a loop is determined to be
+inside an outer shape, it is pushed into the parent shape's
+<code>holes</code> array (<code>shape.holes.push(holePath)</code>).</li>
+</ol>
+<p>The result of this stage is an array of fully defined
+<code>THREE.Shape</code> instances, each representing a complete,
+punctured 2D planar polygon.</p>
+<h3 id="step-4-extrusion-via-textgeometry">Step 4: Extrusion via
+TextGeometry</h3>
+<p><code>TextGeometry</code> is a specialized subclass of
+<code>ExtrudeGeometry</code>. When instantiated:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> <span class="fu">TextGeometry</span>(text<span class="op">,</span> { <span class="dt">font</span><span class="op">:</span> font<span class="op">,</span> <span class="dt">size</span><span class="op">:</span> <span class="dv">80</span><span class="op">,</span> <span class="dt">depth</span><span class="op">:</span> <span class="dv">20</span><span class="op">,</span> <span class="op">...</span> })<span class="op">;</span></span></code></pre></div>
+<p>It immediately calls <code>font.generateShapes()</code> and passes
+the resulting array of <code>THREE.Shape</code> objects directly to the
+<code>ExtrudeGeometry</code> constructor along with extrusion parameters
+such as <code>depth</code>, <code>bevelEnabled</code>,
+<code>bevelThickness</code>, and <code>bevelSegments</code>.</p>
+<p>The extrusion engine completes the transformation:</p>
+<ol type="1">
+<li><strong>Triangulation:</strong> The 2D front faces of the shapes
+(including their holes) are triangulated using the Earcut polygon
+triangulation algorithm.</li>
+<li><strong>Side Wall Generation:</strong> Quad faces (split into two
+triangles) are generated between corresponding vertices on the front and
+back planes across the specified <code>depth</code>.</li>
+<li><strong>Beveling (Optional):</strong> If beveling is enabled, normal
+offsets are calculated to taper or round the edges of the face before
+pushing the geometry along the Z-axis.</li>
+<li><strong>BufferGeometry Output:</strong> All resulting vertices,
+normals, and UVs are packaged into a standard
+<code>THREE.BufferGeometry</code>, ready to be assigned a material and
+rendered in the 3D scene.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

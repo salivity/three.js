@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Rhino 3DM Models in Three.js with Rhino3dmLoader - three.js</title>
+    <meta name="description" content="Loading and rendering native Rhinoceros 3D (.3dm) files in Three.js requires converting mathematical Non-Uniform Rational B-Splines (NURBS) surfaces into renderable triangle meshes directly within the browser. This guide details how to integrate the Rhin">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/load-rhino-3dm-models-in-three-js-with-rhino3dmloader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Load Rhino 3DM Models in Three.js with Rhino3dmLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/load-rhino-3dm-models-in-three-js-with-rhino3dmloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Loading and rendering native Rhinoceros 3D (.3dm) files in Three.js requires converting mathematical Non-Uniform Rational B-Splines (NURBS) surfaces into renderable triangle meshes directly within the browser. This guide details how to integrate the Rhin" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="load-rhino-3dm-models-in-threejs-with-rhino3dmloader">Load Rhino
+3DM Models in Three.js with Rhino3dmLoader</h1>
+<p>Loading and rendering native Rhinoceros 3D (.3dm) files in Three.js
+requires converting mathematical Non-Uniform Rational B-Splines (NURBS)
+surfaces into renderable triangle meshes directly within the browser.
+This guide details how to integrate the <code>Rhino3dmLoader</code>,
+configure the underlying WebAssembly runtime (<code>rhino3dm.js</code>),
+load <code>.3dm</code> assets asynchronously, and optimize complex NURBS
+models for smooth WebGL rendering.</p>
+<h3 id="how-nurbs-processing-works-in-threejs">How NURBS Processing
+Works in Three.js</h3>
+<p>Standard graphics pipelines cannot render mathematical NURBS surfaces
+natively; they require polygonal meshes consisting of vertices, edges,
+and faces. The <code>Rhino3dmLoader</code> bridges this gap by utilizing
+the official <code>rhino3dm</code> WebAssembly library (built from
+openNURBS). When a <code>.3dm</code> file is passed to the loader, the
+library parses geometry, extracts metadata (such as layers and
+materials), and tessellates NURBS surfaces into
+<code>THREE.BufferGeometry</code> instances on the client side if
+pre-calculated render meshes are not already embedded in the file.</p>
+<h3 id="prerequisites-and-asset-setup">Prerequisites and Asset
+Setup</h3>
+<p>To use <code>Rhino3dmLoader</code>, you need access to the loader
+module and the matching <code>rhino3dm</code> WASM dependencies:</p>
+<ol type="1">
+<li>Import <code>Rhino3dmLoader</code> from
+<code>three/addons/loaders/3DMLoader.js</code>.</li>
+<li>Locate <code>rhino3dm.js</code> and <code>rhino3dm.wasm</code>
+inside the <code>node_modules/rhino3dm/</code> directory.</li>
+<li>Host the <code>rhino3dm.wasm</code> and <code>rhino3dm.js</code>
+files statically on your web server so the client can fetch them during
+initialization.</li>
+</ol>
+<h3 id="implementation-guide">Implementation Guide</h3>
+<h4 id="1-configure-the-loader">1. Configure the Loader</h4>
+<p>Initialize the loader and point it to the directory hosting your
+WebAssembly binaries using the <code>setLibraryPath</code> method:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Rhino3dmLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/3DMLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize loader</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">Rhino3dmLoader</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Specify the path to the folder containing rhino3dm.js and rhino3dm.wasm</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">setLibraryPath</span>(<span class="st">&#39;/path/to/rhino3dm/&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-load-and-traverse-the-model">2. Load and Traverse the
+Model</h4>
+<p>Invoke <code>loader.load()</code> to parse the <code>.3dm</code>
+file. The callback returns a <code>THREE.Object3D</code> group
+representing the Rhino hierarchy:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;models/complex_nurbs_model.3dm&#39;</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  (object) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Traverse the loaded model hierarchy</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    object<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        child<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        child<span class="op">.</span><span class="at">receiveShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Apply standard PBR materials if necessary</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span>child<span class="op">.</span><span class="at">material</span> <span class="op">||</span> child<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">type</span> <span class="op">===</span> <span class="st">&#39;MeshBasicMaterial&#39;</span>) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>          child<span class="op">.</span><span class="at">material</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="dt">color</span><span class="op">:</span> child<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">color</span> <span class="op">||</span> <span class="bn">0xcccccc</span><span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>            <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.4</span><span class="op">,</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.2</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>          })<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(object)<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  (progress) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> percent <span class="op">=</span> (progress<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> progress<span class="op">.</span><span class="at">total</span>) <span class="op">*</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Loading: </span><span class="sc">${</span><span class="bu">Math</span><span class="op">.</span><span class="fu">round</span>(percent)<span class="sc">}</span><span class="vs">%`</span>)<span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred while loading the 3DM file:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="best-practices-for-complex-nurbs-models">Best Practices for
+Complex NURBS Models</h3>
+<p>Complex NURBS topologies can cause severe frame drops and long load
+times if not prepared properly. Implement the following
+optimizations:</p>
+<ul>
+<li><strong>Pre-generate Render Meshes in Rhino:</strong> Client-side
+tessellation of raw NURBS curves and surfaces via WebAssembly is
+computationally intensive. In Rhino, set the viewport to "Shaded" mode
+or run the <code>ExtractRenderMesh</code> command before saving. Saving
+the file with render meshes allows the loader to extract existing
+polygon data directly, bypassing heavy browser-side tessellation.</li>
+<li><strong>Tessellation Settings:</strong> If the model must rely on
+client-side meshing, configure tessellation options via
+<code>loader.setMeshingParameters()</code> to balance visual fidelity
+and polygon count.</li>
+<li><strong>Material Mapping:</strong> Rhino materials are automatically
+mapped to equivalent Three.js materials where possible. Ensure your
+scene includes an adequate light setup (such as
+<code>THREE.AmbientLight</code> and <code>THREE.DirectionalLight</code>
+or an environment map) to properly illuminate
+<code>MeshStandardMaterial</code> surfaces generated from the CAD
+data.</li>
+<li><strong>Worker Threads:</strong> <code>Rhino3dmLoader</code> handles
+parsing inside Web Workers when supported, preventing the primary UI
+thread from freezing during the decompression and processing of large
+model files.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

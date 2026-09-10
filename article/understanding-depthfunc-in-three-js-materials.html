@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding depthFunc in Three.js Materials - three.js</title>
+    <meta name="description" content="This article provides an overview of the depthFunc property in Three.js, detailing how it directly controls the WebGL depth-testing function for rendered materials. You will learn how depthFunc dictates whether a fragment is drawn or discarded relative t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/understanding-depthfunc-in-three-js-materials">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Understanding depthFunc in Three.js Materials - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/understanding-depthfunc-in-three-js-materials" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the depthFunc property in Three.js, detailing how it directly controls the WebGL depth-testing function for rendered materials. You will learn how depthFunc dictates whether a fragment is drawn or discarded relative t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="understanding-depthfunc-in-threejs-materials">Understanding
+depthFunc in Three.js Materials</h1>
+<p>This article provides an overview of the <code>depthFunc</code>
+property in Three.js, detailing how it directly controls the WebGL
+depth-testing function for rendered materials. You will learn how
+<code>depthFunc</code> dictates whether a fragment is drawn or discarded
+relative to existing depth buffer data, the standard constants available
+to configure it, and how it differs from CPU-level object sorting.</p>
+<h3 id="what-is-depthfunc">What is <code>depthFunc</code>?</h3>
+<p>In Three.js, <code>depthFunc</code> is a property inherited by all
+materials from the base <code>THREE.Material</code> class. Its primary
+function is to define the comparison algorithm used by the GPU during
+the depth test—specifically mapping to the WebGL API call
+<code>gl.depthFunc()</code>.</p>
+<p>When a 3D mesh is drawn, each fragment (potential pixel) carries a
+depth value (Z-buffer value) representing its distance from the camera.
+The <code>depthFunc</code> determines the exact mathematical condition
+under which this incoming fragment’s depth value is compared against the
+depth value already stored in the frame's depth buffer. If the
+comparison evaluates to <code>true</code>, the fragment passes the depth
+test and is rendered (or written to the buffer, assuming
+<code>depthWrite</code> is active); if <code>false</code>, the fragment
+is discarded.</p>
+<h3 id="available-depth-functions">Available Depth Functions</h3>
+<p>Three.js provides several constants to define custom depth-testing
+behavior:</p>
+<ul>
+<li><strong><code>THREE.LessEqualDepth</code> (Default):</strong> A
+fragment is rendered if its depth is less than or equal to the stored
+depth. This is the standard behavior for realistic 3D occlusion, where
+closer objects hide objects farther away.</li>
+<li><strong><code>THREE.LessDepth</code>:</strong> Renders the fragment
+only if its depth is strictly less than the stored depth.</li>
+<li><strong><code>THREE.GreaterEqualDepth</code>:</strong> Renders the
+fragment only if its depth is greater than or equal to the stored
+depth.</li>
+<li><strong><code>THREE.GreaterDepth</code>:</strong> Renders the
+fragment only if it is strictly behind existing geometry.</li>
+<li><strong><code>THREE.EqualDepth</code>:</strong> Renders the fragment
+only if its depth matches the stored depth exactly.</li>
+<li><strong><code>THREE.NotEqualDepth</code>:</strong> Renders the
+fragment only if its depth differs from the stored depth.</li>
+<li><strong><code>THREE.AlwaysDepth</code>:</strong> Bypasses occlusion
+comparisons completely and always renders the fragment, regardless of
+what is in front of it.</li>
+<li><strong><code>THREE.NeverDepth</code>:</strong> Never passes the
+depth test; the fragments are always discarded.</li>
+</ul>
+<h3 id="how-it-interacts-with-depth-sorting">How It Interacts with Depth
+Sorting</h3>
+<p>It is important to distinguish <code>depthFunc</code> from CPU-side
+scene sorting. Three.js sorts transparent objects back-to-front and
+opaque objects front-to-back before dispatching draw calls. The
+<code>depthFunc</code> property does not alter the order in which meshes
+are processed in JavaScript; instead, it provides per-fragment
+evaluation on the GPU.</p>
+<p>By altering <code>depthFunc</code>, developers can bypass standard
+visual rules without manually manipulating render queues. Common use
+cases include:</p>
+<ul>
+<li><strong>X-Ray / Occlusion Effects:</strong> Setting
+<code>depthFunc</code> to <code>THREE.GreaterDepth</code> allows
+geometry to render only when it is hidden behind walls or other
+meshes.</li>
+<li><strong>Always-Visible UI / Overlays:</strong> Setting
+<code>depthFunc</code> to <code>THREE.AlwaysDepth</code> forces 3D UI
+elements, gizmos, or crosshairs to render on top of all existing
+geometry without disabling the depth buffer entirely.</li>
+<li><strong>Z-Fighting Mitigation:</strong> Custom depth functions can
+be used alongside polygon offsets to control which overlapping coplanar
+surface takes rendering precedence.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

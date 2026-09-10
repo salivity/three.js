@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js TessellateModifier: Subdivide Geometry - three.js</title>
+    <meta name="description" content="The TessellateModifier in Three.js is an essential utility for dividing long or uneven geometric faces into smaller, more uniform triangles based on a maximum edge length threshold. This article demonstrates how to import, configure, and apply the Tessel">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-tessellatemodifier-subdivide-geometry">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js TessellateModifier: Subdivide Geometry - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-tessellatemodifier-subdivide-geometry" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The TessellateModifier in Three.js is an essential utility for dividing long or uneven geometric faces into smaller, more uniform triangles based on a maximum edge length threshold. This article demonstrates how to import, configure, and apply the Tessel" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-tessellatemodifier-subdivide-geometry">Three.js
+TessellateModifier: Subdivide Geometry</h1>
+<p>The <code>TessellateModifier</code> in Three.js is an essential
+utility for dividing long or uneven geometric faces into smaller, more
+uniform triangles based on a maximum edge length threshold. This article
+demonstrates how to import, configure, and apply the
+<code>TessellateModifier</code> to standard Three.js geometries to
+ensure consistent vertex density for dynamic vertex displacement,
+deformation, or detailed lighting calculations.</p>
+<h3 id="understanding-tessellatemodifier">Understanding
+TessellateModifier</h3>
+<p>Standard geometries in Three.js often consist of large triangles
+spanning across flat planes. When applying vertex shaders, displacement
+maps, or physics simulations, these long faces fail to deform smoothly
+due to a lack of intermediate vertices.</p>
+<p>The <code>TessellateModifier</code> recursively splits any triangle
+whose edge length exceeds a specified limit. It splits faces until all
+edge lengths are below the threshold or until a maximum iteration limit
+is reached, resulting in a more uniform mesh surface.</p>
+<h3 id="importing-the-modifier">Importing the Modifier</h3>
+<p><code>TessellateModifier</code> is located in the Three.js add-ons
+directory. Import it alongside the core Three.js library:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { TessellateModifier } <span class="im">from</span> <span class="st">&#39;three/addons/modifiers/TessellateModifier.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="basic-implementation">Basic Implementation</h3>
+<p>To use the modifier, instantiate it with your target edge length,
+then call its <code>modify()</code> method on a
+<code>BufferGeometry</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create a base geometry</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Define subdivision parameters</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxEdgeLength <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span> <span class="co">// Triangles with edges longer than this will split</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxIterations <span class="op">=</span> <span class="dv">6</span><span class="op">;</span>   <span class="co">// Safety cap to prevent infinite loops</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Instantiate and apply the modifier</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tessellateModifier <span class="op">=</span> <span class="kw">new</span> <span class="fu">TessellateModifier</span>(maxEdgeLength<span class="op">,</span> maxIterations)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tessellatedGeometry <span class="op">=</span> tessellateModifier<span class="op">.</span><span class="fu">modify</span>(geometry)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 4. Create the mesh</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0077ff</span><span class="op">,</span> </span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span> </span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(tessellatedGeometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="key-parameters">Key Parameters</h3>
+<ul>
+<li><strong><code>maxEdgeLength</code></strong>: Defines the threshold
+length. Any triangle with an edge greater than this value will be
+subdivided into smaller triangles. Smaller values result in a higher
+density of vertices and a significantly larger triangle count.</li>
+<li><strong><code>maxIterations</code></strong>: Restricts the maximum
+number of subdivision passes. This acts as a safeguard against excessive
+recursion and memory overflow if the geometry contains extremely large
+faces relative to a very small <code>maxEdgeLength</code>.</li>
+</ul>
+<h3 id="working-with-geometry-formats">Working with Geometry
+Formats</h3>
+<p>The <code>TessellateModifier</code> operates on non-indexed geometry.
+If you pass an indexed geometry (such as default primitives like
+<code>THREE.BoxGeometry</code>), the modifier automatically converts it
+to a non-indexed format internally via <code>.toNonIndexed()</code>.</p>
+<p>If your workflow requires smooth shading across adjoining faces after
+tessellation, compute the vertex normals after subdivision:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>tessellatedGeometry<span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<p>Subdividing faces exponentially increases the polygon count of your
+scene. Keep <code>maxIterations</code> constrained to values typically
+between <code>3</code> and <code>8</code>, and benchmark the resulting
+vertex count using
+<code>tessellatedGeometry.attributes.position.count</code> to avoid
+rendering bottlenecks on lower-end devices.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

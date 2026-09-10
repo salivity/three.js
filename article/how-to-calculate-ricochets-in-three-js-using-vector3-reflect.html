@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Calculate Ricochets in Three.js Using Vector3.reflect - three.js</title>
+    <meta name="description" content="Calculating the ricochet trajectory of a bouncing object in Three.js involves determining the collision point on a surface and mathematically reflecting the object's velocity vector across the surface's normal vector. This guide demonstrates how to detec">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-calculate-ricochets-in-three-js-using-vector3-reflect">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Calculate Ricochets in Three.js Using Vector3.reflect - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-calculate-ricochets-in-three-js-using-vector3-reflect" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Calculating the ricochet trajectory of a bouncing object in Three.js involves determining the collision point on a surface and mathematically reflecting the object's velocity vector across the surface's normal vector. This guide demonstrates how to detec" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-calculate-ricochets-in-threejs-using-vector3reflect">How
+to Calculate Ricochets in Three.js Using Vector3.reflect</h1>
+<p>Calculating the ricochet trajectory of a bouncing object in Three.js
+involves determining the collision point on a surface and mathematically
+reflecting the object's velocity vector across the surface's normal
+vector. This guide demonstrates how to detect collisions using
+<code>THREE.Raycaster</code>, extract the face normal of the impacted
+geometry, and utilize the built-in <code>Vector3.reflect</code> method
+to calculate the precise angle and direction of deflection for realistic
+bouncing physics.</p>
+<h3 id="1-understanding-vector-reflection">1. Understanding Vector
+Reflection</h3>
+<p>When an object bounces off a flat barrier, the angle of reflection
+equals the angle of incidence. In 3D space, this calculation requires
+two pieces of information:</p>
+<ul>
+<li><strong>The Incident Vector:</strong> The object's incoming
+direction or velocity vector.</li>
+<li><strong>The Normal Vector:</strong> A unit vector perpendicular to
+the surface at the point of impact.</li>
+</ul>
+<p>The mathematical formula applied internally by Three.js is:</p>
+<p><span class="math display">\[v_{reflected} = v - 2(v \cdot
+n)n\]</span></p>
+<p>Where <span class="math inline">\(v\)</span> is the incoming velocity
+and <span class="math inline">\(n\)</span> is the normalized surface
+normal.</p>
+<h3 id="2-detecting-the-collision-and-surface-normal">2. Detecting the
+Collision and Surface Normal</h3>
+<p>To reflect a vector, you must first know what the object hits and the
+orientation of that surface. Using <code>THREE.Raycaster</code> is the
+most reliable way to find this data in Three.js.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> raycaster <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Raycaster</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> objectPosition <span class="op">=</span> bullet<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> objectVelocity <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">2</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// Moving downward and right</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Normalize velocity to get the direction for the raycaster</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> moveDirection <span class="op">=</span> objectVelocity<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> moveDistance <span class="op">=</span> objectVelocity<span class="op">.</span><span class="fu">length</span>() <span class="op">*</span> delta<span class="op">;</span> <span class="co">// Distance traveled this frame</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>raycaster<span class="op">.</span><span class="fu">set</span>(objectPosition<span class="op">,</span> moveDirection)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Check intersections against collidable scene meshes</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> intersects <span class="op">=</span> raycaster<span class="op">.</span><span class="fu">intersectObjects</span>(collidableMeshes<span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-applying-vector3reflect">3. Applying Vector3.reflect</h3>
+<p>When an intersection occurs within the current frame's movement
+distance, you can access the surface normal via the intersection
+result's <code>face.normal</code> property.</p>
+<p>Before applying the reflection, ensure the normal is transformed into
+world coordinates if the intersected mesh has been rotated or
+scaled.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (intersects<span class="op">.</span><span class="at">length</span> <span class="op">&gt;</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> intersects[<span class="dv">0</span>]<span class="op">.</span><span class="at">distance</span> <span class="op">&lt;=</span> moveDistance) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> hit <span class="op">=</span> intersects[<span class="dv">0</span>]<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Get the surface normal in world space</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> normal <span class="op">=</span> hit<span class="op">.</span><span class="at">face</span><span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    normal<span class="op">.</span><span class="fu">transformDirection</span>(hit<span class="op">.</span><span class="at">object</span><span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Position the object at the point of impact</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    bullet<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(hit<span class="op">.</span><span class="at">point</span>)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Reflect the velocity vector off the normal</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    objectVelocity<span class="op">.</span><span class="fu">reflect</span>(normal)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Optional: Account for energy loss (bounciness/restitution)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> restitution <span class="op">=</span> <span class="fl">0.8</span><span class="op">;</span> <span class="co">// 80% speed retained</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    objectVelocity<span class="op">.</span><span class="fu">multiplyScalar</span>(restitution)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 5. Prevent sticking: nudge object slightly along the normal</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    bullet<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">addScaledVector</span>(normal<span class="op">,</span> <span class="fl">0.001</span>)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">// No collision: proceed with normal movement</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    bullet<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">addScaledVector</span>(objectVelocity<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Unit Length for Normals:</strong> The <code>normal</code>
+parameter passed into <code>Vector3.reflect()</code> must be normalized.
+Face normals obtained from <code>hit.face.normal</code> and transformed
+using <code>transformDirection</code> will remain unit vectors, ensuring
+an accurate bounce.</li>
+<li><strong>Surface Penetration:</strong> Moving objects can sometimes
+penetrate surfaces if their velocity is high relative to the frame rate.
+Placing the object directly at <code>hit.point</code> and adding a tiny
+offset along the normal prevents the object from getting stuck inside
+the geometry on the subsequent frame.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

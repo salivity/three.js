@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transient Input vs Tracked Controller in WebXR - three.js</title>
+    <meta name="description" content="In Three.js WebXR, the primary difference between a transient input and a standard tracked controller lies in their lifecycle and how their spatial poses are tracked. While standard tracked controllers are persistent physical devices that continuously re">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/transient-input-vs-tracked-controller-in-webxr">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Transient Input vs Tracked Controller in WebXR - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/transient-input-vs-tracked-controller-in-webxr" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js WebXR, the primary difference between a transient input and a standard tracked controller lies in their lifecycle and how their spatial poses are tracked. While standard tracked controllers are persistent physical devices that continuously re" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="transient-input-vs-tracked-controller-in-webxr">Transient Input
+vs Tracked Controller in WebXR</h1>
+<p>In Three.js WebXR, the primary difference between a transient input
+and a standard tracked controller lies in their lifecycle and how their
+spatial poses are tracked. While standard tracked controllers are
+persistent physical devices that continuously report position and
+orientation, transient inputs are temporary, event-driven
+interactions—such as screen taps in mobile augmented reality—that exist
+only for the duration of an action.</p>
+<h3 id="standard-tracked-controllers">Standard Tracked Controllers</h3>
+<p>Standard tracked controllers represent physical hardware such as the
+Meta Quest Touch controllers, HTC Vive wands, or Valve Index
+controllers.</p>
+<ul>
+<li><strong>Persistence:</strong> These devices maintain an active
+connection and continuous presence in the WebXR session. They exist in
+the scene even when the user is not actively pressing buttons or
+interacting with virtual objects.</li>
+<li><strong>Tracking Modes:</strong> They typically provide 6DoF
+(Degrees of Freedom) tracking, continuously updating both their target
+ray space (for pointing) and grip space (for rendering 3D controller
+models or virtual hands).</li>
+<li><strong>Three.js Handling:</strong> Developers access these
+controllers using <code>renderer.xr.getController(index)</code> and
+<code>renderer.xr.getControllerGrip(index)</code>. Because their poses
+update every frame, you can reliably attach persistent visual models,
+laser pointers, or physics colliders to them throughout the
+session.</li>
+</ul>
+<h3 id="transient-inputs">Transient Inputs</h3>
+<p>Transient inputs correspond to WebXR input sources classified under
+the <code>transient-pointer</code> target ray mode. Common examples
+include a user tapping on the screen of an AR-enabled smartphone,
+gaze-and-tap mechanisms, or temporary pinch gestures.</p>
+<ul>
+<li><strong>Lifecycle:</strong> Unlike standard controllers, transient
+inputs do not continuously track a physical object in space. The input
+source is established dynamically when an action begins (such as a
+finger touching the screen) and terminates as soon as the action ends
+(lifting the finger).</li>
+<li><strong>Tracking Constraints:</strong> A transient input provides a
+ray pose only while the interaction is active. Because there is no
+persistent physical controller in the user's hand, these inputs do not
+have an associated grip space, making it impossible to render a
+permanent controller model in the virtual world.</li>
+<li><strong>Three.js Handling:</strong> While Three.js maps these inputs
+through the same <code>renderer.xr.getController()</code> index system,
+their tracking data is transient. Interaction logic relies heavily on
+listening for <code>selectstart</code>, <code>select</code>, and
+<code>selectend</code> events. When an event fires, Three.js updates the
+controller’s matrix to the location where the tap or interaction
+occurred, typically using it to cast a ray into the scene at that
+specific moment.</li>
+</ul>
+<h3 id="key-architectural-differences">Key Architectural
+Differences</h3>
+<ol type="1">
+<li><strong>Target Ray Mode:</strong> Standard controllers use the
+<code>tracked-pointer</code> mode, indicating continuous spatial
+tracking independent of user actions. Transient inputs use the
+<code>transient-pointer</code> mode, indicating that the pointing ray is
+short-lived and valid primarily during active input events.</li>
+<li><strong>Visual Representation:</strong> Standard controllers warrant
+persistent 3D models and continuous reticles. Transient inputs require
+reactive visuals, such as an indicator that appears at the point of
+contact only when a tap or gesture occurs.</li>
+<li><strong>Use Case Alignment:</strong> Standard controllers are
+designed for immersive VR and MR experiences requiring continuous
+manipulation, tool holding, and spatial navigation. Transient inputs are
+optimized for mobile AR and basic viewer devices where interaction is
+sporadic and screen- or gaze-dependent.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Translation with setFromMatrixColumn in Three.js - three.js</title>
+    <meta name="description" content="Extracting position and translation data from a 4x4 transformation matrix is a frequent operation in Three.js rendering loops and physics calculations. While Vector3.setFromMatrixPosition() is commonly used, you can also extract translation vectors direc">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/extract-translation-with-setfrommatrixcolumn-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Extract Translation with setFromMatrixColumn in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/extract-translation-with-setfrommatrixcolumn-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extracting position and translation data from a 4x4 transformation matrix is a frequent operation in Three.js rendering loops and physics calculations. While Vector3.setFromMatrixPosition() is commonly used, you can also extract translation vectors direc" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="extract-translation-with-setfrommatrixcolumn-in-threejs">Extract
+Translation with setFromMatrixColumn in Three.js</h1>
+<p>Extracting position and translation data from a 4x4 transformation
+matrix is a frequent operation in Three.js rendering loops and physics
+calculations. While <code>Vector3.setFromMatrixPosition()</code> is
+commonly used, you can also extract translation vectors directly using
+<code>Vector3.setFromMatrixColumn()</code>. This guide explains how
+matrix column mapping works in Three.js and demonstrates how to quickly
+extract translation components by targeting the fourth column of a
+<code>Matrix4</code>.</p>
+<h3 id="understanding-the-matrix-layout">Understanding the Matrix
+Layout</h3>
+<p>Three.js represents 3D transformations using a column-major 4x4
+matrix (<code>THREE.Matrix4</code>). The internal <code>elements</code>
+array stores values in a specific order where the first three columns
+define rotation and scale (the local coordinate axes), and the fourth
+column defines the world-space or parent-space translation:</p>
+<ul>
+<li><strong>Column 0:</strong> Basis Vector X (<span
+class="math inline">\(X_x, X_y, X_z, 0\)</span>)</li>
+<li><strong>Column 1:</strong> Basis Vector Y (<span
+class="math inline">\(Y_x, Y_y, Y_z, 0\)</span>)</li>
+<li><strong>Column 2:</strong> Basis Vector Z (<span
+class="math inline">\(Z_x, Z_y, Z_z, 0\)</span>)</li>
+<li><strong>Column 3:</strong> Translation (<span
+class="math inline">\(T_x, T_y, T_z, 1\)</span>)</li>
+</ul>
+<h3 id="extracting-translation-using-setfrommatrixcolumn">Extracting
+Translation Using setFromMatrixColumn</h3>
+<p>The <code>Vector3.setFromMatrixColumn(matrix, index)</code> method
+populates a <code>Vector3</code> using the values of a specified column
+index (from 0 to 3) in a given <code>Matrix4</code>. Because array
+indices are zero-based, passing <code>3</code> as the second argument
+extracts the translation components (<span class="math inline">\(T_x,
+T_y, T_z\)</span>) directly into the target vector.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume &#39;objectMatrix&#39; is an existing THREE.Matrix4 instance</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> objectMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Create or reuse a Vector3 instance to prevent garbage collection overhead</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> translation <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Extract the translation components (Column Index 3)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>translation<span class="op">.</span><span class="fu">setFromMatrixColumn</span>(objectMatrix<span class="op">,</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(translation)<span class="op">;</span> <span class="co">// Outputs: Vector3 { x: Tx, y: Ty, z: Tz }</span></span></code></pre></div>
+<h3 id="why-use-this-approach">Why Use This Approach?</h3>
+<ol type="1">
+<li><strong>Memory Efficiency:</strong> Reusing an existing
+<code>THREE.Vector3</code> instance with
+<code>setFromMatrixColumn</code> avoids allocating new objects during
+hot loops or tick functions.</li>
+<li><strong>Bypasses Full Decomposition:</strong> Unlike
+<code>matrix.decompose()</code>, which calculates position, quaternion,
+and scale simultaneously through complex floating-point operations,
+<code>setFromMatrixColumn</code> performs three direct array lookups
+(<code>elements[12]</code>, <code>elements[13]</code>,
+<code>elements[14]</code>).</li>
+<li><strong>Loop Uniformity:</strong> If you are reading out basis
+vectors and translation sequentially (for example, building custom
+physics bodies or export formats), using indices <code>0</code>,
+<code>1</code>, <code>2</code>, and <code>3</code> with
+<code>setFromMatrixColumn</code> keeps code clean and standardized
+across all coordinate axes and the position vector.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

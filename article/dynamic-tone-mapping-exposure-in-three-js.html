@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Tone Mapping Exposure in Three.js - three.js</title>
+    <meta name="description" content="Dynamically adjusting renderer.toneMappingExposure in Three.js simulates human eye adaptation—commonly known as auto-exposure—by evaluating the scene's current luminance and compensating accordingly. This article details how to downsample the rendere">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/dynamic-tone-mapping-exposure-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dynamic Tone Mapping Exposure in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/dynamic-tone-mapping-exposure-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Dynamically adjusting renderer.toneMappingExposure in Three.js simulates human eye adaptation—commonly known as auto-exposure—by evaluating the scene's current luminance and compensating accordingly. This article details how to downsample the rendere" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="dynamic-tone-mapping-exposure-in-threejs">Dynamic Tone Mapping
+Exposure in Three.js</h1>
+<p>Dynamically adjusting <code>renderer.toneMappingExposure</code> in
+Three.js simulates human eye adaptation—commonly known as
+auto-exposure—by evaluating the scene's current luminance and
+compensating accordingly. This article details how to downsample the
+rendered view to read its average brightness using a low-resolution
+<code>WebGLRenderTarget</code>, calculate the perceived luminance, and
+smoothly interpolate the renderer's exposure value frame by frame.</p>
+<h3 id="the-mechanism">The Mechanism</h3>
+<p>To determine the average brightness of the view without causing
+performance bottlenecks, you should avoid reading every pixel of the
+full-resolution canvas. Instead, render or copy the scene into a tiny
+offscreen render target (such as 1x1 or 4x4 pixels). This relies on GPU
+hardware linear filtering to aggregate the overall scene luminance into
+a small set of pixels.</p>
+<p>Once read into CPU memory via <code>readRenderTargetPixels</code>,
+convert the RGB values into relative luminance, determine the difference
+from your target middle-gray brightness, and adjust
+<code>renderer.toneMappingExposure</code> smoothly using linear
+interpolation (<code>lerp</code>).</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-setup-the-downsample-render-target">1. Setup the Downsample
+Render Target</h4>
+<p>Create a small render target and a buffer to store the downsampled
+pixel data:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1x1 target aggregates the entire screen if mipmapping/bilinear downscaling is applied, </span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// or a small 2x2 target can be averaged manually.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sampleWidth <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sampleHeight <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> luminanceTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(sampleWidth<span class="op">,</span> sampleHeight<span class="op">,</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">minFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearFilter</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">magFilter</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">LinearFilter</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">format</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBAFormat</span><span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">type</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">UnsignedByteType</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pixelBuffer <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(sampleWidth <span class="op">*</span> sampleHeight <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-downsample-and-read-average-luminance">2. Downsample and Read
+Average Luminance</h4>
+<p>Render the camera view into this smaller target, read back the pixel
+values, and calculate the average perceived luminance using standard
+photometric weights (<span class="math inline">\(0.2126R + 0.7152G +
+0.0722B\)</span>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getAverageLuminance</span>(renderer<span class="op">,</span> scene<span class="op">,</span> camera) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Render current scene directly to the tiny target</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> currentTarget <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getRenderTarget</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(luminanceTarget)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Read pixel data from the render target</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">readRenderTargetPixels</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    luminanceTarget<span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    sampleWidth<span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    sampleHeight<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    pixelBuffer</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Restore the original render target (screen or post-processing chain)</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">setRenderTarget</span>(currentTarget)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> totalLuminance <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> numPixels <span class="op">=</span> sampleWidth <span class="op">*</span> sampleHeight<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> pixelBuffer<span class="op">.</span><span class="at">length</span><span class="op">;</span> i <span class="op">+=</span> <span class="dv">4</span>) {</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> r <span class="op">=</span> pixelBuffer[i] <span class="op">/</span> <span class="dv">255</span><span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> g <span class="op">=</span> pixelBuffer[i <span class="op">+</span> <span class="dv">1</span>] <span class="op">/</span> <span class="dv">255</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> b <span class="op">=</span> pixelBuffer[i <span class="op">+</span> <span class="dv">2</span>] <span class="op">/</span> <span class="dv">255</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Standard relative luminance formula</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> lum <span class="op">=</span> <span class="fl">0.2126</span> <span class="op">*</span> r <span class="op">+</span> <span class="fl">0.7152</span> <span class="op">*</span> g <span class="op">+</span> <span class="fl">0.0722</span> <span class="op">*</span> b<span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    totalLuminance <span class="op">+=</span> lum<span class="op">;</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> totalLuminance <span class="op">/</span> numPixels<span class="op">;</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="3-dynamically-adjust-the-exposure">3. Dynamically Adjust the
+Exposure</h4>
+<p>Incorporate the luminance measurement into your animation loop.
+Calculate the target exposure using an optimal midpoint luminance
+(typically around <code>0.18</code> for middle gray) and interpolate the
+change over time:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Target exposure settings</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetMiddleGray <span class="op">=</span> <span class="fl">0.18</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> minExposure <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxExposure <span class="op">=</span> <span class="fl">4.0</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> adaptationSpeed <span class="op">=</span> <span class="fl">0.05</span><span class="op">;</span> <span class="co">// Lower values create slower, more realistic eye adaptation</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateAutoExposure</span>(renderer<span class="op">,</span> scene<span class="op">,</span> camera<span class="op">,</span> delta) {</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> avgLuminance <span class="op">=</span> <span class="fu">getAverageLuminance</span>(renderer<span class="op">,</span> scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Prevent divide-by-zero in pitch black scenes</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> safeLuminance <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(avgLuminance<span class="op">,</span> <span class="fl">0.001</span>)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate ideal target exposure</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> targetExposure <span class="op">=</span> targetMiddleGray <span class="op">/</span> safeLuminance<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Clamp exposure to predefined bounds</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  targetExposure <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">clamp</span>(targetExposure<span class="op">,</span> minExposure<span class="op">,</span> maxExposure)<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Smoothly interpolate current exposure towards the target exposure</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> lerpFactor <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">exp</span>(<span class="op">-</span>adaptationSpeed <span class="op">*</span> delta <span class="op">*</span> <span class="dv">60</span>)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="at">toneMappingExposure</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">lerp</span>(</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">toneMappingExposure</span><span class="op">,</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    targetExposure<span class="op">,</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    lerpFactor</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="4-the-render-loop">4. The Render Loop</h4>
+<p>Execute the auto-exposure update in your main requestAnimationFrame
+callback:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update exposure dynamically</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">updateAutoExposure</span>(renderer<span class="op">,</span> scene<span class="op">,</span> camera<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Render main scene to canvas</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<ul>
+<li><strong>CPU-GPU Synchronization:</strong> Calling
+<code>readRenderTargetPixels</code> forces a GPU pipeline stall because
+the CPU must wait for the GPU to finish rendering to return the pixel
+data. To minimize overhead, keep the sample target extremely small
+(<span class="math inline">\(1\times1\)</span> or <span
+class="math inline">\(2\times2\)</span>) or execute the measurement once
+every few frames rather than on every tick.</li>
+<li><strong>Tone Mapping Selection:</strong> Dynamic exposure works in
+conjunction with tone mapping operators. Ensure a tone mapping method
+like <code>THREE.ACESFilmicToneMapping</code> or
+<code>THREE.AgXToneMapping</code> is enabled via
+<code>renderer.toneMapping</code> to prevent high exposure values from
+blowing out highlight details abruptly.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

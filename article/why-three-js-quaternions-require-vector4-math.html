@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Three.js Quaternions Require Vector4 Math - three.js</title>
+    <meta name="description" content="This article explores the mathematical necessity of utilizing a four-dimensional representation, such as a Vector4, when handling complex quaternion calculations in Three.js. While 3D space involves only three spatial dimensions, orientation cannot be re">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/why-three-js-quaternions-require-vector4-math">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Why Three.js Quaternions Require Vector4 Math - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/why-three-js-quaternions-require-vector4-math" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the mathematical necessity of utilizing a four-dimensional representation, such as a Vector4, when handling complex quaternion calculations in Three.js. While 3D space involves only three spatial dimensions, orientation cannot be re" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="why-threejs-quaternions-require-vector4-math">Why Three.js
+Quaternions Require Vector4 Math</h1>
+<p>This article explores the mathematical necessity of utilizing a
+four-dimensional representation, such as a <code>Vector4</code>, when
+handling complex quaternion calculations in Three.js. While 3D space
+involves only three spatial dimensions, orientation cannot be
+represented continuously and without singularities using only three
+scalar parameters. The following breakdown explains why quaternions
+inherently belong to four-dimensional space (<span
+class="math inline">\(\mathbb{R}^4\)</span>), how vector rotation relies
+on four-part hypercomplex conjugation, and why Three.js relies on
+four-component structures to execute reliable, gimbal-lock-free 3D
+transformations.</p>
+<h2 id="the-mathematical-structure-of-quaternions">The Mathematical
+Structure of Quaternions</h2>
+<p>A quaternion <span class="math inline">\(q\)</span> is an element of
+the four-dimensional normed division algebra <span
+class="math inline">\(\mathbb{H}\)</span>. Mathematically, it is defined
+as:</p>
+<p><span class="math display">\[q = w + xi + yj + zk\]</span></p>
+<p>where <span class="math inline">\(w, x, y, z \in \mathbb{R}\)</span>,
+and <span class="math inline">\(i, j, k\)</span> are imaginary units
+satisfying Hamilton's fundamental identities:</p>
+<p><span class="math display">\[i^2 = j^2 = k^2 = ijk = -1\]</span></p>
+<p>A quaternion consists of a scalar part (<span
+class="math inline">\(w\)</span>) and a three-dimensional vector part
+(<span class="math inline">\(\mathbf{v} = xi + yj + zk\)</span>).
+Reducing this structure to a three-component vector
+(<code>Vector3</code>) discards one of these components, breaking the
+algebraic closure required for quaternion multiplication.</p>
+<p>When expressing a 3D rotation by an angle <span
+class="math inline">\(\theta\)</span> around a normalized unit axis
+<span class="math inline">\(\mathbf{u} = (u_x, u_y, u_z)\)</span>, the
+unit quaternion is defined as:</p>
+<p><span class="math display">\[q = \cos\left(\frac{\theta}{2}\right) +
+\mathbf{u}\sin\left(\frac{\theta}{2}\right) =
+\left(u_x\sin\frac{\theta}{2}, u_y\sin\frac{\theta}{2},
+u_z\sin\frac{\theta}{2}, \cos\frac{\theta}{2}\right)\]</span></p>
+<p>This encoding explicitly demands four distinct scalar values: three
+to scale the unit axis vector by <span
+class="math inline">\(\sin(\theta/2)\)</span>, and a fourth independent
+scalar to encode <span class="math inline">\(\cos(\theta/2)\)</span>. A
+<code>Vector3</code> cannot hold both the directional vector and the
+scalar half-angle simultaneously without loss of data.</p>
+<h2 id="pure-quaternions-and-vector-conjugation">Pure Quaternions and
+Vector Conjugation</h2>
+<p>To rotate a 3D vector <span class="math inline">\(\mathbf{p} = (p_x,
+p_y, p_z)\)</span> using a quaternion in Three.js, the vector must
+undergo quaternion conjugation:</p>
+<p><span class="math display">\[\mathbf{p}&#39; = q \mathbf{p}
+q^{-1}\]</span></p>
+<p>This operation is impossible using standard vector operations in
+<span class="math inline">\(\mathbb{R}^3\)</span>. For this formula to
+be mathematically valid, the vector <span
+class="math inline">\(\mathbf{p}\)</span> must be embedded into <span
+class="math inline">\(\mathbb{H}\)</span> as a "pure quaternion" whose
+real component is zero:</p>
+<p><span class="math display">\[\mathbf{p}_{\mathbb{H}} = 0 + p_x i +
+p_y j + p_z k\]</span></p>
+<p>In computational terms, this requires representing the 3D point as a
+four-component vector <span class="math inline">\((p_x, p_y, p_z,
+0)\)</span>. The calculation involves two hypercomplex multiplications.
+Discarding the fourth component prevents the formation of the inverse
+<span class="math inline">\(q^{-1}\)</span> (or conjugate <span
+class="math inline">\(q^*\)</span>) and corrupts the cross-product and
+dot-product interactions that occur during the Hamilton product
+expansion:</p>
+<p><span class="math display">\[q_1 q_2 = (w_1 w_2 - \mathbf{v}_1 \cdot
+\mathbf{v}_2, \, w_1 \mathbf{v}_2 + w_2 \mathbf{v}_1 + \mathbf{v}_1
+\times \mathbf{v}_2)\]</span></p>
+<p>Without the fourth component, the inner product term <span
+class="math inline">\(\mathbf{v}_1 \cdot \mathbf{v}_2\)</span> and the
+real-part scaling cannot be resolved.</p>
+<h2 id="topological-necessity-the-unit-3-sphere-s3">Topological
+Necessity: The Unit 3-Sphere (<span
+class="math inline">\(S^3\)</span>)</h2>
+<p>Rotations in three dimensions belong to the Special Orthogonal group
+<span class="math inline">\(\mathrm{SO}(3)\)</span>. The topology of
+<span class="math inline">\(\mathrm{SO}(3)\)</span> is homeomorphic to
+real projective space <span
+class="math inline">\(\mathbb{R}\mathrm{P}^3\)</span>.</p>
+<p>Any continuous three-parameter representation of <span
+class="math inline">\(\mathrm{SO}(3)\)</span>—such as Euler angles
+(<code>Vector3</code>) or Rodrigues vectors—either contains coordinate
+singularities (gimbal lock) or discontinuities at specific boundary
+points. According to topology, <span
+class="math inline">\(\mathrm{SO}(3)\)</span> cannot be globally
+parameterized by a subset of <span
+class="math inline">\(\mathbb{R}^3\)</span> without introducing
+singularities.</p>
+<p>Unit quaternions solve this by living on the unit 3-sphere (<span
+class="math inline">\(S^3\)</span>), which is embedded in
+four-dimensional Euclidean space (<span
+class="math inline">\(\mathbb{R}^4\)</span>):</p>
+<p><span class="math display">\[x^2 + y^2 + z^2 + w^2 = 1\]</span></p>
+<p>The 3-sphere <span class="math inline">\(S^3\)</span> acts as a
+double cover of <span class="math inline">\(\mathrm{SO}(3)\)</span>,
+where each rotation corresponds to an antipodal pair of unit quaternions
+(<span class="math inline">\(q\)</span> and <span
+class="math inline">\(-q\)</span>). Navigating this space
+continuously—such as performing Spherical Linear Interpolation
+(<code>slerp</code>) between orientations—strictly requires
+interpolating along geodesics in <span
+class="math inline">\(\mathbb{R}^4\)</span>. A three-component format
+cannot preserve the constraint <span class="math inline">\(x^2 + y^2 +
+z^2 + w^2 = 1\)</span>.</p>
+<h2 id="computational-alignment-in-threejs-and-webgl">Computational
+Alignment in Three.js and WebGL</h2>
+<p>Beyond pure mathematics, Three.js coordinates quaternion data
+directly with the GPU through WebGL shaders. In linear algebra
+pipelines:</p>
+<ol type="1">
+<li><strong>Memory Alignment:</strong> A quaternion maps directly to a
+4-component floating-point vector (<code>vec4</code> in GLSL or
+<code>Vector4</code> in JavaScript).</li>
+<li><strong>Matrix Conversion:</strong> Converting a quaternion into a
+<span class="math inline">\(4 \times 4\)</span> homogeneous
+transformation matrix requires calculating quadratic terms from all four
+coordinates (<span class="math inline">\(x^2, y^2, z^2, w^2, xy, xz, yz,
+wx, wy, wz\)</span>). Omitting the <span
+class="math inline">\(w\)</span> component prevents the reconstruction
+of the off-diagonal shear and rotational terms.</li>
+<li><strong>Interpolation Arithmetic:</strong> The 4D dot product <span
+class="math inline">\(q_1 \cdot q_2 = x_1 x_2 + y_1 y_2 + z_1 z_2 + w_1
+w_2\)</span> determines the cosine of the angle between two orientations
+on <span class="math inline">\(S^3\)</span>, which dictates whether the
+shortest path interpolation requires negating one quaternion.</li>
+</ol>
+<p>Because the underlying algebra, topological space, and hardware
+execution models all depend on four orthogonal components, utilizing a
+four-dimensional vector structure is an explicit mathematical
+requirement for quaternion mechanics.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

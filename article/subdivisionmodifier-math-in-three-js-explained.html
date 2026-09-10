@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubdivisionModifier Math in Three.js Explained - three.js</title>
+    <meta name="description" content="This article explores the mathematical mechanics behind the SubdivisionModifier in Three.js, detailing how it converts low-polygon geometries into smooth, high-resolution surfaces. At its core, the modifier relies on Charles Loop’s subdivision scheme,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/subdivisionmodifier-math-in-three-js-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SubdivisionModifier Math in Three.js Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/subdivisionmodifier-math-in-three-js-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explores the mathematical mechanics behind the SubdivisionModifier in Three.js, detailing how it converts low-polygon geometries into smooth, high-resolution surfaces. At its core, the modifier relies on Charles Loop’s subdivision scheme," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="subdivisionmodifier-math-in-threejs-explained">SubdivisionModifier
+Math in Three.js Explained</h1>
+<p>This article explores the mathematical mechanics behind the
+<code>SubdivisionModifier</code> in Three.js, detailing how it converts
+low-polygon geometries into smooth, high-resolution surfaces. At its
+core, the modifier relies on Charles Loop’s subdivision scheme, an
+approximating surface algorithm designed specifically for triangular
+meshes. By exploring the topological splitting process, edge-point
+calculation masks, and existing vertex repositioning formulas, this
+guide clarifies the exact linear algebraic functions that generate
+curvature and surface continuity.</p>
+<h3 id="the-foundation-loop-subdivision-scheme">The Foundation: Loop
+Subdivision Scheme</h3>
+<p>The <code>SubdivisionModifier</code> in Three.js operates on
+triangular meshes using the <strong>Loop subdivision algorithm</strong>.
+This process is both topological and geometric: it increases mesh
+density by subdividing faces and repositions vertices via discrete
+weighted averaging functions to converge toward a smooth parametric
+limit surface.</p>
+<p>The algorithm executes two primary phases during each subdivision
+pass:</p>
+<ol type="1">
+<li><strong>Topological Refinement (Splitting):</strong> Each triangular
+face is split into four smaller sub-triangles by introducing a new
+vertex along every edge (a 1-to-4 split).</li>
+<li><strong>Geometric Smoothing (Averaging):</strong> The spatial
+coordinates of both the newly created vertices and the original vertices
+are computed as weighted linear combinations of their immediate
+neighbors.</li>
+</ol>
+<hr />
+<h3 id="1-generating-new-edge-vertices-odd-vertices">1. Generating New
+Edge Vertices (Odd Vertices)</h3>
+<p>When an edge is split, the position of the newly introduced vertex
+<span class="math inline">\(v_{\text{edge}}\)</span> depends on the two
+endpoints of the edge and the two opposing vertices of the adjacent
+triangles sharing that edge.</p>
+<p>For an interior edge bounded by endpoints <span
+class="math inline">\(v_1\)</span> and <span
+class="math inline">\(v_2\)</span>, and flanked by opposing vertices
+<span class="math inline">\(v_3\)</span> and <span
+class="math inline">\(v_4\)</span>, the position is defined by the
+following weighted affine combination:</p>
+<p><span class="math display">\[v_{\text{edge}} = \frac{3}{8}(v_1 + v_2)
++ \frac{1}{8}(v_3 + v_4)\]</span></p>
+<p>This mask applies strong geometric tension to the original edge
+segment (<span class="math inline">\(\frac{6}{8}\)</span> total weight)
+while pulling the new point slightly toward the flanking faces (<span
+class="math inline">\(\frac{2}{8}\)</span> total weight), introducing
+local curvature.</p>
+<p>If the edge lies on an open mesh boundary (where only one adjacent
+triangle exists), the opposing vertices do not exist. In this case, a
+boundary subdivision rule is applied to preserve silhouette
+integrity:</p>
+<p><span class="math display">\[v_{\text{edge, boundary}} =
+\frac{1}{2}(v_1 + v_2)\]</span></p>
+<hr />
+<h3 id="2-updating-existing-vertices-even-vertices">2. Updating Existing
+Vertices (Even Vertices)</h3>
+<p>Existing vertices are not kept in their original positions; doing so
+would produce an interpolating, faceted shape rather than a smooth
+surface. Instead, each original vertex <span
+class="math inline">\(v\)</span> is repositioned using a convex
+combination of its current position and the positions of all directly
+adjacent neighboring vertices <span
+class="math inline">\(v_i\)</span>.</p>
+<p>For a vertex with valence <span class="math inline">\(n\)</span> (the
+number of connected edges):</p>
+<p><span class="math display">\[v&#39; = (1 - n\beta)v + \beta
+\sum_{i=1}^{n} v_i\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(v\)</span> is the current position
+vector of the vertex.</li>
+<li><span class="math inline">\(v&#39;\)</span> is the updated position
+vector.</li>
+<li><span class="math inline">\(n\)</span> is the vertex valence.</li>
+<li><span class="math inline">\(v_i\)</span> represents the position
+vectors of the <span class="math inline">\(n\)</span> adjacent neighbor
+vertices.</li>
+<li><span class="math inline">\(\beta\)</span> is a weighting
+coefficient chosen to ensure numerical stability and continuous
+curvature.</li>
+</ul>
+<h4 id="calculating-the-parameter-beta">Calculating the Parameter <span
+class="math inline">\(\beta\)</span></h4>
+<p>Charles Loop derived <span class="math inline">\(\beta\)</span> using
+spectral analysis of the subdivision matrix to ensure smooth surface
+properties regardless of valence:</p>
+<p><span class="math display">\[\beta = \frac{1}{n} \left( \frac{5}{8} -
+\left( \frac{3}{8} + \frac{1}{4} \cos\left(\frac{2\pi}{n}\right)
+\right)^2 \right)\]</span></p>
+<p>Many implementations, including optimized real-time variations, adopt
+Joe Warren’s simplified formulation for computational efficiency:</p>
+<p><span class="math display">\[\beta = \begin{cases}
+\frac{3}{16}, &amp; \text{if } n = 3 \\
+\frac{3}{8n}, &amp; \text{if } n &gt; 3
+\end{cases}\]</span></p>
+<h4 id="boundary-rule-for-existing-vertices">Boundary Rule for Existing
+Vertices</h4>
+<p>If an existing vertex lies along an open mesh boundary with two
+boundary neighbor vertices <span
+class="math inline">\(v_{\text{b1}}\)</span> and <span
+class="math inline">\(v_{\text{b2}}\)</span>, its position is smoothed
+using a one-dimensional cubic B-spline mask:</p>
+<p><span class="math display">\[v&#39;_{\text{boundary}} = \frac{3}{4}v
++ \frac{1}{8}(v_{\text{b1}} + v_{\text{b2}})\]</span></p>
+<hr />
+<h3 id="mathematical-properties-and-limit-surface">Mathematical
+Properties and Limit Surface</h3>
+<p>By repeatedly applying these linear transformations, the geometry
+converges to a well-defined limit surface:</p>
+<ul>
+<li><strong>Curvature Continuity:</strong> The limit surface achieves
+<span class="math inline">\(C^2\)</span> continuity (continuous
+curvature) across all regular regions (vertices of valence 6). At
+extraordinary vertices (vertices where <span class="math inline">\(n
+\neq 6\)</span>), the surface maintains <span
+class="math inline">\(C^1\)</span> continuity (tangent plane
+continuity).</li>
+<li><strong>Affine Invariance:</strong> Because all subdivision weights
+sum to 1 (<span class="math inline">\(\sum w = 1\)</span>), the
+geometric transformations are independent of the coordinate system
+origin, ensuring predictable behavior under translation, rotation, and
+scaling.</li>
+<li><strong>Approximation Behavior:</strong> The surface contracts
+slightly relative to the convex hull of the control mesh, smoothing
+sharp peaks into rounded profiles while converging to a continuous
+spline-like representation.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

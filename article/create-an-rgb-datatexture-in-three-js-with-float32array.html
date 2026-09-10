@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create an RGB DataTexture in Three.js with Float32Array - three.js</title>
+    <meta name="description" content="This guide provides a quick overview and step-by-step walkthrough for manually generating an RGB DataTexture in Three.js using a Float32Array. You will learn how to calculate the correct buffer size, structure interleaved red, green, and blue color chann">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/create-an-rgb-datatexture-in-three-js-with-float32array">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Create an RGB DataTexture in Three.js with Float32Array - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/create-an-rgb-datatexture-in-three-js-with-float32array" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide provides a quick overview and step-by-step walkthrough for manually generating an RGB DataTexture in Three.js using a Float32Array. You will learn how to calculate the correct buffer size, structure interleaved red, green, and blue color chann" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="create-an-rgb-datatexture-in-threejs-with-float32array">Create
+an RGB DataTexture in Three.js with Float32Array</h1>
+<p>This guide provides a quick overview and step-by-step walkthrough for
+manually generating an RGB <code>DataTexture</code> in Three.js using a
+<code>Float32Array</code>. You will learn how to calculate the correct
+buffer size, structure interleaved red, green, and blue color channels,
+configure the texture parameters with floating-point precision, and
+apply the resulting texture to a material.</p>
+<h3 id="1-calculate-array-size">1. Calculate Array Size</h3>
+<p>An RGB texture requires three color channels per pixel: Red, Green,
+and Blue. To store this data, your <code>Float32Array</code> must have a
+length equal to the total number of pixels multiplied by 3:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> width <span class="op">=</span> <span class="dv">256</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> height <span class="op">=</span> <span class="dv">256</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> size <span class="op">=</span> width <span class="op">*</span> height<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> data <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(size <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-populate-the-float32array">2. Populate the Float32Array</h3>
+<p>Iterate through every pixel to populate the array. Each pixel
+occupies three consecutive indices:</p>
+<ul>
+<li><code>stride + 0</code>: Red component</li>
+<li><code>stride + 1</code>: Green component</li>
+<li><code>stride + 2</code>: Blue component</li>
+</ul>
+<p>Because you are using <code>Float32Array</code>, color values are
+typically floating-point numbers between <code>0.0</code> and
+<code>1.0</code>, though values greater than <code>1.0</code> can be
+used for High Dynamic Range (HDR) workflows.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> size<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> stride <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Example: generate a gradient</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> x <span class="op">=</span> (i <span class="op">%</span> width) <span class="op">/</span> width<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> y <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">floor</span>(i <span class="op">/</span> width) <span class="op">/</span> height<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  data[stride] <span class="op">=</span> x<span class="op">;</span>       <span class="co">// Red</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  data[stride <span class="op">+</span> <span class="dv">1</span>] <span class="op">=</span> y<span class="op">;</span>   <span class="co">// Green</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  data[stride <span class="op">+</span> <span class="dv">2</span>] <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span> <span class="co">// Blue</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="3-instantiate-the-datatexture">3. Instantiate the
+DataTexture</h3>
+<p>Pass the array, dimensions, format, and type into the
+<code>THREE.DataTexture</code> constructor.</p>
+<ul>
+<li>Set the format to <code>THREE.RGBFormat</code> (for older Three.js
+versions) or <code>THREE.RGBAFormat</code> if using four channels. Note
+that WebGL implementations increasingly require 4-channel textures
+(<code>RGBA</code>), but when 3-channel RGB float textures are
+supported, use <code>THREE.RGBFormat</code>.</li>
+<li>Set the type to <code>THREE.FloatType</code>.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> texture <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DataTexture</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  data<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  width<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  height<span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  THREE<span class="op">.</span><span class="at">RGBFormat</span><span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  THREE<span class="op">.</span><span class="at">FloatType</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Inform Three.js that the buffer needs to be uploaded to the GPU</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h3 id="4-configure-texture-filtering">4. Configure Texture
+Filtering</h3>
+<p>Floating-point textures often require specific filtering depending on
+your GPU's capabilities and enabled extensions:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// NearestFilter is supported on all devices for float textures</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">minFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">magFilter</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">NearestFilter</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">generateMipmaps</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code></pre></div>
+<p>If you require linear filtering (<code>THREE.LinearFilter</code>),
+ensure the WebGL context supports the
+<code>OES_texture_float_linear</code> extension.</p>
+<h3 id="5-apply-the-texture-to-a-material">5. Apply the Texture to a
+Material</h3>
+<p>Once the texture is created, assign it to any compatible Three.js
+material map:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">map</span><span class="op">:</span> texture })<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

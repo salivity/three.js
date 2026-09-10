@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orient Character on Spherical Planet in Three.js - three.js</title>
+    <meta name="description" content="When creating spherical planetary traversal in Three.js, a standard fixed world-up axis breaks standard character movement controls. To fix this, you must dynamically calculate the surface normal at the character's current position, assign that normal to">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/orient-character-on-spherical-planet-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Orient Character on Spherical Planet in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/orient-character-on-spherical-planet-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When creating spherical planetary traversal in Three.js, a standard fixed world-up axis breaks standard character movement controls. To fix this, you must dynamically calculate the surface normal at the character's current position, assign that normal to" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="orient-character-on-spherical-planet-in-threejs">Orient
+Character on Spherical Planet in Three.js</h1>
+<p>When creating spherical planetary traversal in Three.js, a standard
+fixed world-up axis breaks standard character movement controls. To fix
+this, you must dynamically calculate the surface normal at the
+character's current position, assign that normal to the character's
+<code>Object3D.up</code> vector, and derive a proper rotation quaternion
+to keep the character perpendicular to the planet while preserving
+horizontal steering.</p>
+<h3 id="1-calculate-the-surface-normal">1. Calculate the Surface
+Normal</h3>
+<p>In a spherical coordinate system centered on a planet, the surface
+normal is simply the normalized vector pointing from the planet's center
+to the character's position.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> planetPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// Assuming planet center is at origin</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> surfaceNormal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>surfaceNormal<span class="op">.</span><span class="fu">copy</span>(character<span class="op">.</span><span class="at">position</span>)<span class="op">.</span><span class="fu">sub</span>(planetPosition)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="2-update-the-object3dup-vector">2. Update the
+<code>Object3D.up</code> Vector</h3>
+<p>By default, Three.js objects treat <code>(0, 1, 0)</code> as their
+upward reference vector. When moving across a sphere, this vector must
+continually match the current surface normal so methods like
+<code>lookAt()</code> calculate the correct orientation.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>character<span class="op">.</span><span class="at">up</span><span class="op">.</span><span class="fu">copy</span>(surfaceNormal)<span class="op">;</span></span></code></pre></div>
+<p>Simply setting <code>character.up</code> is not enough to
+automatically rotate the mesh; it only provides the reference frame for
+future orientation calculations.</p>
+<h3 id="3-align-the-characters-orientation">3. Align the Character's
+Orientation</h3>
+<p>To orient the character both upright relative to the surface and
+forward relative to movement, you must project the movement direction
+onto the tangent plane of the sphere.</p>
+<h4 id="step-by-step-implementation-in-the-update-loop">Step-by-Step
+Implementation in the Update Loop</h4>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateCharacterOrientation</span>(character<span class="op">,</span> planetPosition<span class="op">,</span> moveDirection) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Calculate and assign the new Up vector</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> surfaceNormal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    surfaceNormal<span class="op">.</span><span class="fu">copy</span>(character<span class="op">.</span><span class="at">position</span>)<span class="op">.</span><span class="fu">sub</span>(planetPosition)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    character<span class="op">.</span><span class="at">up</span><span class="op">.</span><span class="fu">copy</span>(surfaceNormal)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Project the forward direction onto the tangent plane</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> forward <span class="op">=</span> moveDirection<span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    forward<span class="op">.</span><span class="fu">projectOnPlane</span>(surfaceNormal)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Compute target look-at point</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (forward<span class="op">.</span><span class="fu">lengthSq</span>() <span class="op">&gt;</span> <span class="fl">0.001</span>) {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> targetPosition <span class="op">=</span> character<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">add</span>(forward)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        character<span class="op">.</span><span class="fu">lookAt</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="4-direct-quaternion-alignment-alternative-approach">4. Direct
+Quaternion Alignment (Alternative Approach)</h3>
+<p>If you manage rotation directly using quaternions rather than Euler
+angles or <code>lookAt()</code>, you can rotate the character using
+<code>Quaternion.setFromUnitVectors</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> currentUp <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// Initial local up</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetRotation <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Quaternion</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Rotate from local up to the planet surface normal</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>targetRotation<span class="op">.</span><span class="fu">setFromUnitVectors</span>(currentUp<span class="op">,</span> surfaceNormal)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Apply rotation smoothly</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>character<span class="op">.</span><span class="at">quaternion</span><span class="op">.</span><span class="fu">slerp</span>(targetRotation<span class="op">,</span> <span class="fl">0.1</span>)<span class="op">;</span></span></code></pre></div>
+<p>To include steering when using direct quaternion alignment, multiply
+the surface-alignment quaternion with an independent yaw quaternion
+around the local Y-axis:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> yawQuaternion <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Quaternion</span>()<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>yawQuaternion<span class="op">.</span><span class="fu">setFromAxisAngle</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span> characterYawAngle)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>character<span class="op">.</span><span class="at">quaternion</span><span class="op">.</span><span class="fu">copy</span>(targetRotation)<span class="op">.</span><span class="fu">multiply</span>(yawQuaternion)<span class="op">;</span></span></code></pre></div>
+<h3 id="5-keeping-the-character-grounded">5. Keeping the Character
+Grounded</h3>
+<p>To prevent floating or clipping caused by numerical drift, project
+the character's position back to the exact radius of the planet after
+applying forward velocity:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> planetRadius <span class="op">=</span> <span class="dv">50</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>character<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(surfaceNormal<span class="op">.</span><span class="fu">multiplyScalar</span>(planetRadius))<span class="op">;</span></span></code></pre></div>
+<p>Updating the <code>up</code> vector, projecting forward movement
+along the tangent plane, and constraining position to the planet's
+radius inside your animation loop ensures stable orientation across all
+faces and poles of the sphere.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

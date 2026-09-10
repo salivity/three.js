@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Scene.overrideMaterial Depth Issues in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, setting Scene.overrideMaterial globally forces every mesh in the scene hierarchy to render with a single designated material, bypassing individual material settings. While useful for creating masks or uniform passes, this behavior frequently">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-scene-overridematerial-depth-issues-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix Scene.overrideMaterial Depth Issues in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-scene-overridematerial-depth-issues-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, setting Scene.overrideMaterial globally forces every mesh in the scene hierarchy to render with a single designated material, bypassing individual material settings. While useful for creating masks or uniform passes, this behavior frequently" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-sceneoverridematerial-depth-issues-in-threejs">Fix
+Scene.overrideMaterial Depth Issues in Three.js</h1>
+<p>In Three.js, setting <code>Scene.overrideMaterial</code> globally
+forces every mesh in the scene hierarchy to render with a single
+designated material, bypassing individual material settings. While
+useful for creating masks or uniform passes, this behavior frequently
+breaks depth-based rendering—such as shadow maps, alpha testing, and
+occlusion culling—by stripping out geometry-specific pipeline
+configurations like skinning, displacement, and transparency cutouts.
+This article explains the underlying mechanism of why standard depth
+evaluation fails under <code>Scene.overrideMaterial</code> and provides
+actionable methods to circumvent these limitations.</p>
+<h3 id="why-sceneoverridematerial-breaks-depth-rendering">Why
+<code>Scene.overrideMaterial</code> Breaks Depth Rendering</h3>
+<p>When you set <code>scene.overrideMaterial</code>, the Three.js WebGL
+renderer skips the material assigned to each individual
+<code>Mesh</code> and uses the override material's shader program and
+state configuration for the entire render pass. This causes three
+primary depth-related failures:</p>
+<ol type="1">
+<li><strong>Loss of Alpha Testing and Cutouts:</strong> Meshes using
+transparent textures with <code>alphaTest</code> (such as foliage or
+chain-link fences) rely on texture lookups in the fragment shader to
+discard fragments. An override material (like a basic
+<code>MeshDepthMaterial</code>) typically lacks these specific texture
+maps, causing the renderer to write the mesh's full, rectangular
+geometry to the depth buffer rather than its cut-out silhouette.</li>
+<li><strong>Vertex Transformation Discrepancies:</strong> Skinned meshes
+(<code>SkinnedMesh</code>) and meshes with morph targets require
+specific vertex shader logic to calculate their current pose. If the
+<code>overrideMaterial</code> does not have <code>skinning = true</code>
+or <code>morphTargets = true</code> enabled, vertices are rendered in
+their bind poses, creating a mismatch between visual geometry and depth
+representations.</li>
+<li><strong>Overwritten Depth States:</strong> Individual meshes often
+require distinct depth settings, such as <code>depthWrite: false</code>
+for additive particle systems or custom <code>polygonOffset</code>
+values to prevent Z-fighting. The override material enforces its own
+<code>depthWrite</code>, <code>depthTest</code>, and
+<code>blending</code> modes uniformly across every object.</li>
+</ol>
+<h3 id="workarounds-and-solutions">Workarounds and Solutions</h3>
+<h4 id="1-manual-traversal-and-conditional-material-swapping">1. Manual
+Traversal and Conditional Material Swapping</h4>
+<p>Instead of applying a global override on the scene level, manually
+traverse the scene graph before rendering. This allows you to apply
+substitute materials while preserving object-specific attributes like
+texture maps and animation flags.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> depthMaterialCache <span class="op">=</span> <span class="kw">new</span> <span class="bu">Map</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getDepthMaterial</span>(mesh) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="op">!</span>depthMaterialCache<span class="op">.</span><span class="fu">has</span>(mesh)) {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> depthMat <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshDepthMaterial</span>({</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">depthPacking</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBADepthPacking</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">map</span><span class="op">:</span> mesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">map</span> <span class="op">||</span> <span class="kw">null</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">alphaTest</span><span class="op">:</span> mesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">alphaTest</span> <span class="op">||</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">skinning</span><span class="op">:</span> mesh<span class="op">.</span><span class="at">isSkinnedMesh</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">morphTargets</span><span class="op">:</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">morphAttributes</span><span class="op">.</span><span class="at">position</span> <span class="op">!==</span> <span class="kw">undefined</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    depthMaterialCache<span class="op">.</span><span class="fu">set</span>(mesh<span class="op">,</span> depthMat)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> depthMaterialCache<span class="op">.</span><span class="fu">get</span>(mesh)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Render Pass</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">originalMaterial</span> <span class="op">=</span> child<span class="op">.</span><span class="at">material</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">material</span> <span class="op">=</span> <span class="fu">getDepthMaterial</span>(child)<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co">// Restore</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span> <span class="op">&amp;&amp;</span> child<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">originalMaterial</span>) {</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    child<span class="op">.</span><span class="at">material</span> <span class="op">=</span> child<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">originalMaterial</span><span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">delete</span> child<span class="op">.</span><span class="at">userData</span><span class="op">.</span><span class="at">originalMaterial</span><span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h4 id="2-using-meshcustomdepthmaterial">2. Using
+<code>mesh.customDepthMaterial</code></h4>
+<p>If the goal is to correct shadow mapping or specific depth pre-passes
+without interfering with the main beauty pass, assign materials to
+<code>customDepthMaterial</code> on the mesh itself instead of using
+<code>scene.overrideMaterial</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">customDepthMaterial</span> <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshDepthMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthPacking</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">RGBADepthPacking</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> mesh<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="at">map</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">alphaTest</span><span class="op">:</span> <span class="fl">0.5</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Three.js automatically uses <code>customDepthMaterial</code> during
+the shadow map generation pass, leaving standard depth tests and scene
+rendering intact.</p>
+<h4 id="3-layer-based-multi-pass-rendering">3. Layer-Based Multi-Pass
+Rendering</h4>
+<p>If specific objects must not participate in the override material
+pass (such as skyboxes, UI elements, or transparent overlays), organize
+objects using <code>THREE.Layers</code>.</p>
+<p>Configure the camera to only view the layer intended for the
+depth-dependent pass:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup layers</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> DEFAULT_LAYER <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> OVERRIDE_EXCLUDE_LAYER <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>transparentObject<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">set</span>(OVERRIDE_EXCLUDE_LAYER)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Perform pass with override</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="at">overrideMaterial</span> <span class="op">=</span> customOverrideMaterial<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">disable</span>(OVERRIDE_EXCLUDE_LAYER)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">// Reset for normal rendering</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="at">overrideMaterial</span> <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">layers</span><span class="op">.</span><span class="fu">enable</span>(OVERRIDE_EXCLUDE_LAYER)<span class="op">;</span></span></code></pre></div>
+<h4 id="4-shader-modification-with-onbeforecompile">4. Shader
+Modification with <code>onBeforeCompile</code></h4>
+<p>If you need consistent lighting, depth, or post-processing hooks
+without swapping materials, inject custom GLSL logic into the existing
+materials via <code>material.onBeforeCompile</code>. This allows all
+individual material properties—such as displacement, clipping planes,
+skinning, and alpha discard—to evaluate correctly while altering the
+final output buffer as needed.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

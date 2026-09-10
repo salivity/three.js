@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create a Portal Effect in Three.js with Stencils - three.js</title>
+    <meta name="description" content="Creating a portal effect in Three.js requires isolating what a viewer can see through a specific opening, achieved primarily through the GPU's stencil buffer. By utilizing material properties such as stencilWrite, stencilRef, and stencilFunc, you can mas">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/create-a-portal-effect-in-three-js-with-stencils">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Create a Portal Effect in Three.js with Stencils - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/create-a-portal-effect-in-three-js-with-stencils" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Creating a portal effect in Three.js requires isolating what a viewer can see through a specific opening, achieved primarily through the GPU's stencil buffer. By utilizing material properties such as stencilWrite, stencilRef, and stencilFunc, you can mas" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="create-a-portal-effect-in-threejs-with-stencils">Create a Portal
+Effect in Three.js with Stencils</h1>
+<p>Creating a portal effect in Three.js requires isolating what a viewer
+can see through a specific opening, achieved primarily through the GPU's
+stencil buffer. By utilizing material properties such as
+<code>stencilWrite</code>, <code>stencilRef</code>, and
+<code>stencilFunc</code>, you can mask the 3D scene so that certain
+geometry is only rendered within the pixel boundaries of a defined
+portal frame. This guide covers how to configure the renderer, write to
+the stencil buffer with a portal mask, and restrict the visibility of
+portal-exclusive objects to create a seamless visual illusion.</p>
+<h3 id="1-enable-the-stencil-buffer-in-webglrenderer">1. Enable the
+Stencil Buffer in WebGLRenderer</h3>
+<p>To use stencil testing, the WebGL context must be initialized with
+the stencil buffer active. In Three.js, this is enabled by default, but
+it is best practice to define it explicitly:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">stencil</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-portal-mask-geometry">2. Configure the Portal
+Mask Geometry</h3>
+<p>The portal mask acts as the "window" into the hidden view. This
+object writes an identifier value into the stencil buffer wherever its
+pixels are drawn, without necessarily rendering any colors to the
+screen.</p>
+<p>Set up the portal mask material with the following stencil
+properties:</p>
+<ul>
+<li><strong><code>stencilWrite: true</code></strong>: Tells the renderer
+to execute stencil operations for this material.</li>
+<li><strong><code>stencilRef: 1</code></strong>: Specifies the reference
+value to write into the stencil buffer.</li>
+<li><strong><code>stencilFunc: THREE.AlwaysStencilFunc</code></strong>:
+Ensures the stencil test passes for all drawn fragments.</li>
+<li><strong><code>stencilZPass: THREE.ReplaceStencilOp</code></strong>:
+Replaces the current stencil buffer value with the
+<code>stencilRef</code> value (1) wherever the depth test passes.</li>
+<li><strong><code>colorWrite: false</code></strong>: Disables writing to
+the color buffer if you want an invisible boundary, or keep it
+<code>true</code> if your portal is a tinted glass or textured
+surface.</li>
+<li><strong><code>depthWrite: false</code></strong>: Prevents the portal
+plane from blocking depth testing for the geometry behind it.</li>
+</ul>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> portalGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">3</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> portalMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">colorWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilWrite</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilRef</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilFunc</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">AlwaysStencilFunc</span><span class="op">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilZPass</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">ReplaceStencilOp</span><span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> portalMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(portalGeometry<span class="op">,</span> portalMaterial)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>portalMesh<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(portalMesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-configure-the-objects-inside-the-portal">3. Configure the
+Objects Inside the Portal</h3>
+<p>Any object that should only be visible when looking through the
+portal must read from the stencil buffer and only render when the
+buffer's value matches the portal's <code>stencilRef</code>.</p>
+<p>Configure the hidden objects' material properties:</p>
+<ul>
+<li><strong><code>stencilWrite: true</code></strong>: Activates stencil
+testing for the object.</li>
+<li><strong><code>stencilRef: 1</code></strong>: Must match the
+reference value set by the portal mask.</li>
+<li><strong><code>stencilFunc: THREE.EqualStencilFunc</code></strong>:
+Causes the fragment to render only if the stencil buffer value at that
+screen pixel is equal to <code>stencilRef</code>.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hiddenObjectGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="fl">0.3</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">16</span>)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hiddenObjectMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ff88</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilWrite</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilRef</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stencilFunc</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">EqualStencilFunc</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hiddenObject <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(hiddenObjectGeometry<span class="op">,</span> hiddenObjectMaterial)<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>hiddenObject<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>hiddenObject<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hiddenObject)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-manage-render-order">4. Manage Render Order</h3>
+<p>Correct execution order is essential. The portal mask must be
+rendered before the objects that depend on its stencil marks:</p>
+<ol type="1">
+<li><strong>Outer Scene (Normal Objects)</strong>:
+<code>renderOrder = 0</code> (default)</li>
+<li><strong>Portal Mask Plane</strong>: <code>renderOrder = 1</code>
+(writes <code>1</code> to the stencil buffer)</li>
+<li><strong>Interior Objects</strong>: <code>renderOrder = 2</code>
+(renders only where the stencil buffer equals <code>1</code>)</li>
+</ol>
+<p>By managing <code>renderOrder</code> and matching the stencil buffer
+states across materials, Three.js restricts the interior objects
+strictly to the silhouette of the portal plane.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

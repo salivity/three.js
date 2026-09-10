@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathematical Limits of LatheGeometry Twist and Scale - three.js</title>
+    <meta name="description" content="Revolving a spline to create a 3D mesh in Three.js is fundamentally handled by sweeping a profile curve around an axis of revolution. While the standard LatheGeometry constructor natively accepts radial segments, starting angles, and arc lengths, custom">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/mathematical-limits-of-lathegeometry-twist-and-scale">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mathematical Limits of LatheGeometry Twist and Scale - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/mathematical-limits-of-lathegeometry-twist-and-scale" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Revolving a spline to create a 3D mesh in Three.js is fundamentally handled by sweeping a profile curve around an axis of revolution. While the standard LatheGeometry constructor natively accepts radial segments, starting angles, and arc lengths, custom" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="mathematical-limits-of-lathegeometry-twist-and-scale">Mathematical
+Limits of LatheGeometry Twist and Scale</h1>
+<p>Revolving a spline to create a 3D mesh in Three.js is fundamentally
+handled by sweeping a profile curve around an axis of revolution. While
+the standard <code>LatheGeometry</code> constructor natively accepts
+radial segments, starting angles, and arc lengths, custom extensions and
+parametric shaders frequently introduce scale and twist parameters along
+the revolution path. This article examines the theoretical,
+mathematical, and computational boundaries governing scale and twist,
+focusing on self-intersection, degenerate topology, floating-point
+precision, and tessellation limits.</p>
+<h3 id="mathematical-definition-of-the-revolution">Mathematical
+Definition of the Revolution</h3>
+<p>A standard lathe operation rotates an array of 2D points <span
+class="math inline">\((x_i, y_i)\)</span> around the Y-axis by an angle
+<span class="math inline">\(\phi \in [0, \phi_{length}]\)</span>. When
+introducing twist (<span class="math inline">\(\tau\)</span>) and scale
+(<span class="math inline">\(s\)</span>), the transformation for a point
+at height <span class="math inline">\(y\)</span> and angle <span
+class="math inline">\(\phi\)</span> is defined parametrically as:</p>
+<p><span class="math display">\[x&#39; = s(y, \phi) \cdot x \cdot
+\cos(\phi + \tau(y, \phi))\]</span> <span class="math display">\[z&#39;
+= s(y, \phi) \cdot x \cdot \sin(\phi + \tau(y, \phi))\]</span> <span
+class="math display">\[y&#39; = y\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(s(y, \phi)\)</span> is a scaling factor
+modifying the profile's distance from the axis.</li>
+<li><span class="math inline">\(\tau(y, \phi)\)</span> is an angular
+offset (twist) added as a function of height or revolution
+progress.</li>
+</ul>
+<h3 id="limits-of-the-scale-parameter-s">Limits of the Scale Parameter
+(<span class="math inline">\(s\)</span>)</h3>
+<p>The scale parameter modifies the radial distance of vertices from the
+central axis. Mathematically, <span class="math inline">\(s \in
+(-\infty, \infty)\)</span>, but geometric validity imposes strict
+constraints:</p>
+<ul>
+<li><strong>Lower Non-Degenerate Bound (<span class="math inline">\(s
+&gt; 0\)</span>):</strong> For the generated surface to remain a
+manifold, <span class="math inline">\(s\)</span> must be strictly
+greater than zero.</li>
+<li><strong>The Zero Singularity (<span class="math inline">\(s =
+0\)</span>):</strong> When <span class="math inline">\(s = 0\)</span>,
+all points collapse onto the rotation axis <span
+class="math inline">\((0, y, 0)\)</span>. This reduces surface area to
+zero, creates duplicate vertices, produces degenerate triangles with
+zero area, and results in undefined surface normal vectors (<span
+class="math inline">\(\vec{n} = \frac{\partial \mathbf{p}}{\partial
+\phi} \times \frac{\partial \mathbf{p}}{\partial y} =
+\mathbf{0}\)</span>).</li>
+<li><strong>Negative Values (<span class="math inline">\(s &lt;
+0\)</span>):</strong> A negative scale inverts the spline across the
+axis of revolution. This flips the face winding order (counter-clockwise
+to clockwise), causing surface normals to point inward. Without
+reversing index buffers, backface culling in Three.js will render the
+mesh invisible or visually inverted.</li>
+<li><strong>IEEE 754 Floating-Point Limits:</strong> Practically, scale
+is bounded below by <code>Number.EPSILON</code> (<span
+class="math inline">\(\approx 2.22 \times 10^{-16}\)</span>). Any scale
+below this value causes catastrophic cancellation in vertex position
+shaders and normal calculations. The upper bound is constrained by
+numerical precision limits before vertex coordinates overflow to
+<code>Infinity</code>.</li>
+</ul>
+<h3 id="limits-of-the-twist-parameter-tau">Limits of the Twist Parameter
+(<span class="math inline">\(\tau\)</span>)</h3>
+<p>Twist applies a rotation offset along the axis of revolution. Purely
+algebraically, the twist angle <span class="math inline">\(\tau\)</span>
+has no upper or lower boundary and belongs to <span
+class="math inline">\((-\infty, \infty)\)</span> radians. However,
+discrete mesh generation introduces topological boundaries:</p>
+<ul>
+<li><strong>The Nyquist-Shannon Sampling Limit:</strong> A mesh is
+discretized into a finite number of segments (<span
+class="math inline">\(N\)</span>). For the geometry to retain its
+intended topology without self-intersecting, the relative twist between
+two adjacent sample points must not exceed <span
+class="math inline">\(\pi\)</span> radians (<span
+class="math inline">\(180^\circ\)</span>): <span
+class="math display">\[\Delta \tau = |\tau_{k+1} - \tau_k| &lt;
+\pi\]</span> Exceeding this rate causes triangles to invert through
+themselves, creating non-manifold self-intersections and corrupted face
+normal interpolation.</li>
+<li><strong>Maximum Twist Relative to Segment Count:</strong> If a total
+twist of <span class="math inline">\(T\)</span> radians is applied
+uniformly across <span class="math inline">\(N\)</span> segments along
+the axis or curve length, the absolute limit before mesh inversion
+occurs is: <span class="math display">\[|T| &lt; N \cdot \pi\]</span> To
+maintain smooth lighting and avoid severe shear distortion, practical
+visual limits require <span class="math inline">\(\Delta \tau \le
+\frac{\pi}{4}\)</span> (<span class="math inline">\(45^\circ\)</span>)
+per segment.</li>
+<li><strong>Aspect Ratio and Shear Degradation:</strong> As twist
+increases, triangles are stretched diagonally relative to the axis. In
+the limit as <span class="math inline">\(\tau \to \infty\)</span>, the
+aspect ratio of the generated faces approaches infinity, leading to
+floating-point rounding errors in depth-testing (Z-fighting) and failure
+of derivative-based normal computations in WebGL.</li>
+</ul>
+<h3 id="parameter-interactions-and-singularity-conditions">Parameter
+Interactions and Singularity Conditions</h3>
+<p>The combined limits of scale and twist depend on the Jacobian matrix
+of the surface mapping. A singular point occurs when the determinant of
+the metric tensor equals zero:</p>
+<p><span class="math display">\[g = \det \begin{bmatrix} \mathbf{p}_\phi
+\cdot \mathbf{p}_\phi &amp; \mathbf{p}_\phi \cdot \mathbf{p}_y \\
+\mathbf{p}_y \cdot \mathbf{p}_\phi &amp; \mathbf{p}_y \cdot \mathbf{p}_y
+\end{bmatrix} = 0\]</span></p>
+<p>If <span class="math inline">\(s \to 0\)</span> simultaneously as
+<span class="math inline">\(\tau \to \infty\)</span>, the spatial
+derivative <span class="math inline">\(\frac{\partial \tau}{\partial
+y}\)</span> shears the mesh infinitely faster than the radius shrinks.
+This creates a non-isolated pinch singularity that renders the geometry
+computationally non-manifold, preventing reliable boolean operations,
+physics mesh generation, and raycasting within Three.js.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

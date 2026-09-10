@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js onAfterRender Mesh Callback Explained - three.js</title>
+    <meta name="description" content="In Three.js, the onAfterRender callback provides developers with a direct hook into the rendering lifecycle immediately after a specific mesh is drawn to the screen. This article explains the purpose of the onAfterRender callback, the parameters it provi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-onafterrender-mesh-callback-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js onAfterRender Mesh Callback Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-onafterrender-mesh-callback-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the onAfterRender callback provides developers with a direct hook into the rendering lifecycle immediately after a specific mesh is drawn to the screen. This article explains the purpose of the onAfterRender callback, the parameters it provi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-onafterrender-mesh-callback-explained">Three.js
+onAfterRender Mesh Callback Explained</h1>
+<p>In Three.js, the <code>onAfterRender</code> callback provides
+developers with a direct hook into the rendering lifecycle immediately
+after a specific mesh is drawn to the screen. This article explains the
+purpose of the <code>onAfterRender</code> callback, the parameters it
+provides, common use cases such as state restoration and debugging, and
+how it differs from its counterpart, <code>onBeforeRender</code>.</p>
+<h2 id="what-is-onafterrender">What is onAfterRender?</h2>
+<p>The <code>onAfterRender</code> property is an optional callback
+function available on any <code>Object3D</code> instance, including a
+<code>Mesh</code>. When defined, the <code>WebGLRenderer</code> executes
+this function immediately after the WebGL draw call for that particular
+mesh has finished.</p>
+<p>The function signature provides access to the active rendering
+context and the object’s specific assets:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">onAfterRender</span> <span class="op">=</span> <span class="kw">function</span> (renderer<span class="op">,</span> scene<span class="op">,</span> camera<span class="op">,</span> geometry<span class="op">,</span> material<span class="op">,</span> group) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Custom post-render logic</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<h3 id="parameters-passed-to-the-callback">Parameters Passed to the
+Callback</h3>
+<ul>
+<li><strong>renderer:</strong> The instance of
+<code>WebGLRenderer</code> executing the draw call.</li>
+<li><strong>scene:</strong> The root <code>Scene</code> containing the
+mesh.</li>
+<li><strong>camera:</strong> The active <code>Camera</code> through
+which the scene is rendered.</li>
+<li><strong>geometry:</strong> The <code>BufferGeometry</code> attached
+to the mesh.</li>
+<li><strong>material:</strong> The <code>Material</code> currently being
+applied.</li>
+<li><strong>group:</strong> The active geometry group if the mesh uses
+multi-materials.</li>
+</ul>
+<h2 id="primary-purposes-and-use-cases">Primary Purposes and Use
+Cases</h2>
+<h3 id="1-webgl-state-restoration">1. WebGL State Restoration</h3>
+<p>While <code>onBeforeRender</code> is frequently used to alter WebGL
+state—such as modifying depth tests, stencil buffers, or face
+culling—<code>onAfterRender</code> is designed to restore those states.
+Reverting modified WebGL states ensures that subsequent objects rendered
+in the same frame are not inadvertently corrupted by custom
+settings.</p>
+<h3 id="2-post-draw-cleanups-and-resource-management">2. Post-Draw
+Cleanups and Resource Management</h3>
+<p>Certain dynamic rendering pipelines modify uniforms, textures, or
+buffers on the fly. You can use <code>onAfterRender</code> to unset
+texture bindings, free temporary buffers, or mark custom render targets
+as finished to prevent memory leaks or unwanted frame carryover.</p>
+<h3 id="3-state-tracking-and-visibility-confirmation">3. State Tracking
+and Visibility Confirmation</h3>
+<p>Because <code>onAfterRender</code> only triggers if the mesh actually
+passes the camera's frustum culling check and gets submitted to the GPU,
+it serves as a reliable confirmation that the mesh was rendered.
+Developers use it to reset transient animation flags, update visibility
+metrics, or synchronize external state only when an object is
+demonstrably active on screen.</p>
+<h3 id="4-custom-low-level-gl-operations">4. Custom Low-Level GL
+Operations</h3>
+<p>If you are mixing native WebGL calls directly into a Three.js scene,
+<code>onAfterRender</code> allows you to immediately bind additional
+framebuffers, blit pixels, or read back GPU data using
+<code>renderer.getContext()</code> right after the mesh coordinates are
+projected.</p>
+<h2 id="difference-between-onbeforerender-and-onafterrender">Difference
+Between onBeforeRender and onAfterRender</h2>
+<ul>
+<li><strong><code>onBeforeRender</code></strong> runs prior to the draw
+call. Its primary purpose is preparing the render: updating uniforms,
+dynamically changing materials, or setting specialized hardware
+states.</li>
+<li><strong><code>onAfterRender</code></strong> runs following the draw
+call. Its primary purpose is cleanup, state restoration, and post-draw
+synchronization.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

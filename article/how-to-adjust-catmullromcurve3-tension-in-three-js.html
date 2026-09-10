@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Adjust CatmullRomCurve3 Tension in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, CatmullRomCurve3 creates smooth 3D spline curves passing through a defined set of control points. By configuring the tension property, you can control the curvature dynamics to make the resulting path looser and wider or tighter and more dir">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-adjust-catmullromcurve3-tension-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Adjust CatmullRomCurve3 Tension in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-adjust-catmullromcurve3-tension-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, CatmullRomCurve3 creates smooth 3D spline curves passing through a defined set of control points. By configuring the tension property, you can control the curvature dynamics to make the resulting path looser and wider or tighter and more dir" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-adjust-catmullromcurve3-tension-in-threejs">How to Adjust
+CatmullRomCurve3 Tension in Three.js</h1>
+<p>In Three.js, <code>CatmullRomCurve3</code> creates smooth 3D spline
+curves passing through a defined set of control points. By configuring
+the <code>tension</code> property, you can control the curvature
+dynamics to make the resulting path looser and wider or tighter and more
+direct. This article explains how the <code>tension</code> parameter
+works, the crucial prerequisite settings required for it to take effect,
+and practical code examples to adjust curve tightness.</p>
+<h3 id="understanding-the-tension-property">Understanding the Tension
+Property</h3>
+<p>The <code>tension</code> property defines how sharply the curve bends
+around its control points. In Three.js, the value typically ranges
+between <code>0</code> and <code>1</code>:</p>
+<ul>
+<li><strong>Lower Tension (closer to 0):</strong> Produces a looser,
+broader curve with wider arcs between control points.</li>
+<li><strong>Default Tension (0.5):</strong> Generates a balanced,
+standard Catmull-Rom spline.</li>
+<li><strong>Higher Tension (closer to 1):</strong> Pulls the curve
+tighter toward the straight line segments connecting the control points,
+reducing curve overshooting.</li>
+</ul>
+<h3 id="prerequisite-setting-curvetype">Prerequisite: Setting
+<code>curveType</code></h3>
+<p>By default, <code>CatmullRomCurve3</code> uses the
+<code>'centripetal'</code> curve type. Under this default type (as well
+as <code>'chordal'</code>), the <code>tension</code> property is
+ignored.</p>
+<p>To enable manual tension control, you must explicitly set the
+<code>curveType</code> property to <code>'catmullrom'</code>.</p>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>You can set the tension directly in the constructor or modify it on
+an existing curve instance.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Define control points</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the curve with &#39;catmullrom&#39; curveType</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Parameters: points, closed, curveType, tension</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> looseCurve <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CatmullRomCurve3</span>(points<span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="st">&#39;catmullrom&#39;</span><span class="op">,</span> <span class="fl">0.1</span>)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tightCurve <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CatmullRomCurve3</span>(points<span class="op">,</span> <span class="kw">false</span><span class="op">,</span> <span class="st">&#39;catmullrom&#39;</span><span class="op">,</span> <span class="fl">0.9</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="modifying-tension-dynamically">Modifying Tension
+Dynamically</h3>
+<p>If you need to adjust tension dynamically after instantiation, update
+the properties and rebuild the geometry accordingly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Change an existing curve&#39;s tension</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>curve<span class="op">.</span><span class="at">curveType</span> <span class="op">=</span> <span class="st">&#39;catmullrom&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>curve<span class="op">.</span><span class="at">tension</span> <span class="op">=</span> <span class="fl">0.8</span><span class="op">;</span> <span class="co">// Make path tighter</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Update existing mesh or line geometry using the new points</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> updatedPoints <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoints</span>(<span class="dv">50</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>lineGeometry<span class="op">.</span><span class="fu">setFromPoints</span>(updatedPoints)<span class="op">;</span></span></code></pre></div>
+<p>Setting <code>tension</code> to <code>0</code> yields maximum looping
+and smoothness, while values approaching <code>1</code> straighten the
+curve segments between the control vertices.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

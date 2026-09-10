@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Define BufferGeometry Groups for Multi-Materials in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, mapping specific faces of a single BufferGeometry to distinct materials is achieved by configuring its groups array. By dividing geometry indices or vertices into designated segments using geometry.addGroup(), you can instruct the renderer t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/define-buffergeometry-groups-for-multi-materials-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Define BufferGeometry Groups for Multi-Materials in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/define-buffergeometry-groups-for-multi-materials-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, mapping specific faces of a single BufferGeometry to distinct materials is achieved by configuring its groups array. By dividing geometry indices or vertices into designated segments using geometry.addGroup(), you can instruct the renderer t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="define-buffergeometry-groups-for-multi-materials-in-threejs">Define
+BufferGeometry Groups for Multi-Materials in Three.js</h1>
+<p>In Three.js, mapping specific faces of a single
+<code>BufferGeometry</code> to distinct materials is achieved by
+configuring its <code>groups</code> array. By dividing geometry indices
+or vertices into designated segments using
+<code>geometry.addGroup()</code>, you can instruct the renderer to apply
+specific materials from a material array to defined sets of faces. This
+approach avoids splitting an object into multiple separate meshes while
+enabling diverse surface appearances across a unified geometry.</p>
+<h3 id="understanding-the-group-structure">Understanding the Group
+Structure</h3>
+<p>A group defines a draw call segment for a specific material and
+contains three primary properties:</p>
+<ul>
+<li><strong><code>start</code></strong>: The starting element offset.
+For indexed geometries, this is the offset in the index buffer; for
+non-indexed geometries, it is the offset in the vertex position
+buffer.</li>
+<li><strong><code>count</code></strong>: The number of indices or
+vertices to render in this group. For standard triangle meshes, this
+number must be a multiple of 3.</li>
+<li><strong><code>materialIndex</code></strong>: The zero-based index
+pointing to the corresponding material inside the material array
+assigned to the <code>THREE.Mesh</code>.</li>
+</ul>
+<h3 id="explicitly-setting-groups">Explicitly Setting Groups</h3>
+<p>You can define groups either by calling the <code>addGroup()</code>
+helper method or by directly assigning an array of objects to
+<code>geometry.groups</code>.</p>
+<h4 id="example-1-indexed-buffergeometry">Example 1: Indexed
+BufferGeometry</h4>
+<p>Indexed geometries define faces using an index buffer
+(<code>geometry.setIndex()</code>). The <code>start</code> and
+<code>count</code> parameters directly correspond to offsets within this
+index array.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Define vertices (e.g., 4 vertices forming two triangles)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertices <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>([</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">0.0</span><span class="op">,</span> <span class="co">// 0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>   <span class="fl">1.0</span><span class="op">,</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">0.0</span><span class="op">,</span> <span class="co">// 1</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>   <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">0.0</span><span class="op">,</span> <span class="co">// 2</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">-</span><span class="fl">1.0</span><span class="op">,</span>  <span class="fl">1.0</span><span class="op">,</span>  <span class="fl">0.0</span>  <span class="co">// 3</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(vertices<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Define two triangular faces</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> indices <span class="op">=</span> [</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="co">// Face 1</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">0</span>  <span class="co">// Face 2</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setIndex</span>(indices)<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Explicitly assign groups using addGroup(start, count, materialIndex)</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">// First face uses material at index 0 (starts at index 0, spans 3 indices)</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">addGroup</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Second face uses material at index 1 (starts at index 3, spans 3 indices)</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">addGroup</span>(<span class="dv">3</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co">// Create materials array</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> materials <span class="op">=</span> [</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">,</span> <span class="co">// Index 0: Red</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0000ff</span> })  <span class="co">// Index 1: Blue</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> materials)<span class="op">;</span></span></code></pre></div>
+<h4 id="example-2-direct-array-assignment">Example 2: Direct Array
+Assignment</h4>
+<p>You can clear and explicitly rewrite <code>geometry.groups</code>
+using raw JavaScript objects:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="at">groups</span> <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">start</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span> <span class="dt">count</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">materialIndex</span><span class="op">:</span> <span class="dv">0</span> }<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">start</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">count</span><span class="op">:</span> <span class="dv">3</span><span class="op">,</span> <span class="dt">materialIndex</span><span class="op">:</span> <span class="dv">1</span> }</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span></code></pre></div>
+<h4 id="example-3-non-indexed-buffergeometry">Example 3: Non-Indexed
+BufferGeometry</h4>
+<p>When working without an index array, triangles are constructed
+sequentially from every three consecutive vertices in the
+<code>position</code> attribute. In this case, <code>start</code> and
+<code>count</code> represent direct vertex counts rather than
+indices.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// A non-indexed geometry with two separate triangles (6 vertices total)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">clearGroups</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// First triangle: 3 vertices, material index 0</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">addGroup</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Second triangle: 3 vertices, material index 1</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">addGroup</span>(<span class="dv">3</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="essential-rules-to-follow">Essential Rules to Follow</h3>
+<ol type="1">
+<li><strong>Multiple of Three</strong>: Because meshes are typically
+composed of triangles, both <code>start</code> and <code>count</code>
+must strictly align with triangle boundaries. A count that is not
+divisible by 3 will produce rendering artifacts or WebGL errors.</li>
+<li><strong>Material Array Matching</strong>: Ensure that the highest
+<code>materialIndex</code> referenced in your groups does not exceed the
+bounds of the materials array passed to the mesh. If an out-of-bounds
+index is supplied, Three.js will default to the first material or fail
+to render the group.</li>
+<li><strong>Clearing Existing Groups</strong>: If you are modifying a
+built-in primitive (like <code>THREE.BoxGeometry</code>), existing
+groups may already be defined. Call <code>geometry.clearGroups()</code>
+before assigning new groups to prevent overlap.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

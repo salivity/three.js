@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Completely Dispose of a Three.js Application - three.js</title>
+    <meta name="description" content="Completely destroying a Three.js application instance requires freeing both CPU and GPU resources to prevent critical memory leaks, especially within Single Page Applications (SPAs). This process involves canceling the active animation frame loop, system">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-completely-dispose-of-a-three-js-application">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Completely Dispose of a Three.js Application - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-completely-dispose-of-a-three-js-application" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Completely destroying a Three.js application instance requires freeing both CPU and GPU resources to prevent critical memory leaks, especially within Single Page Applications (SPAs). This process involves canceling the active animation frame loop, system" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-completely-dispose-of-a-threejs-application">How to
+Completely Dispose of a Three.js Application</h1>
+<p>Completely destroying a Three.js application instance requires
+freeing both CPU and GPU resources to prevent critical memory leaks,
+especially within Single Page Applications (SPAs). This process involves
+canceling the active animation frame loop, systematically traversing the
+scene graph to dispose of geometries, materials, and textures, tearing
+down active controllers and event listeners, and finally disposing of
+the WebGL renderer and its canvas element.</p>
+<h3 id="1-cancel-the-animation-loop">1. Cancel the Animation Loop</h3>
+<p>Before releasing any WebGL resources, stop the rendering loop.
+Continuing to render during or after disposal will trigger runtime
+errors and attempt to access destroyed WebGL contexts.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// If using requestAnimationFrame</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cancelAnimationFrame</span>(animationFrameId)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">// If using WebGLRenderer&#39;s setAnimationLoop</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">setAnimationLoop</span>(<span class="kw">null</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-traverse-and-dispose-of-the-scene">2. Traverse and Dispose of
+the Scene</h3>
+<p>The <code>Scene</code> object is an organizational node, but its
+child objects hold direct references to GPU buffers (geometries) and
+WebGL programs (materials and textures). You must traverse the hierarchy
+and dispose of these items explicitly.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">cleanScene</span>(scene) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  scene<span class="op">.</span><span class="fu">traverse</span>((object) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>object<span class="op">.</span><span class="at">isMesh</span>) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose geometry</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (object<span class="op">.</span><span class="at">geometry</span>) {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>      object<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Dispose material and associated textures</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (object<span class="op">.</span><span class="at">material</span>) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">cleanMaterial</span>(object<span class="op">.</span><span class="at">material</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Remove all child objects from the scene graph</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">while</span> (scene<span class="op">.</span><span class="at">children</span><span class="op">.</span><span class="at">length</span> <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">remove</span>(scene<span class="op">.</span><span class="at">children</span>[<span class="dv">0</span>])<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">cleanMaterial</span>(material) {</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Handle multi-material arrays</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">Array</span><span class="op">.</span><span class="fu">isArray</span>(material)) {</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    material<span class="op">.</span><span class="fu">forEach</span>(cleanMaterial)<span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Dispose all texture maps assigned to the material</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">const</span> key <span class="kw">of</span> <span class="bu">Object</span><span class="op">.</span><span class="fu">keys</span>(material)) {</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> value <span class="op">=</span> material[key]<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (value <span class="op">&amp;&amp;</span> <span class="kw">typeof</span> value <span class="op">===</span> <span class="st">&#39;object&#39;</span> <span class="op">&amp;&amp;</span> <span class="st">&#39;minFilter&#39;</span> <span class="kw">in</span> value) {</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>      value<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>  material<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="3-handle-cameras-and-controls">3. Handle Cameras and
+Controls</h3>
+<p>Cameras themselves do not allocate WebGL buffers and do not feature a
+<code>.dispose()</code> method. However, auxiliary controls connected to
+cameras (such as <code>OrbitControls</code>) bind DOM events and
+internal state that must be freed:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (controls) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  controls<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If the camera was added to the scene hierarchy (common when attaching
+light sources or audio listeners to it), ensure it is detached when
+clearing the scene.</p>
+<h3 id="4-dispose-of-the-webglrenderer">4. Dispose of the
+WebGLRenderer</h3>
+<p>Calling <code>.dispose()</code> on the renderer releases its WebGL
+context and internal caches (such as render targets, programs, and
+shadow maps). Afterward, remove the canvas from the DOM.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Dispose renderer resources</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Force the WebGL context loss to free VRAM immediately (optional but recommended)</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">forceContextLoss</span>()<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Remove the canvas element from the DOM</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (renderer<span class="op">.</span><span class="at">domElement</span> <span class="op">&amp;&amp;</span> renderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">parentNode</span>) {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="at">domElement</span><span class="op">.</span><span class="at">parentNode</span><span class="op">.</span><span class="fu">removeChild</span>(renderer<span class="op">.</span><span class="at">domElement</span>)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="5-remove-event-listeners-and-references">5. Remove Event
+Listeners and References</h3>
+<p>Unbind any global or element-specific listeners created for the
+instance, such as resize or pointer events:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">window</span><span class="op">.</span><span class="fu">removeEventListener</span>(<span class="st">&#39;resize&#39;</span><span class="op">,</span> onWindowResize)<span class="op">;</span></span></code></pre></div>
+<p>Finally, set all primary instance variables (<code>renderer</code>,
+<code>scene</code>, <code>camera</code>, <code>controls</code>) to
+<code>null</code> so the JavaScript garbage collector can reclaim their
+host memory.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

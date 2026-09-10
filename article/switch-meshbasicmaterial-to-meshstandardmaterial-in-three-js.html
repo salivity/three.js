@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Switch MeshBasicMaterial to MeshStandardMaterial in Three.js - three.js</title>
+    <meta name="description" content="Transitioning from MeshBasicMaterial to MeshStandardMaterial allows your Three.js objects to interact realistically with dynamic light sources using physically based rendering (PBR). This guide outlines the exact steps required to upgrade your project: r">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/switch-meshbasicmaterial-to-meshstandardmaterial-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Switch MeshBasicMaterial to MeshStandardMaterial in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/switch-meshbasicmaterial-to-meshstandardmaterial-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Transitioning from MeshBasicMaterial to MeshStandardMaterial allows your Three.js objects to interact realistically with dynamic light sources using physically based rendering (PBR). This guide outlines the exact steps required to upgrade your project: r" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="switch-meshbasicmaterial-to-meshstandardmaterial-in-threejs">Switch
+MeshBasicMaterial to MeshStandardMaterial in Three.js</h1>
+<p>Transitioning from <code>MeshBasicMaterial</code> to
+<code>MeshStandardMaterial</code> allows your Three.js objects to
+interact realistically with dynamic light sources using physically based
+rendering (PBR). This guide outlines the exact steps required to upgrade
+your project: replacing the material definitions, adding essential scene
+lights to prevent objects from rendering pitch black, configuring
+roughness and metalness parameters, and enabling real-time shadow
+maps.</p>
+<h3 id="1-replace-the-material-constructor">1. Replace the Material
+Constructor</h3>
+<p><code>MeshBasicMaterial</code> ignores all scene lighting. To enable
+lighting calculations, replace instances of
+<code>MeshBasicMaterial</code> with
+<code>MeshStandardMaterial</code>.</p>
+<p><strong>Before:</strong></p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> texture</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>After:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">map</span><span class="op">:</span> texture<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.1</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Common properties such as <code>color</code>, <code>map</code>,
+<code>wireframe</code>, <code>transparent</code>, and
+<code>opacity</code> carry over directly without modification.</p>
+<h3 id="2-add-light-sources-to-the-scene">2. Add Light Sources to the
+Scene</h3>
+<p><code>MeshStandardMaterial</code> requires light to be visible. If
+you switch materials without adding lights, your meshes will render
+completely black.</p>
+<p>At a minimum, add an ambient light for base visibility and a
+directional light to create depth:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Base ambient illumination</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ambientLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AmbientLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">0.4</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(ambientLight)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Key dynamic light</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directionalLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="fl">1.2</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="fl">7.5</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(directionalLight)<span class="op">;</span></span></code></pre></div>
+<p>You can also use other dynamic lights such as
+<code>THREE.PointLight</code> or <code>THREE.SpotLight</code> depending
+on the scene requirements.</p>
+<h3 id="3-tune-pbr-properties">3. Tune PBR Properties</h3>
+<p>Unlike basic materials, <code>MeshStandardMaterial</code> calculates
+reflection based on physical surface properties:</p>
+<ul>
+<li><strong><code>roughness</code></strong> (0.0 to 1.0): Controls
+surface smoothness. A value of <code>0.0</code> creates mirror-like
+reflections, while <code>1.0</code> creates a completely diffuse, matte
+appearance.</li>
+<li><strong><code>metalness</code></strong> (0.0 to 1.0): Controls
+metallic reflection. Non-metallic surfaces (plastic, wood, stone) should
+generally be set to <code>0.0</code>, while raw metals should be set
+close to <code>1.0</code>.</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">roughness</span> <span class="op">=</span> <span class="fl">0.4</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">metalness</span> <span class="op">=</span> <span class="fl">0.2</span><span class="op">;</span></span></code></pre></div>
+<h3 id="4-utilize-advanced-lighting-maps-optional">4. Utilize Advanced
+Lighting Maps (Optional)</h3>
+<p>To take full advantage of dynamic lighting, leverage the additional
+texture slots supported by <code>MeshStandardMaterial</code>:</p>
+<ul>
+<li><strong><code>normalMap</code></strong>: Adds surface detail and
+bumps without increasing polygon counts.</li>
+<li><strong><code>roughnessMap</code></strong>: Varies shininess across
+different areas of the model.</li>
+<li><strong><code>metalnessMap</code></strong>: Defines which parts of
+the surface are metallic.</li>
+<li><strong><code>aoMap</code></strong>: Adds ambient occlusion to
+simulate contact shadows in crevices.</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">normalMap</span> <span class="op">=</span> normalTexture<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>material<span class="op">.</span><span class="at">roughnessMap</span> <span class="op">=</span> roughnessTexture<span class="op">;</span></span></code></pre></div>
+<h3 id="5-enable-real-time-shadows">5. Enable Real-Time Shadows</h3>
+<p>Dynamic lights can cast real-time shadows when using
+<code>MeshStandardMaterial</code>. To enable this feature:</p>
+<ol type="1">
+<li>Enable shadow maps on the WebGL renderer:</li>
+</ol>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">shadowMap</span><span class="op">.</span><span class="at">type</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">PCFSoftShadowMap</span><span class="op">;</span></span></code></pre></div>
+<ol start="2" type="1">
+<li>Configure the light source:</li>
+</ol>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">width</span> <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>directionalLight<span class="op">.</span><span class="at">shadow</span><span class="op">.</span><span class="at">mapSize</span><span class="op">.</span><span class="at">height</span> <span class="op">=</span> <span class="dv">1024</span><span class="op">;</span></span></code></pre></div>
+<ol start="3" type="1">
+<li>Enable shadow casting and receiving on your meshes:</li>
+</ol>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">castShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">receiveShadow</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code></pre></div>
+<h3 id="6-verify-color-space-settings">6. Verify Color Space
+Settings</h3>
+<p>When moving to dynamic lighting and standard materials, ensure linear
+workflow colors are properly managed in newer Three.js versions:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">outputColorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>texture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">SRGBColorSpace</span><span class="op">;</span></span></code></pre></div>
+<p>Using the correct color space ensures that textures and dynamic light
+calculations do not appear washed out or overly dark.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

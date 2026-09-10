@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Scene Background vs Environment Pipeline - three.js</title>
+    <meta name="description" content="In Three.js, Scene.background and Scene.environment serve fundamentally different roles within the WebGL rendering pipeline. While Scene.background represents a rasterization pass designed purely to display a visual backdrop behind the 3D scene without a">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-scene-background-vs-environment-pipeline">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Scene Background vs Environment Pipeline - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-scene-background-vs-environment-pipeline" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, Scene.background and Scene.environment serve fundamentally different roles within the WebGL rendering pipeline. While Scene.background represents a rasterization pass designed purely to display a visual backdrop behind the 3D scene without a" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-scene-background-vs-environment-pipeline">Three.js Scene
+Background vs Environment Pipeline</h1>
+<p>In Three.js, <code>Scene.background</code> and
+<code>Scene.environment</code> serve fundamentally different roles
+within the WebGL rendering pipeline. While <code>Scene.background</code>
+represents a rasterization pass designed purely to display a visual
+backdrop behind the 3D scene without altering light values,
+<code>Scene.environment</code> supplies image-based lighting (IBL) data
+that injects radiance and irradiance into the fragment shaders of
+physically based materials (<code>MeshStandardMaterial</code> and
+<code>MeshPhysicalMaterial</code>). Understanding how the renderer
+treats these properties determines whether an asset merely appears on
+the screen or actively drives surface reflections and diffuse
+shading.</p>
+<h3 id="how-scenebackground-operates-in-the-pipeline">How
+<code>Scene.background</code> Operates in the Pipeline</h3>
+<p>When you assign a <code>Color</code>, <code>Texture</code>, or
+<code>CubeTexture</code> to <code>Scene.background</code>, the
+<code>WebGLRenderer</code> handles it as an independent visual
+layer:</p>
+<ol type="1">
+<li><strong>Clear and Draw Pass:</strong> During
+<code>renderer.render()</code>, if <code>Scene.background</code> is a
+<code>Color</code>, the renderer sets the WebGL clear color using
+<code>gl.clearColor()</code> and executes a screen buffer clear
+(<code>gl.clear()</code>). If it is assigned a <code>Texture</code> or
+<code>CubeTexture</code>, Three.js creates or updates an internal
+background box or fullscreen quad geometry.</li>
+<li><strong>Depth Testing:</strong> The background geometry is rendered
+with depth write disabled and a depth function set to render at the
+furthest depth value (far plane). Modern Three.js builds typically
+render this background after opaque scene geometry to leverage the early
+depth test (Z-culling), saving fill rate by only shading background
+pixels that are not occluded by 3D objects.</li>
+<li><strong>Lighting Separation:</strong> The texture data bound to
+<code>Scene.background</code> is not passed as an illumination uniform
+to the fragment shaders of your scene meshes. Meshes in the scene have
+no mathematical awareness of the background pixels.</li>
+</ol>
+<h3 id="how-sceneenvironment-operates-in-the-pipeline">How
+<code>Scene.environment</code> Operates in the Pipeline</h3>
+<p><code>Scene.environment</code> bypasses screen-level background
+drawing entirely and instead targets the fragment stage of physical
+material shaders:</p>
+<ol type="1">
+<li><strong>PMREM Preprocessing:</strong> Before an equirectangular
+texture or cubemap can function effectively as an environment map, it
+must be prefiltered into a Prefiltered Mipmapped Radiance Environment
+Map (PMREM). Three.js automatically utilizes <code>PMREMGenerator</code>
+to bake diffuse irradiance and varying levels of specular blur across
+mipmap levels.</li>
+<li><strong>Uniform Binding to Meshes:</strong> During the scene graph
+traversal, if a mesh with a <code>MeshStandardMaterial</code> or
+<code>MeshPhysicalMaterial</code> does not have its own explicit
+<code>material.envMap</code>, the renderer binds the
+<code>Scene.environment</code> texture to the material’s internal
+sampler uniforms (such as <code>envMap</code>).</li>
+<li><strong>PBR Lighting Calculations:</strong> Inside the material's
+fragment shader, the environment texture is sampled to compute split-sum
+approximations for Image-Based Lighting. Rougher surfaces sample
+blurrier mip levels to evaluate indirect specular reflections, while
+mathematical approximations (or spherical harmonics) resolve indirect
+diffuse lighting.</li>
+<li><strong>Zero Canvas Contribution:</strong> Empty pixels where no
+geometry exists will not display the <code>Scene.environment</code>
+texture. If <code>Scene.background</code> is <code>null</code>, those
+pixels remain transparent or show the clear color, even though the
+meshes are illuminated by the environment map.</li>
+</ol>
+<h3 id="summary-of-differences">Summary of Differences</h3>
+<ul>
+<li><strong>Target Destination:</strong> <code>Scene.background</code>
+writes pixels directly to the framebuffer's color attachment.
+<code>Scene.environment</code> writes values into texture units read by
+geometry fragment shaders.</li>
+<li><strong>Shader Execution:</strong> <code>Scene.background</code>
+uses dedicated internal background shaders.
+<code>Scene.environment</code> injects calculations into standard and
+physical PBR fragment programs.</li>
+<li><strong>Performance Impact:</strong> <code>Scene.background</code>
+adds a simple texturing or clearing pass influenced primarily by screen
+resolution. <code>Scene.environment</code> incurs GPU memory overhead
+for PMREM cubemap generation and increases the arithmetic complexity of
+every illuminated fragment.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

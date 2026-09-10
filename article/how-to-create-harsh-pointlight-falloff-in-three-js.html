@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Create Harsh PointLight Falloff in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to configure the distance and decay properties of a THREE.PointLight to produce an abrupt, harsh light falloff in Three.js. By default, Three.js simulates physically realistic light attenuation, where illumination dims smoothly">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-create-harsh-pointlight-falloff-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Create Harsh PointLight Falloff in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-create-harsh-pointlight-falloff-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure the distance and decay properties of a THREE.PointLight to produce an abrupt, harsh light falloff in Three.js. By default, Three.js simulates physically realistic light attenuation, where illumination dims smoothly" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-create-harsh-pointlight-falloff-in-threejs">How to Create
+Harsh PointLight Falloff in Three.js</h1>
+<p>This article explains how to configure the <code>distance</code> and
+<code>decay</code> properties of a <code>THREE.PointLight</code> to
+produce an abrupt, harsh light falloff in Three.js. By default, Three.js
+simulates physically realistic light attenuation, where illumination
+dims smoothly using the inverse-square law. By overriding these physical
+defaults through precise combinations of range boundaries and
+attenuation rates, you can produce dramatic, sharp-edged lighting suited
+for stylized or high-contrast scenes.</p>
+<hr />
+<h3 id="the-role-of-distance-and-decay">The Role of
+<code>distance</code> and <code>decay</code></h3>
+<p>A standard <code>PointLight</code> in Three.js accepts four primary
+arguments:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PointLight</span>(color<span class="op">,</span> intensity<span class="op">,</span> distance<span class="op">,</span> decay)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>distance</code></strong>: Defines the maximum range of
+the light. When set to <code>0</code>, the light travels infinitely.
+When set to a value greater than <code>0</code>, the light’s intensity
+drops to zero precisely at that distance.</li>
+<li><strong><code>decay</code></strong>: Determines how fast the light
+attenuates along its path. The physically accurate default is
+<code>2</code>. Lower values make the light sustain its brightness over
+distance, while higher values cause it to fade more quickly.</li>
+</ul>
+<h3 id="configuring-for-a-harsh-falloff">Configuring for a Harsh
+Falloff</h3>
+<p>To produce a harsh cutoff rather than a gradual fade, you must
+manipulate both properties in tandem. A harsh falloff requires the light
+to remain bright across its volume and then drop sharply at the
+perimeter.</p>
+<h4 id="1-combine-non-zero-distance-with-zero-decay">1. Combine Non-Zero
+Distance with Zero Decay</h4>
+<p>Setting <code>decay = 0</code> eliminates the continuous
+inverse-square dimming. When combined with a defined
+<code>distance</code>, the light maintains maximum brightness throughout
+its volume before terminating sharply at the defined boundary.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a light with high intensity, a fixed radius, and no attenuation decay</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> harshLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PointLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">15</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>harshLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(harshLight)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-using-high-intensity-with-tight-distance-limits">2. Using High
+Intensity with Tight Distance Limits</h4>
+<p>If you still want slight depth to the light while forcing a visually
+abrupt edge, keep <code>decay</code> at <code>1</code> or
+<code>2</code>, increase the <code>intensity</code>, and restrict the
+<code>distance</code> to a compact radius.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// High intensity compressed into a short distance</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> compactHarshLight <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PointLight</span>(<span class="bn">0xffaa00</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">6</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>compactHarshLight<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(compactHarshLight)<span class="op">;</span></span></code></pre></div>
+<p>Because the high brightness must drop to absolute zero within a short
+span (6 units), the transition zone is compressed into a narrow band,
+creating the visual impression of a hard light barrier.</p>
+<h3 id="summary-of-best-practices">Summary of Best Practices</h3>
+<ul>
+<li><strong>For stylized/arcade rendering:</strong> Set
+<code>distance &gt; 0</code> and <code>decay = 0</code>. This eliminates
+smooth dimming entirely and cuts the illumination off at the boundary
+radius.</li>
+<li><strong>For compressed gradients:</strong> Use high
+<code>intensity</code> (e.g., <code>5</code> to <code>15</code>),
+moderate <code>decay</code> (<code>1</code> or <code>2</code>), and a
+small <code>distance</code> (e.g., <code>3</code> to
+<code>8</code>).</li>
+<li><strong>Avoid <code>distance = 0</code>:</strong> Leaving
+<code>distance</code> at its default value of <code>0</code> makes the
+light mathematically infinite, which prevents any hard outer cutoff from
+forming.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

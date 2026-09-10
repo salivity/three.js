@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirroring Objects with MatrixWorld in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to precisely mirror the transformation of one 3D object to another in Three.js using global transformation matrices (matrixWorld). You will learn how to capture the source object's absolute world transform, apply a reflection ma">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/mirroring-objects-with-matrixworld-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mirroring Objects with MatrixWorld in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/mirroring-objects-with-matrixworld-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to precisely mirror the transformation of one 3D object to another in Three.js using global transformation matrices (matrixWorld). You will learn how to capture the source object's absolute world transform, apply a reflection ma" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="mirroring-objects-with-matrixworld-in-threejs">Mirroring Objects
+with MatrixWorld in Three.js</h1>
+<p>This article explains how to precisely mirror the transformation of
+one 3D object to another in Three.js using global transformation
+matrices (<code>matrixWorld</code>). You will learn how to capture the
+source object's absolute world transform, apply a reflection matrix
+across a designated plane, convert the resulting transform into the
+target object’s local coordinates, and resolve common rendering issues
+like inverted mesh winding order.</p>
+<h2 id="understanding-the-mirror-transformation">Understanding the
+Mirror Transformation</h2>
+<p>To mirror an object, you must invert its scale along a specific
+reflection axis or plane. When objects are nested inside different
+parent hierarchies, manipulating local <code>position</code>,
+<code>rotation</code>, and <code>scale</code> directly causes
+discrepancies. Using <code>matrixWorld</code> circumvents hierarchy
+mismatches by working strictly in absolute world coordinates.</p>
+<p>A reflection across the X-axis (mirroring through the YZ-plane) is
+represented by the scale matrix:</p>
+<p><span class="math display">\[\begin{bmatrix} -1 &amp; 0 &amp; 0 &amp;
+0 \\ 0 &amp; 1 &amp; 0 &amp; 0 \\ 0 &amp; 0 &amp; 1 &amp; 0 \\ 0 &amp; 0
+&amp; 0 &amp; 1 \end{bmatrix}\]</span></p>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-update-the-source-world-matrix">1. Update the Source World
+Matrix</h3>
+<p>Before reading the source matrix, ensure all parent transformations
+are fully resolved:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>sourceObject<span class="op">.</span><span class="fu">updateWorldMatrix</span>(<span class="kw">true</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-construct-the-reflection-matrix">2. Construct the Reflection
+Matrix</h3>
+<p>Define a reflection matrix based on the plane you wish to mirror
+across:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Reflection across the YZ plane (invert X)</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> reflectionMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">.</span><span class="fu">makeScale</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-compute-the-targets-local-transformation">3. Compute the
+Target's Local Transformation</h3>
+<p>To ensure the target object can live anywhere in the scene graph
+(even inside transformed parents), compute its mirrored world matrix and
+convert it back to its local coordinate space:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">mirrorObject</span>(source<span class="op">,</span> target<span class="op">,</span> reflectionMatrix) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Ensure source hierarchy is up-to-date</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    source<span class="op">.</span><span class="fu">updateWorldMatrix</span>(<span class="kw">true</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Compute mirrored world transform: M_target_world = M_reflect * M_source_world</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> mirroredWorldMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">multiplyMatrices</span>(reflectionMatrix<span class="op">,</span> source<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Convert mirrored world matrix into target&#39;s local coordinate space</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (target<span class="op">.</span><span class="at">parent</span>) {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        target<span class="op">.</span><span class="at">parent</span><span class="op">.</span><span class="fu">updateWorldMatrix</span>(<span class="kw">true</span><span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> parentInverse <span class="op">=</span> target<span class="op">.</span><span class="at">parent</span><span class="op">.</span><span class="at">matrixWorld</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">invert</span>()<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        target<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">multiplyMatrices</span>(parentInverse<span class="op">,</span> mirroredWorldMatrix)<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        target<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">copy</span>(mirroredWorldMatrix)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Decompose the local matrix into position, quaternion, and scale</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    target<span class="op">.</span><span class="at">matrix</span><span class="op">.</span><span class="fu">decompose</span>(target<span class="op">.</span><span class="at">position</span><span class="op">,</span> target<span class="op">.</span><span class="at">quaternion</span><span class="op">,</span> target<span class="op">.</span><span class="at">scale</span>)<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="4-continuous-synchronization-in-the-render-loop">4. Continuous
+Synchronization in the Render Loop</h3>
+<p>Call the mirroring function inside your animation loop so that any
+movement in the source immediately reflects onto the target:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mirrorPlaneMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">.</span><span class="fu">makeScale</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Source object transformations happen here...</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    sourceMesh<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">y</span> <span class="op">+=</span> <span class="fl">0.01</span><span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply mirror binding</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mirrorObject</span>(sourceMesh<span class="op">,</span> targetMesh<span class="op">,</span> mirrorPlaneMatrix)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="handling-mesh-normal-and-winding-inversion">Handling Mesh Normal
+and Winding Inversion</h2>
+<p>Negative scaling changes the winding order of the mesh faces from
+counter-clockwise to clockwise. This causes Three.js to interpret front
+faces as back faces, leading to invisible or incorrectly shaded surfaces
+when backface culling is active.</p>
+<p>Resolve this by configuring the target material or geometry:</p>
+<ul>
+<li><strong>Material Side Setting:</strong> Set
+<code>material.side = THREE.DoubleSide</code> or
+<code>THREE.BackSide</code> on the mirrored mesh.</li>
+<li><strong>FrontFace Direction:</strong> In custom shaders or low-level
+WebGL states, invert the front-face winding rule using
+<code>gl.frontFace(gl.CW)</code>.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Query maxTextures in Three.js - three.js</title>
+    <meta name="description" content="Optimizing WebGL performance requires understanding client-side hardware limitations, particularly how many textures a GPU can process simultaneously within a single shader. In Three.js, these hardware constraints are abstracted and exposed through the W">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-query-maxtextures-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Query maxTextures in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-query-maxtextures-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Optimizing WebGL performance requires understanding client-side hardware limitations, particularly how many textures a GPU can process simultaneously within a single shader. In Three.js, these hardware constraints are abstracted and exposed through the W" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-query-maxtextures-in-threejs">How to Query maxTextures in
+Three.js</h1>
+<p>Optimizing WebGL performance requires understanding client-side
+hardware limitations, particularly how many textures a GPU can process
+simultaneously within a single shader. In Three.js, these hardware
+constraints are abstracted and exposed through the
+<code>WebGLCapabilities</code> module. This guide demonstrates how to
+directly query the <code>maxTextures</code> property from a
+<code>WebGLRenderer</code> instance to inspect the user's texture unit
+limits and prevent runtime WebGL errors.</p>
+<h3 id="accessing-the-webglcapabilities-object">Accessing the
+WebGLCapabilities Object</h3>
+<p>To query hardware limits, you must first instantiate a
+<code>THREE.WebGLRenderer</code>. The renderer automatically initializes
+an instance of <code>WebGLCapabilities</code>, which queries the
+underlying WebGL context for device-specific parameters.</p>
+<p>You can access these capabilities via the <code>capabilities</code>
+property on the renderer:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the WebGLRenderer instance</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Access the maxTextures limit</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxTextures <span class="op">=</span> renderer<span class="op">.</span><span class="at">capabilities</span><span class="op">.</span><span class="at">maxTextures</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Maximum fragment shader textures supported: </span><span class="sc">${</span>maxTextures<span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="what-maxtextures-represents">What <code>maxTextures</code>
+Represents</h3>
+<p>The <code>renderer.capabilities.maxTextures</code> property
+corresponds directly to the underlying WebGL constant
+<code>gl.MAX_TEXTURE_IMAGE_UNITS</code>.</p>
+<ul>
+<li>It defines the maximum number of hardware texture units accessible
+by the <strong>fragment shader</strong>.</li>
+<li>Typical modern desktop GPUs generally support 16 or 32 texture
+units, while lower-end mobile devices might support fewer (such as 8 or
+16).</li>
+<li>If a custom shader material or complex multi-texture Three.js
+material attempts to bind more textures than this limit allows, WebGL
+will generate an error, and the material may fail to render
+correctly.</li>
+</ul>
+<h3 id="related-texture-limits-in-webglcapabilities">Related Texture
+Limits in WebGLCapabilities</h3>
+<p>When handling advanced multi-texturing or vertex-displacement
+mapping, <code>maxTextures</code> is only one part of the texture
+budget. Three.js also provides complementary properties through
+<code>WebGLCapabilities</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Maximum textures accessible in the vertex shader (gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxVertexTextures <span class="op">=</span> renderer<span class="op">.</span><span class="at">capabilities</span><span class="op">.</span><span class="at">maxVertexTextures</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Total maximum textures accessible across all shader stages combined (gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxCombinedTextures <span class="op">=</span> renderer<span class="op">.</span><span class="at">capabilities</span><span class="op">.</span><span class="at">maxCombinedTextures</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Maximum dimensions (width/height) for any 2D texture (gl.MAX_TEXTURE_SIZE)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maxTextureSize <span class="op">=</span> renderer<span class="op">.</span><span class="at">capabilities</span><span class="op">.</span><span class="at">maxTextureSize</span><span class="op">;</span></span></code></pre></div>
+<h3 id="practical-application">Practical Application</h3>
+<p>Querying <code>maxTextures</code> is useful for implementing dynamic
+fallbacks for low-end devices. For example, if a scene includes
+materials with base color, roughness, metalness, normal, ambient
+occlusion, and light maps, you can adjust shader complexity at
+runtime:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">configureMaterial</span>(renderer<span class="op">,</span> advancedMaterial<span class="op">,</span> simpleMaterial) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> availableUnits <span class="op">=</span> renderer<span class="op">.</span><span class="at">capabilities</span><span class="op">.</span><span class="at">maxTextures</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fall back to a simplified material if hardware limits are constrained</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (availableUnits <span class="op">&lt;</span> <span class="dv">16</span>) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> simpleMaterial<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> advancedMaterial<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By querying <code>renderer.capabilities.maxTextures</code> during
+application initialization, you can adapt material fidelity dynamically
+to guarantee cross-device compatibility.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

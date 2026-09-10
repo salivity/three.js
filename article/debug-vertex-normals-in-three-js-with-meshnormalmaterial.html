@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Vertex Normals in Three.js with MeshNormalMaterial - three.js</title>
+    <meta name="description" content="In Three.js, visual inspection is one of the fastest methods to identify inverted, missing, or improperly smoothed surface normals. This article covers how THREE.MeshNormalMaterial maps 3D directional vectors directly to RGB color channels, enabling imme">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/debug-vertex-normals-in-three-js-with-meshnormalmaterial">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Debug Vertex Normals in Three.js with MeshNormalMaterial - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/debug-vertex-normals-in-three-js-with-meshnormalmaterial" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, visual inspection is one of the fastest methods to identify inverted, missing, or improperly smoothed surface normals. This article covers how THREE.MeshNormalMaterial maps 3D directional vectors directly to RGB color channels, enabling imme" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="debug-vertex-normals-in-threejs-with-meshnormalmaterial">Debug
+Vertex Normals in Three.js with MeshNormalMaterial</h1>
+<p>In Three.js, visual inspection is one of the fastest methods to
+identify inverted, missing, or improperly smoothed surface normals. This
+article covers how <code>THREE.MeshNormalMaterial</code> maps 3D
+directional vectors directly to RGB color channels, enabling immediate
+identification of orientation defects across your 3D meshes without
+manual shader programming.</p>
+<h2 id="how-normal-to-rgb-mapping-works">How Normal-to-RGB Mapping
+Works</h2>
+<p>A surface normal is a unit vector <span class="math inline">\((x, y,
+z)\)</span> indicating the direction a face or vertex points. Because
+unit vector components range from <code>-1.0</code> to <code>1.0</code>,
+while RGB color channels range from <code>0.0</code> to <code>1.0</code>
+(or <code>0</code> to <code>255</code>), Three.js maps the coordinates
+linearly using the standard formula:</p>
+<p><span class="math display">\[\text{Color Channel} =
+\frac{\text{Vector Component} + 1}{2}\]</span></p>
+<p>This mathematical mapping yields a consistent color reference across
+your models:</p>
+<ul>
+<li><strong>X-Axis (Red):</strong> Points to the right (<code>+X</code>)
+as pure red, and to the left (<code>-X</code>) as black or dark
+cyan/green.</li>
+<li><strong>Y-Axis (Green):</strong> Points upward (<code>+Y</code>) as
+pure green, and downward (<code>-Y</code>) as the absence of green.</li>
+<li><strong>Z-Axis (Blue):</strong> Points outward toward the
+camera/viewer (<code>+Z</code>) as pure blue, and inward away from the
+camera (<code>-Z</code>) as the absence of blue.</li>
+</ul>
+<p>When a surface faces directly along the positive axes, it combines
+these values. For instance, a face angled toward the upper-right corner
+pointing slightly toward the viewer will appear as a pastel yellow-blue
+mix.</p>
+<h2 id="applying-meshnormalmaterial">Applying MeshNormalMaterial</h2>
+<p>To inspect a mesh, swap its current material with
+<code>THREE.MeshNormalMaterial</code>. This material does not require
+scene lighting to function, making it ideal for isolated geometry
+testing.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create or load your geometry</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">16</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize the normal debugging material</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normalMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshNormalMaterial</span>({</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional: enable flatShading to inspect face normals instead of interpolated vertex normals</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">flatShading</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional: render both sides to detect inverted geometry</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Apply to the mesh</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> normalMaterial)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h2 id="practical-debugging-techniques">Practical Debugging
+Techniques</h2>
+<h3 id="detecting-inverted-faces">Detecting Inverted Faces</h3>
+<p>If back-face culling is enabled and normals are inverted, parts of
+the model will appear transparent. If you set
+<code>side: THREE.DoubleSide</code> on the material, inverted surfaces
+will display colors opposing their expected screen directions (e.g., an
+upward-pointing face showing dark tones instead of green).</p>
+<h3 id="smooth-vs-flat-normals">Smooth vs. Flat Normals</h3>
+<p>By default, <code>MeshNormalMaterial</code> interpolates vertex
+normals across faces, creating smooth color gradients. If your model
+exhibits unwanted shading artifacts:</p>
+<ul>
+<li>Set <code>flatShading: true</code> on the material to visualize
+individual face normals.</li>
+<li>If individual faces show abrupt color transitions where smooth
+shading is desired, the mesh likely lacks shared vertices or requires
+normal recalculation via
+<code>geometry.computeVertexNormals()</code>.</li>
+</ul>
+<h3 id="inspecting-local-vs-transformed-normals">Inspecting Local vs.
+Transformed Normals</h3>
+<p><code>MeshNormalMaterial</code> renders normals relative to camera
+space by default. As you rotate the camera, the colors across the model
+will shift relative to the view angle (e.g., surfaces facing directly
+toward the camera will consistently display a light purple/blue tint).
+If colors do not update as the camera moves, verify whether custom
+transformation matrices are overriding the default material
+behavior.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

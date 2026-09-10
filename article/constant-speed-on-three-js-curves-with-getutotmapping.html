@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constant Speed on Three.js Curves with getUtoTmapping - three.js</title>
+    <meta name="description" content="Moving an object along a 3D spline at a constant velocity requires decoupling the curve’s mathematical parameterization from physical distance. By default, interpolating a spline using its normalized parameter $t$ causes objects to speed up or slow dow">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/constant-speed-on-three-js-curves-with-getutotmapping">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Constant Speed on Three.js Curves with getUtoTmapping - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/constant-speed-on-three-js-curves-with-getutotmapping" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Moving an object along a 3D spline at a constant velocity requires decoupling the curve’s mathematical parameterization from physical distance. By default, interpolating a spline using its normalized parameter $t$ causes objects to speed up or slow dow" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="constant-speed-on-threejs-curves-with-getutotmapping">Constant
+Speed on Three.js Curves with getUtoTmapping</h1>
+<p>Moving an object along a 3D spline at a constant velocity requires
+decoupling the curve’s mathematical parameterization from physical
+distance. By default, interpolating a spline using its normalized
+parameter <span class="math inline">\(t\)</span> causes objects to speed
+up or slow down depending on the density and spacing of the control
+points. This article demonstrates how to use the Three.js method
+<code>Curve.getUtoTmapping</code> to translate an equidistant arc-length
+fraction <span class="math inline">\(u\)</span> into the parameter <span
+class="math inline">\(t\)</span>, strictly maintaining a uniform speed
+regardless of curve complexity.</p>
+<h3 id="understanding-the-parameterization-problem-t-vs-u">Understanding
+the Parameterization Problem: <span class="math inline">\(t\)</span> vs.
+<span class="math inline">\(u\)</span></h3>
+<p>In Three.js, evaluating a curve with <code>curve.getPoint(t)</code>
+takes a value <span class="math inline">\(t\)</span> between
+<code>0.0</code> and <code>1.0</code>. Splines, such as
+<code>CatmullRomCurve3</code>, do not distribute distance linearly
+across <span class="math inline">\(t\)</span>. Segments with closely
+packed control points represent shorter spatial distances than segments
+with distant control points, yet both occupy equivalent intervals of
+<span class="math inline">\(t\)</span>. Incrementing <span
+class="math inline">\(t\)</span> linearly per frame results in erratic
+object acceleration.</p>
+<p>To enforce constant speed, motion must be driven by arc length,
+represented as <span class="math inline">\(u \in [0, 1]\)</span>, where
+equal changes in <span class="math inline">\(u\)</span> correspond to
+equal physical distances along the curve. The
+<code>Curve.getUtoTmapping(u, distance)</code> method bridges this gap.
+It searches pre-calculated segment lengths using binary search to find
+the exact parameter <span class="math inline">\(t\)</span> that yields
+the target arc-length fraction <span
+class="math inline">\(u\)</span>.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<p>Enforcing constant velocity requires calculating the total curve
+length, tracking elapsed distance over delta time, and converting
+normalized distance to the spline parameter.</p>
+<h4 id="1-instantiate-the-spline-and-calculate-lengths">1. Instantiate
+the Spline and Calculate Lengths</h4>
+<p>Create your curve using your set of points. Three.js caches curve
+segment lengths internally, but calling <code>getLength()</code> ensures
+that the arc-length lookup table is built.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">5</span><span class="op">,</span> <span class="op">-</span><span class="dv">5</span><span class="op">,</span> <span class="dv">5</span>)<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> curve <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CatmullRomCurve3</span>(points)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> totalLength <span class="op">=</span> curve<span class="op">.</span><span class="fu">getLength</span>()<span class="op">;</span></span></code></pre></div>
+<h4 id="2-track-linear-distance-via-delta-time">2. Track Linear Distance
+via Delta Time</h4>
+<p>In your animation loop, compute the spatial distance traversed in the
+current frame using the object's defined speed and
+<code>clock.getDelta()</code>. Accumulate this value to track the
+absolute distance traveled.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> speed <span class="op">=</span> <span class="fl">5.0</span><span class="op">;</span> <span class="co">// Units per second</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> distanceTraveled <span class="op">=</span> <span class="fl">0.0</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clock <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Clock</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updatePosition</span>() {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> delta <span class="op">=</span> clock<span class="op">.</span><span class="fu">getDelta</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  distanceTraveled <span class="op">+=</span> speed <span class="op">*</span> delta<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Loop the motion along the curve length</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  distanceTraveled <span class="op">=</span> distanceTraveled <span class="op">%</span> totalLength<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Normalize distance to a [0, 1] range (u)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> u <span class="op">=</span> distanceTraveled <span class="op">/</span> totalLength<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Map the equidistant distance &#39;u&#39; to curve parameter &#39;t&#39;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> t <span class="op">=</span> curve<span class="op">.</span><span class="fu">getUtoTmapping</span>(u)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Retrieve the strictly uniform coordinate</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> position <span class="op">=</span> curve<span class="op">.</span><span class="fu">getPoint</span>(t)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(position)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="3-orienting-the-moving-object">3. Orienting the Moving
+Object</h4>
+<p>When moving an object at a constant speed, you typically also need it
+to face the direction of travel. Because you have the mapped value <span
+class="math inline">\(t\)</span>, you can query the curve tangent
+directly using <code>curve.getTangent(t)</code>.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Calculate orientation from tangent</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> tangent <span class="op">=</span> curve<span class="op">.</span><span class="fu">getTangent</span>(t)<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lookTarget <span class="op">=</span> position<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">add</span>(tangent)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="fu">lookAt</span>(lookTarget)<span class="op">;</span></span></code></pre></div>
+<h3 id="getutotmapping-vs-getpointat"><code>getUtoTmapping</code> vs.
+<code>getPointAt</code></h3>
+<p>Three.js provides <code>curve.getPointAt(u)</code>, which internally
+executes <code>curve.getPoint(curve.getUtoTmapping(u))</code>. While
+<code>getPointAt</code> is sufficient for fetching coordinates directly,
+using <code>getUtoTmapping</code> explicitly is necessary when:</p>
+<ul>
+<li>You need to reuse the resolved parameter <span
+class="math inline">\(t\)</span> across multiple queries, such as
+evaluating position via <code>getPoint(t)</code> and direction via
+<code>getTangent(t)</code> without repeating the internal binary
+search.</li>
+<li>You need to pass <span class="math inline">\(t\)</span> to shaders
+or external interpolation libraries to sync animations, camera zooms, or
+particle emitters precisely with the movement along the spline.</li>
+</ul>
+<h3 id="improving-lookup-accuracy">Improving Lookup Accuracy</h3>
+<p>The binary search in <code>getUtoTmapping</code> relies on the
+resolution of the curve's arc-length cache. If you notice
+micro-stuttering on extremely long or highly complex curves, increase
+the internal subdivisions before running animations:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Default division count is 200; increase it for high-precision paths</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>curve<span class="op">.</span><span class="at">arcLengthDivisions</span> <span class="op">=</span> <span class="dv">1000</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>curve<span class="op">.</span><span class="fu">updateArcLengths</span>()<span class="op">;</span></span></code></pre></div>
+<p>Increasing <code>arcLengthDivisions</code> produces a denser segment
+table, allowing <code>getUtoTmapping</code> to resolve <span
+class="math inline">\(t\)</span> with higher precision, ensuring
+perfectly smooth motion along tight loops and sharp turns.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transition Perspective to Orthographic Camera in Three.js - three.js</title>
+    <meta name="description" content="Switching between a PerspectiveCamera and an OrthographicCamera in Three.js without jarring the user requires matching the visible dimensions of both cameras at a specific focal distance. This article explains the mathematics behind aligning their view f">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/transition-perspective-to-orthographic-camera-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Transition Perspective to Orthographic Camera in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/transition-perspective-to-orthographic-camera-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Switching between a PerspectiveCamera and an OrthographicCamera in Three.js without jarring the user requires matching the visible dimensions of both cameras at a specific focal distance. This article explains the mathematics behind aligning their view f" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="transition-perspective-to-orthographic-camera-in-threejs">Transition
+Perspective to Orthographic Camera in Three.js</h1>
+<p>Switching between a <code>PerspectiveCamera</code> and an
+<code>OrthographicCamera</code> in Three.js without jarring the user
+requires matching the visible dimensions of both cameras at a specific
+focal distance. This article explains the mathematics behind aligning
+their view frustums, demonstrates how to synchronize transforms and
+controls, and details how to animate a seamless visual transition using
+a dolly-zoom approach or projection matrix interpolation.</p>
+<hr />
+<h3 id="understanding-the-frustum-mismatch">Understanding the Frustum
+Mismatch</h3>
+<p>A <code>PerspectiveCamera</code> renders scenes with perspective
+distortion based on a vertical field of view (<code>fov</code>), where
+objects appear smaller the further they are from the lens. An
+<code>OrthographicCamera</code> projects parallel rays, meaning an
+object's screen size remains constant regardless of distance.</p>
+<p>To make the transition seamless, you must choose a focal
+plane—usually the target of your camera controls (such as an
+<code>OrbitControls</code> target)—and calculate the orthographic
+frustum so that it covers the exact visible height and width of the
+perspective camera at that specific distance.</p>
+<h3 id="step-1-calculate-the-matching-frustum-bounds">Step 1: Calculate
+the Matching Frustum Bounds</h3>
+<p>At a given distance <span class="math inline">\(d\)</span> from the
+perspective camera to the target, the visible height <span
+class="math inline">\(H\)</span> is defined by:</p>
+<p><span class="math display">\[H = 2 \times d \times
+\tan\left(\frac{\text{fov} \times \pi}{360}\right)\]</span></p>
+<p>The visible width <span class="math inline">\(W\)</span> depends on
+the aspect ratio:</p>
+<p><span class="math display">\[W = H \times \text{aspect}\]</span></p>
+<p>Use this calculation to configure the orthographic camera's
+frustum:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">syncOrthographicCamera</span>(perspectiveCam<span class="op">,</span> orthoCam<span class="op">,</span> targetPosition) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> distance <span class="op">=</span> perspectiveCam<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(targetPosition)<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> aspect <span class="op">=</span> perspectiveCam<span class="op">.</span><span class="at">aspect</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate visible half-height and half-width at the target distance</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fovInRadians <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(perspectiveCam<span class="op">.</span><span class="at">fov</span>)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> halfHeight <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(fovInRadians <span class="op">/</span> <span class="dv">2</span>) <span class="op">*</span> distance<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> halfWidth <span class="op">=</span> halfHeight <span class="op">*</span> aspect<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set orthographic bounds</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">left</span> <span class="op">=</span> <span class="op">-</span>halfWidth<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">right</span> <span class="op">=</span> halfWidth<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">top</span> <span class="op">=</span> halfHeight<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">bottom</span> <span class="op">=</span> <span class="op">-</span>halfHeight<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Synchronize transforms</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(perspectiveCam<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">quaternion</span><span class="op">.</span><span class="fu">copy</span>(perspectiveCam<span class="op">.</span><span class="at">quaternion</span>)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="at">zoom</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  orthoCam<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="step-2-animating-the-transition">Step 2: Animating the
+Transition</h3>
+<p>An instant switch using the synchronized frustum produces an
+identical view of objects located precisely on the target plane, but
+objects in front of or behind that plane will instantly jump due to the
+sudden removal or addition of perspective distortion. To make this
+change visually continuous, animate the perspective camera using a
+modified dolly zoom before swapping cameras.</p>
+<h4 id="the-dolly-zoom-approach">The Dolly Zoom Approach</h4>
+<ol type="1">
+<li><p><strong>Perspective to Orthographic:</strong> Animate the
+perspective camera's <code>fov</code> down toward a very low value
+(e.g., from <code>50</code> down to <code>4</code> or <code>5</code>),
+while simultaneously moving the camera backward to keep the target
+plane's size constant. Once the <code>fov</code> is minimal, switch to
+the <code>OrthographicCamera</code>.</p></li>
+<li><p><strong>Orthographic to Perspective:</strong> Place the
+perspective camera far away with the minimal <code>fov</code>, swap the
+active camera, and animate the <code>fov</code> back to its original
+value while moving the camera inward to its original position.</p></li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gsap <span class="im">from</span> <span class="st">&#39;gsap&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">transitionToOrtho</span>(perspectiveCam<span class="op">,</span> orthoCam<span class="op">,</span> controls<span class="op">,</span> onComplete) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> target <span class="op">=</span> controls<span class="op">.</span><span class="at">target</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> initialDistance <span class="op">=</span> perspectiveCam<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">distanceTo</span>(target)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> initialFov <span class="op">=</span> perspectiveCam<span class="op">.</span><span class="at">fov</span><span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetFov <span class="op">=</span> <span class="dv">4</span><span class="op">;</span> <span class="co">// Near-orthographic angle</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Direction vector from target to camera</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> direction <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">subVectors</span>(perspectiveCam<span class="op">.</span><span class="at">position</span><span class="op">,</span> target)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> animState <span class="op">=</span> { <span class="dt">fov</span><span class="op">:</span> initialFov }<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  gsap<span class="op">.</span><span class="fu">to</span>(animState<span class="op">,</span> {</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fov</span><span class="op">:</span> targetFov<span class="op">,</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">duration</span><span class="op">:</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">ease</span><span class="op">:</span> <span class="st">&quot;power2.inOut&quot;</span><span class="op">,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">onUpdate</span><span class="op">:</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> animState<span class="op">.</span><span class="at">fov</span><span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Compensate position to maintain size at target distance</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> newDistance <span class="op">=</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>        initialDistance <span class="op">*</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>        (<span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(initialFov <span class="op">/</span> <span class="dv">2</span>)) <span class="op">/</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>         <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(animState<span class="op">.</span><span class="at">fov</span> <span class="op">/</span> <span class="dv">2</span>)))<span class="op">;</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="at">position</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">copy</span>(target)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">addScaledVector</span>(direction<span class="op">,</span> newDistance)<span class="op">;</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="dt">onComplete</span><span class="op">:</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Sync and activate Orthographic Camera</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>      <span class="fu">syncOrthographicCamera</span>(perspectiveCam<span class="op">,</span> orthoCam<span class="op">,</span> target)<span class="op">;</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Reset perspective camera back to standard settings for future use</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="at">fov</span> <span class="op">=</span> initialFov<span class="op">;</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="at">position</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">copy</span>(target)</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>        <span class="op">.</span><span class="fu">addScaledVector</span>(direction<span class="op">,</span> initialDistance)<span class="op">;</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>      perspectiveCam<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (onComplete) <span class="fu">onComplete</span>()<span class="op">;</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="step-3-reattaching-orbitcontrols">Step 3: Reattaching
+OrbitControls</h3>
+<p>If using <code>OrbitControls</code>, update the controller's active
+camera reference when swapping cameras to keep interactions
+consistent.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">setActiveCamera</span>(newCamera<span class="op">,</span> controls) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  controls<span class="op">.</span><span class="at">object</span> <span class="op">=</span> newCamera<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  controls<span class="op">.</span><span class="fu">update</span>()<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>When switching back from <code>OrthographicCamera</code> to
+<code>PerspectiveCamera</code>, recalculate the perspective camera's
+position based on <code>orthoCam.top</code> and
+<code>orthoCam.zoom</code>, reassign <code>controls.object</code>, and
+call <code>controls.update()</code>. This sequence prevents view shifts
+and ensures seamless interaction across both projection modes.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

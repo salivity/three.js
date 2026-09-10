@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Y-Axis Rotation from a Quaternion in Three.js - three.js</title>
+    <meta name="description" content="Extracting the rotation strictly around the Y-axis from a complex THREE.Quaternion can be achieved depending on whether you need the planar facing direction (yaw heading) or a mathematical isolation of the rotation component (twist). This guide explains">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/extract-y-axis-rotation-from-a-quaternion-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Extract Y-Axis Rotation from a Quaternion in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/extract-y-axis-rotation-from-a-quaternion-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Extracting the rotation strictly around the Y-axis from a complex THREE.Quaternion can be achieved depending on whether you need the planar facing direction (yaw heading) or a mathematical isolation of the rotation component (twist). This guide explains" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="extract-y-axis-rotation-from-a-quaternion-in-threejs">Extract
+Y-Axis Rotation from a Quaternion in Three.js</h1>
+<p>Extracting the rotation strictly around the Y-axis from a complex
+<code>THREE.Quaternion</code> can be achieved depending on whether you
+need the planar facing direction (yaw heading) or a mathematical
+isolation of the rotation component (twist). This guide explains the two
+most effective methods in Three.js: vector projection for world-space
+yaw, and swing-twist decomposition for isolating the exact Y-axis
+rotation without gimbal lock.</p>
+<hr />
+<h3 id="method-1-forward-vector-projection-world-yaw--heading">Method 1:
+Forward Vector Projection (World Yaw / Heading)</h3>
+<p>If your goal is to find the object's direction or yaw on the
+horizontal XZ plane, the most reliable method is to apply the quaternion
+to a forward vector and compute its angle using <code>Math.atan2</code>.
+This completely avoids Euler angle singularities.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getYawFromQuaternion</span>(quaternion) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Define default forward vector (Three.js convention is negative Z)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> forward <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Rotate the forward vector by the complex quaternion</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  forward<span class="op">.</span><span class="fu">applyQuaternion</span>(quaternion)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute the angle on the XZ plane</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// forward.x and forward.z represent the horizontal heading</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan2</span>(forward<span class="op">.</span><span class="at">x</span><span class="op">,</span> forward<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li><strong>Pros:</strong> Robust, immune to gimbal lock, and guarantees
+the true facing direction on the horizontal plane.</li>
+<li><strong>Range:</strong> Returns an angle in radians from <span
+class="math inline">\(-\pi\)</span> to <span
+class="math inline">\(\pi\)</span>.</li>
+</ul>
+<hr />
+<h3 id="method-2-swing-twist-decomposition-local-twist-around-y">Method
+2: Swing-Twist Decomposition (Local Twist Around Y)</h3>
+<p>When you need to mathematically decompose a quaternion into a
+rotation <em>around</em> the Y-axis (twist) and a tilt <em>off</em> the
+Y-axis (swing), you use swing-twist decomposition.</p>
+<p>For an axis-aligned unit vector along the Y-axis <span
+class="math inline">\((0, 1, 0)\)</span>, the twist quaternion
+simplifies to keeping only the <span class="math inline">\(y\)</span>
+and <span class="math inline">\(w\)</span> components of the original
+quaternion:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getStrictYTwistAngle</span>(quaternion) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// If the quaternion is not normalized, normalize it first</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> q <span class="op">=</span> quaternion<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The angle around the Y-axis can be extracted directly from y and w</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> angle <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan2</span>(q<span class="op">.</span><span class="at">y</span><span class="op">,</span> q<span class="op">.</span><span class="at">w</span>)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Normalize the angle to the range [-PI, PI]</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">euclideanModulo</span>(angle <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span><span class="op">,</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">*</span> <span class="dv">2</span>) <span class="op">-</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li><strong>Pros:</strong> Isolates the intrinsic rotation purely around
+the specified axis.</li>
+<li><strong>Use Case:</strong> Useful for inverse kinematics, bone
+constraints, and procedural animations where the twist must be isolated
+from the swing.</li>
+</ul>
+<hr />
+<h3 id="method-3-using-threejs-euler-with-yxz-order">Method 3: Using
+Three.js Euler with 'YXZ' Order</h3>
+<p>If you prefer using standard Three.js classes, you can extract the
+rotation into a <code>THREE.Euler</code> instance. To minimize gimbal
+lock issues around the Y-axis, set the Euler order to <code>'YXZ'</code>
+so that the Y rotation is calculated first.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">getEulerY</span>(quaternion) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> euler <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Euler</span>()<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set the order to YXZ to prioritize Y rotation</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  euler<span class="op">.</span><span class="fu">setFromQuaternion</span>(quaternion<span class="op">,</span> <span class="st">&#39;YXZ&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> euler<span class="op">.</span><span class="at">y</span><span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li><strong>Note:</strong> While straightforward, Euler conversions can
+still encounter numerical instability near 90-degree pitch tilts (gimbal
+lock). Use <strong>Method 1</strong> or <strong>Method 2</strong> for
+production-grade character controllers or physics interactions.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

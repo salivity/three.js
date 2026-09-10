@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Linecap and Linejoin for Architectural Drawings - three.js</title>
+    <meta name="description" content="Stylizing architectural line drawings in Three.js requires fine control over line terminations and corners to achieve aesthetics ranging from sharp technical blueprints to soft, hand-drawn schematics. The linecap and linejoin properties in Three.js LineB">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-linecap-and-linejoin-for-architectural-drawings">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Linecap and Linejoin for Architectural Drawings - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-linecap-and-linejoin-for-architectural-drawings" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Stylizing architectural line drawings in Three.js requires fine control over line terminations and corners to achieve aesthetics ranging from sharp technical blueprints to soft, hand-drawn schematics. The linecap and linejoin properties in Three.js LineB" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="threejs-linecap-and-linejoin-for-architectural-drawings">Three.js
+Linecap and Linejoin for Architectural Drawings</h1>
+<p>Stylizing architectural line drawings in Three.js requires fine
+control over line terminations and corners to achieve aesthetics ranging
+from sharp technical blueprints to soft, hand-drawn schematics. The
+<code>linecap</code> and <code>linejoin</code> properties in Three.js
+<code>LineBasicMaterial</code> govern the shape of segment endpoints and
+the vertices where two segments meet. This guide explains how to
+configure these two properties, the visual styles they produce, and the
+practical implementation details needed to render clean architectural
+line work.</p>
+<h3 id="understanding-linecap-and-linejoin">Understanding Linecap and
+Linejoin</h3>
+<p>In 2D vector drafting and 3D wireframe presentation, line styling
+depends on two visual parameters defined in
+<code>LineBasicMaterial</code>:</p>
+<ul>
+<li><strong><code>linecap</code></strong>: Defines the appearance of
+line ends. It accepts three string values:
+<ul>
+<li><code>'butt'</code>: The stroke ends immediately at the coordinate
+with a flat edge perpendicular to the line direction.</li>
+<li><code>'round'</code>: Adds a semicircle at the end of the line with
+a diameter equal to the line width.</li>
+<li><code>'square'</code>: Extends the line past the endpoint by half
+the line width, ending in a squared-off edge.</li>
+</ul></li>
+<li><strong><code>linejoin</code></strong>: Controls the shape of the
+corner formed where two line segments meet. It accepts three string
+values:
+<ul>
+<li><code>'miter'</code>: Extends the outer edges until they meet at a
+sharp point, ideal for crisp structural corners.</li>
+<li><code>'round'</code>: Rounds off the corner with a smooth arc.</li>
+<li><code>'bevel'</code>: Cuts off the sharp corner with a straight
+diagonal segment.</li>
+</ul></li>
+</ul>
+<h3 id="configuring-linebasicmaterial">Configuring
+LineBasicMaterial</h3>
+<p>To apply these properties, pass them directly into the constructor of
+<code>LineBasicMaterial</code> or assign them dynamically to an existing
+material instance:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create material for sharp, technical drafting lines</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> technicalLineMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">LineBasicMaterial</span>({</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x1a1a1a</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">linewidth</span><span class="op">:</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">linecap</span><span class="op">:</span> <span class="st">&#39;square&#39;</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">linejoin</span><span class="op">:</span> <span class="st">&#39;miter&#39;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Create geometry and line object</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> points <span class="op">=</span> [</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">0</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">.</span><span class="fu">setFromPoints</span>(points)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> architecturalOutline <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Line</span>(geometry<span class="op">,</span> technicalLineMaterial)<span class="op">;</span></span></code></pre></div>
+<h3
+id="architectural-aesthetics-and-preset-configurations">Architectural
+Aesthetics and Preset Configurations</h3>
+<p>Different combinations of <code>linecap</code> and
+<code>linejoin</code> evoke distinct architectural drawing styles:</p>
+<h4 id="1-cad-and-blueprint-style-crisp--orthogonal">1. CAD and
+Blueprint Style (Crisp &amp; Orthogonal)</h4>
+<p>For structural plans, elevations, and CAD-style views, sharp corners
+and predictable boundaries are critical.</p>
+<ul>
+<li><strong>Settings</strong>: <code>linecap: 'butt'</code>,
+<code>linejoin: 'miter'</code></li>
+<li><strong>Visual Result</strong>: Lines do not spill past coordinate
+boundaries, and 90-degree wall intersections produce sharp, precise
+corners.</li>
+</ul>
+<h4 id="2-conceptual-sketch-style-soft--organic">2. Conceptual Sketch
+Style (Soft &amp; Organic)</h4>
+<p>For early-stage design reviews, soft landscape edges, or hand-drafted
+visuals, hard intersections can feel overly rigid.</p>
+<ul>
+<li><strong>Settings</strong>: <code>linecap: 'round'</code>,
+<code>linejoin: 'round'</code></li>
+<li><strong>Visual Result</strong>: Intersections flow smoothly into one
+another, and open-ended lines terminate without harsh geometric cuts,
+resembling ink or felt-tip pen drawings.</li>
+</ul>
+<h4 id="3-chiseled-or-faceted-drafting-modernistindustrial">3. Chiseled
+or Faceted Drafting (Modernist/Industrial)</h4>
+<p>For schematic diagrams emphasizing faceted surfaces or beveled
+structural members.</p>
+<ul>
+<li><strong>Settings</strong>: <code>linecap: 'square'</code>,
+<code>linejoin: 'bevel'</code></li>
+<li><strong>Visual Result</strong>: Corners appear chamfered, reducing
+visual weight at dense junction nodes while maintaining geometric
+rigidity.</li>
+</ul>
+<h3 id="webgl-limitations-and-fat-lines-alternative">WebGL Limitations
+and Fat Lines Alternative</h3>
+<p>Standard WebGL implementations generally enforce a maximum line width
+of 1 pixel regardless of the <code>linewidth</code> property, meaning
+the visual impact of <code>linecap</code> and <code>linejoin</code>
+within standard <code>LineBasicMaterial</code> may be invisible in
+hardware-accelerated rasterization.</p>
+<p>When your architectural visualization requires lines wider than 1
+pixel with fully rendered caps and joins in 3D space, use the "fat
+lines" module provided by Three.js addons (<code>Line2</code>,
+<code>LineGeometry</code>, and <code>LineMaterial</code>):</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Line2 } <span class="im">from</span> <span class="st">&#39;three/addons/lines/Line2.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { LineMaterial } <span class="im">from</span> <span class="st">&#39;three/addons/lines/LineMaterial.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { LineGeometry } <span class="im">from</span> <span class="st">&#39;three/addons/lines/LineGeometry.js&#39;</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fatLineGeometry <span class="op">=</span> <span class="kw">new</span> <span class="fu">LineGeometry</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>fatLineGeometry<span class="op">.</span><span class="fu">setPositions</span>([<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">0</span>])<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fatLineMaterial <span class="op">=</span> <span class="kw">new</span> <span class="fu">LineMaterial</span>({</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0055ff</span><span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">linewidth</span><span class="op">:</span> <span class="dv">5</span><span class="op">,</span> <span class="co">// Width in screen pixels</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">worldUnits</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">alphaToCoverage</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> stylizedLine <span class="op">=</span> <span class="kw">new</span> <span class="fu">Line2</span>(fatLineGeometry<span class="op">,</span> fatLineMaterial)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>stylizedLine<span class="op">.</span><span class="fu">computeLineDistances</span>()<span class="op">;</span></span></code></pre></div>
+<p>For applications exporting Three.js scenes to 2D vector formats via
+<code>SVGRenderer</code>, the <code>linecap</code> and
+<code>linejoin</code> settings on standard
+<code>LineBasicMaterial</code> translate directly to SVG stroke
+attributes (<code>stroke-linecap</code> and
+<code>stroke-linejoin</code>), preserving line styling during
+export.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

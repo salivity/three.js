@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Object3D.up Works with lookAt in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, the Object3D.up vector acts as a directional guide that defines the roll and vertical orientation of an object when calling the lookAt() method. While lookAt() points an object’s view axis directly at a target coordinate, the up vector det">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-object3d-up-works-with-lookat-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How Object3D.up Works with lookAt in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-object3d-up-works-with-lookat-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, the Object3D.up vector acts as a directional guide that defines the roll and vertical orientation of an object when calling the lookAt() method. While lookAt() points an object’s view axis directly at a target coordinate, the up vector det" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-object3dup-works-with-lookat-in-threejs">How Object3D.up
+Works with lookAt in Three.js</h1>
+<p>In Three.js, the <code>Object3D.up</code> vector acts as a
+directional guide that defines the roll and vertical orientation of an
+object when calling the <code>lookAt()</code> method. While
+<code>lookAt()</code> points an object’s view axis directly at a target
+coordinate, the <code>up</code> vector determines which way the top of
+that object faces. Without it, an object pointing at a target would have
+an infinite number of valid rotational orientations along its viewing
+axis.</p>
+<h3 id="basis-construction-and-cross-products">Basis Construction and
+Cross Products</h3>
+<p>When <code>Object3D.lookAt(target)</code> is invoked, Three.js
+constructs a rotation matrix using standard vector mathematics to orient
+the object's local coordinate system:</p>
+<ol type="1">
+<li><strong>Forward Vector:</strong> The engine computes the direction
+vector between the object’s current world position and the target
+position. For cameras, the negative Z-axis points toward the target; for
+standard 3D meshes, the positive Z-axis aligns with the target
+vector.</li>
+<li><strong>Right Vector (Local X-axis):</strong> Three.js calculates
+the cross product of the normalized direction vector and the normalized
+<code>Object3D.up</code> vector. This generates a perpendicular vector
+representing the object's local X-axis (its "right" side).</li>
+<li><strong>Corrected Up Vector (Local Y-axis):</strong> The engine then
+computes the cross product of the newly formed right vector and the
+direction vector. This produces a final, orthogonal local Y-axis aligned
+as closely as possible to <code>Object3D.up</code>.</li>
+</ol>
+<h3 id="default-values-and-execution-order">Default Values and Execution
+Order</h3>
+<p>By default, every <code>Object3D</code> inherits an <code>up</code>
+vector of <code>(0, 1, 0)</code>, representing the positive Y-axis in
+world space.</p>
+<p>Because <code>lookAt()</code> reads the <code>up</code> vector at the
+moment of execution to calculate the orientation matrix, any changes to
+<code>Object3D.up</code> must be made <strong>before</strong> calling
+<code>lookAt()</code>. Updating <code>object.up</code> after calling
+<code>lookAt()</code> produces no visual change until
+<code>lookAt()</code> or another matrix recalculation is triggered
+again.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Correct usage</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">up</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span> <span class="co">// Set Z as up</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">lookAt</span>(targetPosition)<span class="op">;</span></span></code></pre></div>
+<h3 id="the-collinear-singularity-gimbal-lock">The Collinear Singularity
+(Gimbal Lock)</h3>
+<p>A critical limitation occurs when the direction vector toward the
+target is parallel or anti-parallel (collinear) to the <code>up</code>
+vector. For instance, if an object has an <code>up</code> vector of
+<code>(0, 1, 0)</code> and attempts to look directly up at
+<code>(0, 10, 0)</code> or directly down at
+<code>(0, -10, 0)</code>:</p>
+<ul>
+<li>The cross product of two parallel vectors results in a zero vector
+<code>(0, 0, 0)</code>.</li>
+<li>Three.js cannot calculate a valid right vector or orthogonal
+basis.</li>
+<li>This results in erratic rotation snapping, inverted rendering, or
+mathematical errors (NaN values in transformation matrices).</li>
+</ul>
+<p>To resolve this issue, the <code>up</code> vector must be temporarily
+shifted to another axis (such as <code>(0, 0, 1)</code> or
+<code>(0, 0, -1)</code>) whenever the view vector aligns directly with
+the current <code>up</code> vector.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

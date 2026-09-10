@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Stencil Buffer Masking in EffectComposer - three.js</title>
+    <meta name="description" content="This article provides a direct guide on using the WebGL stencil buffer to mask post-processing effects in Three.js using EffectComposer. You will learn how to configure a render target with stencil support, mark specific geometries in the stencil buffer,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-stencil-buffer-masking-in-effectcomposer">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Stencil Buffer Masking in EffectComposer - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-stencil-buffer-masking-in-effectcomposer" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a direct guide on using the WebGL stencil buffer to mask post-processing effects in Three.js using EffectComposer. You will learn how to configure a render target with stencil support, mark specific geometries in the stencil buffer," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-stencil-buffer-masking-in-effectcomposer">Three.js
+Stencil Buffer Masking in EffectComposer</h1>
+<p>This article provides a direct guide on using the WebGL stencil
+buffer to mask post-processing effects in Three.js using
+<code>EffectComposer</code>. You will learn how to configure a render
+target with stencil support, mark specific geometries in the stencil
+buffer, and leverage Three.js's built-in <code>MaskPass</code> and
+<code>ClearMaskPass</code> to isolate post-processing shaders so they
+affect only designated objects in your scene.</p>
+<h3 id="1-enable-the-stencil-buffer-in-effectcomposer">1. Enable the
+Stencil Buffer in EffectComposer</h3>
+<p>By default, the internal render targets created by
+<code>EffectComposer</code> may not have stencil operations properly
+configured. You must initialize a <code>THREE.WebGLRenderTarget</code>
+with <code>stencilBuffer: true</code> and pass it to the composer
+constructor.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { ShaderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/ShaderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { MaskPass<span class="op">,</span> ClearMaskPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/MaskPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a custom render target with stencil support</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderTarget</span>(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">stencilBuffer</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="dt">depthBuffer</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer<span class="op">,</span> renderTarget)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-configure-the-renderpass">2. Configure the RenderPass</h3>
+<p>Add your primary <code>RenderPass</code> to render the initial scene.
+Ensure your main <code>WebGLRenderer</code> has
+<code>stencil: true</code> in its initialization options (enabled by
+default in Three.js).</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(renderPass)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-set-up-masking-with-maskpass-and-clearmaskpass">3. Set Up
+Masking with MaskPass and ClearMaskPass</h3>
+<p>Three.js provides <code>MaskPass</code> and
+<code>ClearMaskPass</code> explicitly to handle stencil buffer masking
+inside the post-processing pipeline. <code>MaskPass</code> renders a
+designated scene (or sub-scene) directly into the stencil buffer,
+enabling hardware clipping for any passes placed between it and
+<code>ClearMaskPass</code>.</p>
+<h4 id="creating-the-mask-scene">Creating the Mask Scene</h4>
+<p>Create an isolated scene containing only the meshes that should serve
+as the mask:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskScene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">// The mesh to act as the mask boundary</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>())<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>maskScene<span class="op">.</span><span class="fu">add</span>(maskMesh)<span class="op">;</span></span></code></pre></div>
+<p>Keep the transform (position, rotation, scale) of
+<code>maskMesh</code> synchronized with the object in the main scene you
+want to mask.</p>
+<h4 id="adding-the-passes-to-the-composer">Adding the Passes to the
+Composer</h4>
+<p>Assemble the passes in sequence: write the mask, apply the effect,
+and clear the mask.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Write the mask shape into the stencil buffer</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> maskPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">MaskPass</span>(maskScene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(maskPass)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Add the effect pass to be restricted (e.g., an inversion or glitch shader)</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effectPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">ShaderPass</span>(MyCustomPostShader)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(effectPass)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Disable the stencil mask and reset the buffer state</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> clearMaskPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">ClearMaskPass</span>()<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(clearMaskPass)<span class="op">;</span></span></code></pre></div>
+<p><code>MaskPass</code> automatically sets up the required stencil
+functions:</p>
+<ul>
+<li>It sets <code>gl.stencilFunc(gl.ALWAYS, 1, 0xff)</code>.</li>
+<li>It writes values where the mask geometry renders
+(<code>gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)</code>).</li>
+<li>Subsequent passes are rendered with
+<code>gl.stencilFunc(gl.EQUAL, 1, 0xff)</code>, restricting pixel
+rendering strictly to the masked region.</li>
+<li><code>ClearMaskPass</code> resets the stencil testing state and
+clears the stencil bits.</li>
+</ul>
+<h3 id="4-alternative-manual-stencil-configuration-via-materials">4.
+Alternative: Manual Stencil Configuration via Materials</h3>
+<p>If you prefer not to use a separate <code>MaskPass</code> and
+<code>maskScene</code>, you can configure materials directly within the
+main <code>scene</code> to write to the stencil buffer during the
+initial <code>RenderPass</code>.</p>
+<p>Configure the target mesh's material:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> stencilMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>stencilMaterial<span class="op">.</span><span class="at">stencilWrite</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>stencilMaterial<span class="op">.</span><span class="at">stencilRef</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>stencilMaterial<span class="op">.</span><span class="at">stencilFunc</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">AlwaysStencilFunc</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>stencilMaterial<span class="op">.</span><span class="at">stencilZPass</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">ReplaceStencilOp</span><span class="op">;</span></span></code></pre></div>
+<p>To restrict a subsequent custom <code>ShaderPass</code> to this
+stencil value, inject stencil state management into the pass
+execution:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> effectPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">ShaderPass</span>(MyCustomPostShader)<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Hook into pass rendering to enforce stencil testing</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> originalRender <span class="op">=</span> effectPass<span class="op">.</span><span class="at">render</span><span class="op">.</span><span class="fu">bind</span>(effectPass)<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>effectPass<span class="op">.</span><span class="at">render</span> <span class="op">=</span> <span class="kw">function</span> (renderer<span class="op">,</span> writeBuffer<span class="op">,</span> readBuffer<span class="op">,</span> deltaTime<span class="op">,</span> maskActive) {</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> gl <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getContext</span>()<span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">state</span><span class="op">.</span><span class="at">buffers</span><span class="op">.</span><span class="at">stencil</span><span class="op">.</span><span class="fu">setTest</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">state</span><span class="op">.</span><span class="at">buffers</span><span class="op">.</span><span class="at">stencil</span><span class="op">.</span><span class="fu">setFunc</span>(gl<span class="op">.</span><span class="at">EQUAL</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="bn">0xff</span>)<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">state</span><span class="op">.</span><span class="at">buffers</span><span class="op">.</span><span class="at">stencil</span><span class="op">.</span><span class="fu">setOp</span>(gl<span class="op">.</span><span class="at">KEEP</span><span class="op">,</span> gl<span class="op">.</span><span class="at">KEEP</span><span class="op">,</span> gl<span class="op">.</span><span class="at">KEEP</span>)<span class="op">;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">originalRender</span>(renderer<span class="op">,</span> writeBuffer<span class="op">,</span> readBuffer<span class="op">,</span> deltaTime<span class="op">,</span> maskActive)<span class="op">;</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="at">state</span><span class="op">.</span><span class="at">buffers</span><span class="op">.</span><span class="at">stencil</span><span class="op">.</span><span class="fu">setTest</span>(<span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(effectPass)<span class="op">;</span></span></code></pre></div>
+<h3 id="critical-caveats">Critical Caveats</h3>
+<ul>
+<li><strong>Buffer Swapping:</strong> <code>EffectComposer</code>
+alternates between two internal render targets. Ensure the custom render
+target created in Step 1 is duplicated correctly by the composer so both
+read and write buffers retain depth and stencil allocations.</li>
+<li><strong>Auto-Clear Settings:</strong> If subsequent passes clear the
+frame buffer automatically, the stencil values can be wiped prematurely.
+<code>MaskPass</code> handles clearing internally; if executing
+manually, verify that <code>pass.clear = false</code> on passes
+operating inside the masked boundary.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

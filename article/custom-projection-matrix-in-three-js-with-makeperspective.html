@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Projection Matrix in Three.js with makePerspective - three.js</title>
+    <meta name="description" content="This article explains how to manually construct a custom projection matrix in Three.js using the Matrix4.makePerspective method. You will learn the parameters required by the method, how to apply the custom matrix to a camera, and how to prevent Three.js">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/custom-projection-matrix-in-three-js-with-makeperspective">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Projection Matrix in Three.js with makePerspective - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/custom-projection-matrix-in-three-js-with-makeperspective" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to manually construct a custom projection matrix in Three.js using the Matrix4.makePerspective method. You will learn the parameters required by the method, how to apply the custom matrix to a camera, and how to prevent Three.js" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="custom-projection-matrix-in-threejs-with-makeperspective">Custom
+Projection Matrix in Three.js with makePerspective</h1>
+<p>This article explains how to manually construct a custom projection
+matrix in Three.js using the <code>Matrix4.makePerspective</code>
+method. You will learn the parameters required by the method, how to
+apply the custom matrix to a camera, and how to prevent Three.js from
+overwriting your custom projection calculations during rendering.</p>
+<h2 id="understanding-matrix4makeperspective">Understanding
+Matrix4.makePerspective</h2>
+<p>Three.js cameras typically generate their projection matrices
+internally based on properties such as field of view (FOV), aspect
+ratio, near plane, and far plane. However, the
+<code>THREE.Matrix4</code> class provides a low-level method named
+<code>makePerspective()</code> that allows you to define a viewing
+frustum using explicit coordinate bounds.</p>
+<p>The signature for the method is:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>matrix<span class="op">.</span><span class="fu">makePerspective</span>(left<span class="op">,</span> right<span class="op">,</span> top<span class="op">,</span> bottom<span class="op">,</span> near<span class="op">,</span> far)</span></code></pre></div>
+<h3 id="parameter-breakdown">Parameter Breakdown</h3>
+<ul>
+<li><strong><code>left</code></strong>: Coordinate of the left clipping
+plane on the near plane.</li>
+<li><strong><code>right</code></strong>: Coordinate of the right
+clipping plane on the near plane.</li>
+<li><strong><code>top</code></strong>: Coordinate of the top clipping
+plane on the near plane.</li>
+<li><strong><code>bottom</code></strong>: Coordinate of the bottom
+clipping plane on the near plane.</li>
+<li><strong><code>near</code></strong>: Distance to the near clipping
+plane (must be greater than 0).</li>
+<li><strong><code>far</code></strong>: Distance to the far clipping
+plane (must be greater than <code>near</code>).</li>
+</ul>
+<p>This method is especially useful for asymmetric frustums, off-axis
+projections, stereoscopic rendering, or multi-monitor wall displays
+where standard symmetric FOV parameters are insufficient.</p>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-calculate-frustum-boundaries">1. Calculate Frustum
+Boundaries</h3>
+<p>To create a standard symmetric frustum manually, compute the bounds
+using your desired FOV and aspect ratio:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fov <span class="op">=</span> <span class="dv">60</span><span class="op">;</span> <span class="co">// in degrees</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> aspect <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> near <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> far <span class="op">=</span> <span class="dv">1000</span><span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Convert vertical FOV from degrees to radians and calculate bounds</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> top <span class="op">=</span> near <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">tan</span>(THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(fov) <span class="op">/</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> bottom <span class="op">=</span> <span class="op">-</span>top<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> right <span class="op">=</span> top <span class="op">*</span> aspect<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> left <span class="op">=</span> <span class="op">-</span>right<span class="op">;</span></span></code></pre></div>
+<p>For an asymmetric (off-axis) projection, you can define uneven values
+directly:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> left <span class="op">=</span> <span class="op">-</span><span class="fl">1.5</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> right <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> top <span class="op">=</span> <span class="fl">1.0</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> bottom <span class="op">=</span> <span class="op">-</span><span class="fl">1.0</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> near <span class="op">=</span> <span class="fl">0.1</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> far <span class="op">=</span> <span class="dv">1000</span><span class="op">;</span></span></code></pre></div>
+<h3 id="2-construct-the-matrix-and-apply-to-the-camera">2. Construct the
+Matrix and Apply to the Camera</h3>
+<p>Instantiate a <code>THREE.Matrix4</code>, call
+<code>makePerspective()</code>, and assign it to the camera's
+<code>projectionMatrix</code>:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Use a basic Camera instance or PerspectiveCamera</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Camera</span>()<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiate matrix and set perspective</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customProjectionMatrix <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Matrix4</span>()<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>customProjectionMatrix<span class="op">.</span><span class="fu">makePerspective</span>(left<span class="op">,</span> right<span class="op">,</span> top<span class="op">,</span> bottom<span class="op">,</span> near<span class="op">,</span> far)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign directly to the camera</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">.</span><span class="fu">copy</span>(customProjectionMatrix)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">projectionMatrixInverse</span><span class="op">.</span><span class="fu">copy</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span>)<span class="op">.</span><span class="fu">invert</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-prevent-matrix-overwrites">3. Prevent Matrix Overwrites</h3>
+<p>If you use a <code>THREE.PerspectiveCamera</code>, calling
+<code>camera.updateProjectionMatrix()</code> resets
+<code>projectionMatrix</code> using internal properties
+(<code>camera.fov</code>, <code>camera.aspect</code>, etc.). To prevent
+Three.js or third-party controls from overriding your custom matrix:</p>
+<ul>
+<li>Use a base <code>THREE.Camera</code> instead of
+<code>THREE.PerspectiveCamera</code>. Base cameras do not implement an
+automatic <code>updateProjectionMatrix()</code> method.</li>
+<li>If using <code>THREE.PerspectiveCamera</code>, override its update
+method:</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>()<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">projectionMatrix</span><span class="op">.</span><span class="fu">copy</span>(customProjectionMatrix)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">projectionMatrixInverse</span><span class="op">.</span><span class="fu">copy</span>(camera<span class="op">.</span><span class="at">projectionMatrix</span>)<span class="op">.</span><span class="fu">invert</span>()<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Prevent automatic updates from resetting the custom matrix</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">updateProjectionMatrix</span> <span class="op">=</span> <span class="kw">function</span> () {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Custom logic or no-op</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p>Whenever you modify your custom projection matrix, always recompute
+<code>camera.projectionMatrixInverse</code> to ensure raycasting and
+unprojection work correctly.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

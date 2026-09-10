@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js BufferGeometry Index for Vertex Snapping - three.js</title>
+    <meta name="description" content="This article explains how to extract the index array from a Three.js BufferGeometry and use it alongside vertex position attributes to implement custom vertex snapping logic. You will learn how to verify indexed geometry, read vertex data efficiently usi">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-buffergeometry-index-for-vertex-snapping">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js BufferGeometry Index for Vertex Snapping - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-buffergeometry-index-for-vertex-snapping" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to extract the index array from a Three.js BufferGeometry and use it alongside vertex position attributes to implement custom vertex snapping logic. You will learn how to verify indexed geometry, read vertex data efficiently usi" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-buffergeometry-index-for-vertex-snapping">Three.js
+BufferGeometry Index for Vertex Snapping</h1>
+<p>This article explains how to extract the index array from a Three.js
+<code>BufferGeometry</code> and use it alongside vertex position
+attributes to implement custom vertex snapping logic. You will learn how
+to verify indexed geometry, read vertex data efficiently using index
+pointers, compute distances to find the nearest vertex, and apply
+snapping transformations directly to your 3D models or interactive
+cursors.</p>
+<h2 id="accessing-the-index-array-in-buffergeometry">Accessing the Index
+Array in BufferGeometry</h2>
+<p>In Three.js, a <code>BufferGeometry</code> can be either indexed or
+non-indexed. An indexed geometry shares vertex data across multiple
+faces using a dedicated index buffer, reducing redundant data.</p>
+<p>To access this index array, check the <code>.index</code> property of
+your geometry:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> indexAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (indexAttribute <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indices <span class="op">=</span> indexAttribute<span class="op">.</span><span class="at">array</span><span class="op">;</span> <span class="co">// TypedArray (e.g., Uint16Array or Uint32Array)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Total indices: </span><span class="sc">${</span>indices<span class="op">.</span><span class="at">length</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">warn</span>(<span class="st">&quot;Geometry is not indexed.&quot;</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If your geometry is non-indexed, you can generate an indexed version
+using the utility function <code>mergeVertices</code> from
+<code>three/addons/utils/BufferGeometryUtils.js</code>.</p>
+<h2 id="extracting-vertex-positions-via-the-index">Extracting Vertex
+Positions via the Index</h2>
+<p>The index array contains integer pointers that correspond to vertex
+components inside the <code>geometry.attributes.position</code> buffer.
+To evaluate coordinates, loop through the indices and extract positions
+using <code>THREE.Vector3</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> indexAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertex <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Unique vertex tracking using a Set to avoid redundant checks</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> checkedIndices <span class="op">=</span> <span class="kw">new</span> <span class="bu">Set</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> indexAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> vertexIndex <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i)<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>checkedIndices<span class="op">.</span><span class="fu">has</span>(vertexIndex)) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        checkedIndices<span class="op">.</span><span class="fu">add</span>(vertexIndex)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Extract the (x, y, z) components for this specific index</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> vertexIndex)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Transform to world space if geometry belongs to an Object3D</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="fu">applyMatrix4</span>(mesh<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="implementing-custom-snapping-logic">Implementing Custom Snapping
+Logic</h2>
+<p>Vertex snapping commonly involves two scenarios: snapping an external
+point (like a cursor or another object) to the nearest vertex, or
+snapping the mesh's existing vertices to a custom coordinate grid.</p>
+<h3 id="1-snapping-an-external-point-to-the-closest-vertex">1. Snapping
+an External Point to the Closest Vertex</h3>
+<p>To snap an arbitrary point (such as a raycaster intersection point)
+to the nearest vertex of an indexed mesh:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">snapToNearestVertex</span>(targetPoint<span class="op">,</span> mesh<span class="op">,</span> threshold <span class="op">=</span> <span class="fl">0.5</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> geometry <span class="op">=</span> mesh<span class="op">.</span><span class="at">geometry</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indexAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>indexAttribute) <span class="cf">return</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Convert the target point into the mesh&#39;s local coordinate space</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> inverseMatrix <span class="op">=</span> mesh<span class="op">.</span><span class="at">matrixWorld</span><span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">invert</span>()<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> localTarget <span class="op">=</span> targetPoint<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">applyMatrix4</span>(inverseMatrix)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> closestVertex <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> minDistanceSq <span class="op">=</span> threshold <span class="op">*</span> threshold<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> tempVertex <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> visited <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(positionAttribute<span class="op">.</span><span class="at">count</span>)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> indexAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> vertexIndex <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i)<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Skip vertices that have already been evaluated</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (visited[vertexIndex]) <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        visited[vertexIndex] <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        tempVertex<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> vertexIndex)<span class="op">;</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> distSq <span class="op">=</span> localTarget<span class="op">.</span><span class="fu">distanceToSquared</span>(tempVertex)<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (distSq <span class="op">&lt;</span> minDistanceSq) {</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>            minDistanceSq <span class="op">=</span> distSq<span class="op">;</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>            closestVertex <span class="op">=</span> tempVertex<span class="op">.</span><span class="fu">clone</span>()<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (closestVertex) {</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Return snapped position in world space</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> closestVertex<span class="op">.</span><span class="fu">applyMatrix4</span>(mesh<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">null</span><span class="op">;</span> <span class="co">// No vertex found within the threshold</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="2-snapping-geometry-vertices-to-a-grid">2. Snapping Geometry
+Vertices to a Grid</h3>
+<p>To quantize the vertices of an indexed geometry to a specified grid
+size, iterate through unique indices and update the underlying buffer
+directly:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">snapGeometryToGrid</span>(geometry<span class="op">,</span> gridSize <span class="op">=</span> <span class="fl">1.0</span>) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> indexAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">index</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="op">!</span>indexAttribute) <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> visited <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint8Array</span>(positionAttribute<span class="op">.</span><span class="at">count</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> vertex <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> indexAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> vertexIndex <span class="op">=</span> indexAttribute<span class="op">.</span><span class="fu">getX</span>(i)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (visited[vertexIndex]) <span class="cf">continue</span><span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        visited[vertexIndex] <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="fu">fromBufferAttribute</span>(positionAttribute<span class="op">,</span> vertexIndex)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Snap values to grid increments</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">round</span>(vertex<span class="op">.</span><span class="at">x</span> <span class="op">/</span> gridSize) <span class="op">*</span> gridSize<span class="op">;</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="at">y</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">round</span>(vertex<span class="op">.</span><span class="at">y</span> <span class="op">/</span> gridSize) <span class="op">*</span> gridSize<span class="op">;</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        vertex<span class="op">.</span><span class="at">z</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">round</span>(vertex<span class="op">.</span><span class="at">z</span> <span class="op">/</span> gridSize) <span class="op">*</span> gridSize<span class="op">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>        positionAttribute<span class="op">.</span><span class="fu">setXYZ</span>(vertexIndex<span class="op">,</span> vertex<span class="op">.</span><span class="at">x</span><span class="op">,</span> vertex<span class="op">.</span><span class="at">y</span><span class="op">,</span> vertex<span class="op">.</span><span class="at">z</span>)<span class="op">;</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Flag position buffer for GPU re-upload and recompute normals/bounds</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    positionAttribute<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    geometry<span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    geometry<span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    geometry<span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li><strong>Avoid Redundant Computations:</strong> Because multiple
+faces share indices, always track visited vertex indices using a lookup
+array or <code>Set</code> when iterating through
+<code>geometry.index</code>.</li>
+<li><strong>Transform Coordinates Accurately:</strong> Always compare
+points in the same coordinate space—either transform your reference
+point to local space using the object's inverse world matrix, or
+transform vertices to world space.</li>
+<li><strong>Buffer Updates:</strong> Whenever modifying the positions
+referenced by the index array, set
+<code>positionAttribute.needsUpdate = true</code> and call
+<code>geometry.computeVertexNormals()</code> to maintain correct
+lighting and shading.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

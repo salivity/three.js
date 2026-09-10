@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Use Three.js Ray.distanceToPlane - three.js</title>
+    <meta name="description" content="This guide explains how to determine the precise distance between a camera and an infinite mathematical surface in Three.js using the THREE.Ray.distanceToPlane method. By casting a ray along the camera's viewing axis and testing it against a defined THRE">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-use-three-js-ray-distancetoplane">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Use Three.js Ray.distanceToPlane - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-use-three-js-ray-distancetoplane" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to determine the precise distance between a camera and an infinite mathematical surface in Three.js using the THREE.Ray.distanceToPlane method. By casting a ray along the camera's viewing axis and testing it against a defined THRE" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-use-threejs-raydistancetoplane">How to Use Three.js
+Ray.distanceToPlane</h1>
+<p>This guide explains how to determine the precise distance between a
+camera and an infinite mathematical surface in Three.js using the
+<code>THREE.Ray.distanceToPlane</code> method. By casting a ray along
+the camera's viewing axis and testing it against a defined
+<code>THREE.Plane</code>, you can retrieve the exact distance to the
+point of intersection or detect when the plane does not lie in the
+camera's field of view.</p>
+<h3 id="understanding-the-core-components">Understanding the Core
+Components</h3>
+<p>To measure this gap, Three.js requires two primary mathematical
+constructs:</p>
+<ol type="1">
+<li><strong><code>THREE.Plane</code></strong>: A flat, infinite
+two-dimensional surface defined by a normalized normal vector and a
+distance constant from the world origin (<span
+class="math inline">\(w\)</span>).</li>
+<li><strong><code>THREE.Ray</code></strong>: A directed half-line
+defined by an origin point (<code>Vector3</code>) and a normalized
+direction vector (<code>Vector3</code>).</li>
+</ol>
+<p>The <code>Ray.distanceToPlane(plane)</code> method calculates the
+linear distance from the ray's origin to the intersection point on the
+plane. If the ray points away from the plane or runs parallel to it, the
+method returns <code>null</code>.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<h4 id="1-define-the-mathematical-plane">1. Define the Mathematical
+Plane</h4>
+<p>Create the plane by defining its normal vector and constant. For
+example, to create a horizontal ground plane situated 5 units below the
+world origin:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Normal points straight up (Y-axis), offset by 5 units down</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> planeNormal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> planeConstant <span class="op">=</span> <span class="dv">5</span><span class="op">;</span> </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPlane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>(planeNormal<span class="op">,</span> planeConstant)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-create-and-align-the-ray-with-the-camera">2. Create and Align
+the Ray with the Camera</h4>
+<p>Extract the camera's world position to serve as the ray's origin, and
+extract the camera's forward-facing direction to serve as the ray's
+direction.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">20</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">lookAt</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiate vectors to prevent memory reallocation in render loops</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cameraPosition <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> cameraDirection <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Get world position and forward direction vector</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">getWorldPosition</span>(cameraPosition)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">getWorldDirection</span>(cameraDirection)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Construct the ray</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ray <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Ray</span>(cameraPosition<span class="op">,</span> cameraDirection)<span class="op">;</span></span></code></pre></div>
+<h4 id="3-calculate-the-distance">3. Calculate the Distance</h4>
+<p>Pass the plane instance into the ray's <code>distanceToPlane</code>
+method:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> distance <span class="op">=</span> ray<span class="op">.</span><span class="fu">distanceToPlane</span>(targetPlane)<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (distance <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Distance from camera to plane: </span><span class="sc">${</span>distance<span class="op">.</span><span class="fu">toFixed</span>(<span class="dv">2</span>)<span class="sc">}</span><span class="vs"> units`</span>)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="st">&#39;The camera is facing away from or parallel to the plane.&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="measuring-perpendicular-distance-vs-ray-distance">Measuring
+Perpendicular Distance vs. Ray Distance</h3>
+<p>It is important to distinguish between the distance along the
+camera's line of sight and the perpendicular distance to the plane:</p>
+<ul>
+<li><strong>Line of Sight (Ray Distance)</strong>: Calculated via
+<code>ray.distanceToPlane(plane)</code>. This represents how far light
+travels straight out from the camera lens to strike the plane surface at
+an angle.</li>
+<li><strong>Orthogonal Distance</strong>: Calculated via
+<code>plane.distanceToPoint(camera.position)</code>. This measures the
+shortest perpendicular distance from the camera directly to the plane,
+regardless of where the camera is facing.</li>
+</ul>
+<h3 id="continuous-measurement-in-the-animation-loop">Continuous
+Measurement in the Animation Loop</h3>
+<p>To track this distance dynamically as the camera moves or rotates,
+place the calculation inside your render or update loop:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateDistance</span>() {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">getWorldPosition</span>(ray<span class="op">.</span><span class="at">origin</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">.</span><span class="fu">getWorldDirection</span>(ray<span class="op">.</span><span class="at">direction</span>)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> gap <span class="op">=</span> ray<span class="op">.</span><span class="fu">distanceToPlane</span>(targetPlane)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (gap <span class="op">!==</span> <span class="kw">null</span>) {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply logic such as Level of Detail (LOD) switching, fog adjustments, or collision checks</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">handleProximity</span>(gap)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">updateDistance</span>()<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

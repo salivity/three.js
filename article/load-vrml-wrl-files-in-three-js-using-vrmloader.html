@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load VRML WRL Files in Three.js Using VRMLoader - three.js</title>
+    <meta name="description" content="This guide explains how to convert legacy Virtual Reality Modeling Language (VRML 2.0 / VRML97) .wrl files into modern WebGL scene graphs using Three.js. By utilizing the built-in VRMLoader add-on, developers can import historical 3D assets directly into">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/load-vrml-wrl-files-in-three-js-using-vrmloader">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Load VRML WRL Files in Three.js Using VRMLoader - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/load-vrml-wrl-files-in-three-js-using-vrmloader" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to convert legacy Virtual Reality Modeling Language (VRML 2.0 / VRML97) .wrl files into modern WebGL scene graphs using Three.js. By utilizing the built-in VRMLoader add-on, developers can import historical 3D assets directly into" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="load-vrml-wrl-files-in-threejs-using-vrmloader">Load VRML WRL
+Files in Three.js Using VRMLoader</h1>
+<p>This guide explains how to convert legacy Virtual Reality Modeling
+Language (VRML 2.0 / VRML97) <code>.wrl</code> files into modern WebGL
+scene graphs using Three.js. By utilizing the built-in
+<code>VRMLoader</code> add-on, developers can import historical 3D
+assets directly into a standard Three.js render loop without requiring
+third-party conversion software.</p>
+<h3 id="1-import-the-required-modules">1. Import the Required
+Modules</h3>
+<p><code>VRMLoader</code> is not included in the Three.js core bundle;
+it is distributed as an add-on. Import both <code>three</code> and
+<code>VRMLoader</code> from the <code>three/addons</code> directory.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { VRMLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/VRMLoader.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<p>If you are using script tags with an import map, ensure your mapping
+points correctly to your <code>three/addons/</code> path.</p>
+<h3 id="2-set-up-the-loader-and-load-the-asset">2. Set Up the Loader and
+Load the Asset</h3>
+<p>Instantiate the <code>VRMLoader</code> and use its
+<code>.load()</code> method. The loader parses the textual
+<code>.wrl</code> syntax into a standard <code>THREE.Group</code> or
+<code>THREE.Scene</code> object containing meshes, materials, and
+hierarchy.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize the basic Three.js scene</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Instantiate the VRMLoader</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">VRMLoader</span>()<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Load the .wrl file</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;models/legacy_model.wrl&#39;</span><span class="op">,</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> (object) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="co">// &#39;object&#39; is a THREE.Scene/THREE.Group containing the parsed scene graph</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="fu">add</span>(object)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> (xhr) {</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>((xhr<span class="op">.</span><span class="at">loaded</span> <span class="op">/</span> xhr<span class="op">.</span><span class="at">total</span> <span class="op">*</span> <span class="dv">100</span>) <span class="op">+</span> <span class="st">&#39;% loaded&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">function</span> (error) {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&#39;An error occurred while loading the VRML file:&#39;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-parse-in-memory-data">3. Parse In-Memory Data</h3>
+<p>If the <code>.wrl</code> file is retrieved as a raw string (e.g., via
+<code>fetch</code> or user file upload), use the synchronous
+<code>.parse()</code> method instead:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> wrlText <span class="op">=</span> <span class="st">&quot;...&quot;</span><span class="op">;</span> <span class="co">// Raw VRML file text</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> parsedScene <span class="op">=</span> loader<span class="op">.</span><span class="fu">parse</span>(wrlText)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(parsedScene)<span class="op">;</span></span></code></pre></div>
+<h3 id="4-critical-considerations-for-legacy-wrl-files">4. Critical
+Considerations for Legacy WRL Files</h3>
+<ul>
+<li><strong>VRML Version Support:</strong> The Three.js
+<code>VRMLoader</code> strictly supports <strong>VRML 2.0
+(VRML97)</strong> syntax. It cannot parse older VRML 1.0 files. Check
+the header line of your <code>.wrl</code> file; it must start with
+<code>#VRML V2.0 utf8</code>. Files beginning with
+<code>#VRML V1.0</code> must be converted to VRML 2.0 or modern formats
+using external tools like Blender or MeshLab first.</li>
+<li><strong>Texture Paths:</strong> VRML files often use relative paths
+to reference external image files (such as <code>.jpg</code> or
+<code>.png</code>). Ensure that textures are hosted relative to the
+loading script or configure a loading manager to resolve resource URLs
+properly using <code>loader.setResourcePath('textures/')</code>.</li>
+<li><strong>Scale and Orientation:</strong> Many legacy CAD and VRML
+tools use different unit standards (such as millimeters or inches) and
+coordinate system orientations (Z-up instead of Three.js's Y-up). Apply
+transforms directly to the loaded group if the asset appears misaligned
+or disproportionately sized:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>object<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(<span class="fl">0.01</span><span class="op">,</span> <span class="fl">0.01</span><span class="op">,</span> <span class="fl">0.01</span>)<span class="op">;</span> <span class="co">// Adjust scale if needed</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>object<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="op">-</span><span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">2</span><span class="op">;</span>    <span class="co">// Correct orientation if exported as Z-up</span></span></code></pre></div>
+<h3 id="5-transitioning-to-modern-formats">5. Transitioning to Modern
+Formats</h3>
+<p>VRML parsing involves heavy text interpretation in JavaScript at
+runtime. For production environments, serialize the parsed Three.js
+object to glTF/GLB using <code>GLTFExporter</code> to optimize load
+times, memory consumption, and runtime performance.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

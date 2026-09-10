@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js DecalGeometry: Projecting Decals on Meshes - three.js</title>
+    <meta name="description" content="The DecalGeometry class in Three.js provides a specialized solution for projecting 2D textures—such as bullet impacts, footprints, blood splatters, or decorative stickers—directly onto complex, irregular 3D surfaces. Instead of modifying the target o">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-decalgeometry-projecting-decals-on-meshes">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js DecalGeometry: Projecting Decals on Meshes - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-decalgeometry-projecting-decals-on-meshes" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="The DecalGeometry class in Three.js provides a specialized solution for projecting 2D textures—such as bullet impacts, footprints, blood splatters, or decorative stickers—directly onto complex, irregular 3D surfaces. Instead of modifying the target o" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-decalgeometry-projecting-decals-on-meshes">Three.js
+DecalGeometry: Projecting Decals on Meshes</h1>
+<p>The <code>DecalGeometry</code> class in Three.js provides a
+specialized solution for projecting 2D textures—such as bullet impacts,
+footprints, blood splatters, or decorative stickers—directly onto
+complex, irregular 3D surfaces. Instead of modifying the target object's
+original texture or relying on flat planes that clip through curved
+geometry, <code>DecalGeometry</code> computes a custom sub-mesh derived
+from the target mesh. This article explains the technical purpose of
+<code>DecalGeometry</code>, the rendering problems it solves, and how it
+functions within a Three.js scene.</p>
+<h3 id="the-purpose-of-decalgeometry">The Purpose of DecalGeometry</h3>
+<p>In 3D graphics, applying localized details to a surface using simple
+textured quads presents significant visual artifacts. If a flat plane is
+placed on a curved or uneven surface, parts of the plane will hover in
+empty space while other parts intersect and disappear inside the
+mesh.</p>
+<p><code>DecalGeometry</code> solves this by functioning as an oriented
+bounding box projector. It captures the exact surface contours of the
+target mesh within a specified area, clipping the target's polygons to
+create a brand-new geometry that conforms perfectly to the underlying
+model.</p>
+<h3 id="key-problems-solved-by-decalgeometry">Key Problems Solved by
+DecalGeometry</h3>
+<ol type="1">
+<li><strong>Surface Conformance:</strong> Standard geometric primitives
+cannot adapt to arbitrary, non-flat topologies.
+<code>DecalGeometry</code> dynamically extracts the vertices and faces
+of the target mesh within its projection volume, wrapping seamlessly
+over curves, corners, and seams.</li>
+<li><strong>Preventing Z-Fighting:</strong> When two coplanar surfaces
+share the exact same depth, rendering engines struggle to determine
+which surface is in front, causing flickering artifacts known as
+z-fighting. <code>DecalGeometry</code>, combined with material settings
+such as <code>polygonOffset</code>, slightly shifts the depth values of
+the decal to ensure clean rendering on top of the base mesh.</li>
+<li><strong>Preserving Original Textures and UVs:</strong> Without
+decals, localized marks would require dynamically painting onto the base
+object's texture map (canvas baking) or editing the original UV layout.
+<code>DecalGeometry</code> generates its own local UV coordinates
+ranging from <code>(0,0)</code> to <code>(1,1)</code> across the
+projection box, leaving the underlying mesh and its materials completely
+untouched.</li>
+</ol>
+<h3 id="how-decalgeometry-works">How DecalGeometry Works</h3>
+<p>Creating a decal typically involves a combination of raycasting and
+projection math:</p>
+<ul>
+<li><strong>Intersection:</strong> A raycaster identifies the point of
+contact on the target mesh, returning the exact hit position and face
+normal (surface direction).</li>
+<li><strong>Projection Box Definition:</strong> The developer defines a
+projection volume by specifying the target mesh, the contact position,
+an orientation vector derived from the normal, and dimensions
+representing the width, height, and depth of the decal.</li>
+<li><strong>Polygon Clipping:</strong> <code>DecalGeometry</code>
+traverses the target mesh's triangles, clips any geometry falling
+outside the projection volume, and outputs a new
+<code>BufferGeometry</code>.</li>
+<li><strong>Mesh Generation:</strong> The resulting geometry is paired
+with a material (typically using transparency and an alpha map) and
+added to the scene as an independent mesh.</li>
+</ul>
+<h3 id="common-applications">Common Applications</h3>
+<ul>
+<li><strong>Dynamic Combat Effects:</strong> Bullet holes, scorch marks,
+and slash effects placed dynamically during gameplay.</li>
+<li><strong>Environmental Details:</strong> Puddles, tire tracks,
+graffiti, and dirt overlays applied to static world geometry.</li>
+<li><strong>Product Customization:</strong> Adding logos, labels, or
+stickers to 3D product models in web-based configurators.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

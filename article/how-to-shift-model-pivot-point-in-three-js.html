@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Shift Model Pivot Point in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to shift the origin pivot point of a 3D model in Three.js using the center() method on its geometry. When importing 3D assets, transformations like rotation and scaling occur around the model's local origin, which may not align">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-shift-model-pivot-point-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Shift Model Pivot Point in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-shift-model-pivot-point-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to shift the origin pivot point of a 3D model in Three.js using the center() method on its geometry. When importing 3D assets, transformations like rotation and scaling occur around the model's local origin, which may not align" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-shift-model-pivot-point-in-threejs">How to Shift Model
+Pivot Point in Three.js</h1>
+<p>This article explains how to shift the origin pivot point of a 3D
+model in Three.js using the <code>center()</code> method on its
+geometry. When importing 3D assets, transformations like rotation and
+scaling occur around the model's local origin, which may not align with
+its physical center. By using Three.js's built-in geometry methods, you
+can quickly recalculate vertex positions to position the pivot point
+directly at the center of the mesh.</p>
+<h2 id="understanding-the-pivot-point-in-threejs">Understanding the
+Pivot Point in Three.js</h2>
+<p>In Three.js, an object's pivot point corresponds to its local
+coordinate origin <code>(0, 0, 0)</code>. When you rotate or scale an
+<code>Object3D</code> or <code>Mesh</code>, the transformation is
+computed relative to this origin.</p>
+<p>If a model was exported from software like Blender with its origin
+offset from the actual geometry, rotating the mesh in Three.js causes it
+to orbit around that distant point rather than spinning in place.</p>
+<h2 id="shifting-the-pivot-with-geometrycenter">Shifting the Pivot with
+<code>geometry.center()</code></h2>
+<p>The <code>BufferGeometry.center()</code> method computes the bounding
+box of the geometry and translates all vertex positions so that the
+bounding box center aligns with the local origin
+<code>(0, 0, 0)</code>.</p>
+<p>Because this method directly alters the vertex data rather than
+modifying the mesh's <code>position</code> property, the local origin
+effectively becomes the exact center of the geometry.</p>
+<h3 id="implementation-for-a-single-mesh">Implementation for a Single
+Mesh</h3>
+<p>If your loaded model consists of a single mesh, invoke
+<code>.center()</code> directly on its <code>geometry</code>
+property:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/addons/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> loader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>loader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/model.glb&#39;</span><span class="op">,</span> (gltf) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> model <span class="op">=</span> gltf<span class="op">.</span><span class="at">scene</span><span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    model<span class="op">.</span><span class="fu">traverse</span>((child) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (child<span class="op">.</span><span class="at">isMesh</span>) {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Recenter the geometry to shift the pivot point to the center</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            child<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">center</span>()<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="fu">add</span>(model)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="how-geometrycenter-works-internally">How
+<code>geometry.center()</code> Works Internally</h3>
+<p>Under the hood, <code>BufferGeometry.center()</code> performs the
+following operations:</p>
+<ol type="1">
+<li>Calls <code>computeBoundingBox()</code> to determine the minimum and
+maximum boundaries of the vertices.</li>
+<li>Calculates the center offset vector:
+<code>offset = - (min + max) / 2</code>.</li>
+<li>Calls <code>translate(offset.x, offset.y, offset.z)</code> on the
+geometry, shifting every vertex coordinate by that vector.</li>
+</ol>
+<p>Once this executes, any subsequent transformations—such as
+<code>mesh.rotation.y += 0.01</code>—will rotate the mesh around its
+new, centrally located pivot.</p>
+<h2 id="considerations-for-multi-mesh-models">Considerations for
+Multi-Mesh Models</h2>
+<p>If your loaded asset contains multiple interconnected child meshes (a
+hierarchy), calling <code>child.geometry.center()</code> on every child
+will center each mesh independently. This will collapse all individual
+parts onto the same central origin, breaking the model's visual
+structure.</p>
+<p>To shift the pivot point of a complex, multi-part hierarchy without
+breaking the geometry:</p>
+<ol type="1">
+<li>Calculate the overall bounding box of the entire hierarchy using
+<code>new THREE.Box3().setFromObject(model)</code>.</li>
+<li>Extract the center vector using
+<code>box.getCenter(new THREE.Vector3())</code>.</li>
+<li>Wrap the model inside a parent <code>THREE.Group()</code>.</li>
+<li>Offset the model's position by the negative center:
+<code>model.position.sub(center)</code>.</li>
+</ol>
+<p>For single-mesh objects, however, <code>geometry.center()</code>
+remains the most direct and efficient method to permanently correct
+pivot point alignment in Three.js.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

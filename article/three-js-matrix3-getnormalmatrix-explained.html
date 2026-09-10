@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Matrix3 getNormalMatrix Explained - three.js</title>
+    <meta name="description" content="This article provides a concise overview of the specific mathematical operation performed by the Matrix3.getNormalMatrix method in Three.js. It covers why surface normals require a specialized transformation matrix rather than the standard model-view mat">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-matrix3-getnormalmatrix-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Matrix3 getNormalMatrix Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-matrix3-getnormalmatrix-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides a concise overview of the specific mathematical operation performed by the Matrix3.getNormalMatrix method in Three.js. It covers why surface normals require a specialized transformation matrix rather than the standard model-view mat" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-matrix3-getnormalmatrix-explained">Three.js Matrix3
+getNormalMatrix Explained</h1>
+<p>This article provides a concise overview of the specific mathematical
+operation performed by the <code>Matrix3.getNormalMatrix</code> method
+in Three.js. It covers why surface normals require a specialized
+transformation matrix rather than the standard model-view matrix,
+details the mathematical derivation involving the inverse transpose, and
+outlines the step-by-step calculation executed internally by the
+Three.js library.</p>
+<h3 id="the-mathematical-function">The Mathematical Function</h3>
+<p>The specific mathematical function of
+<code>Matrix3.getNormalMatrix</code> is to calculate the <strong>inverse
+transpose</strong> of the upper-left 3×3 submatrix of a given 4×4 affine
+transformation matrix (typically the <code>modelViewMatrix</code> or
+<code>modelMatrix</code>).</p>
+<p>Mathematically, if <span class="math inline">\(M\)</span> represents
+the 4×4 transformation matrix, and <span
+class="math inline">\(A\)</span> represents the upper-left 3×3 submatrix
+of <span class="math inline">\(M\)</span> (containing the rotation and
+scaling components):</p>
+<p><span class="math display">\[N = (A^{-1})^T\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(A\)</span> is the 3×3 rotation-scale
+matrix extracted from the input <code>Matrix4</code>.</li>
+<li><span class="math inline">\(A^{-1}\)</span> is the matrix inverse of
+<span class="math inline">\(A\)</span>.</li>
+<li><span class="math inline">\(T\)</span> denotes the transpose
+operation.</li>
+<li><span class="math inline">\(N\)</span> is the resulting 3×3 normal
+matrix.</li>
+</ul>
+<p>In Three.js source code, this is implemented directly as:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">this</span><span class="op">.</span><span class="fu">setFromMatrix4</span>( matrix4 )<span class="op">.</span><span class="fu">invert</span>()<span class="op">.</span><span class="fu">transpose</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="why-the-inverse-transpose-is-required">Why the Inverse Transpose
+is Required</h3>
+<p>Surface normals are directional vectors that must remain
+perpendicular to the surface of a polygon. While translations,
+rotations, and uniform scaling preserve the perpendicularity of normals
+when using standard matrix multiplication, <strong>non-uniform
+scaling</strong> and <strong>shearing</strong> distort angles.</p>
+<p>If a mesh is scaled along only one axis (for example, stretched along
+the X-axis), applying that same scale matrix directly to the surface
+normals tilts them incorrectly, causing them to lose their 90-degree
+angle relative to the surface tangent vectors.</p>
+<h3 id="the-mathematical-proof">The Mathematical Proof</h3>
+<p>To understand why the inverse transpose is necessary, consider a
+tangent vector <span class="math inline">\(\mathbf{t}\)</span> on a
+surface and the corresponding surface normal <span
+class="math inline">\(\mathbf{n}\)</span>. Because they are
+perpendicular, their dot product equals zero:</p>
+<p><span class="math display">\[\mathbf{n} \cdot \mathbf{t} =
+\mathbf{n}^T \mathbf{t} = 0\]</span></p>
+<p>When an object is transformed by matrix <span
+class="math inline">\(A\)</span>, the tangent vector transforms
+directly:</p>
+<p><span class="math display">\[\mathbf{t}&#39; = A
+\mathbf{t}\]</span></p>
+<p>The transformed normal <span
+class="math inline">\(\mathbf{n}&#39;\)</span> must be computed using an
+unknown matrix <span class="math inline">\(N\)</span> such that <span
+class="math inline">\(\mathbf{n}&#39; = N \mathbf{n}\)</span>, while
+still remaining orthogonal to <span
+class="math inline">\(\mathbf{t}&#39;\)</span>:</p>
+<p><span class="math display">\[(\mathbf{n}&#39;)^T \mathbf{t}&#39; =
+0\]</span></p>
+<p>Substitute the transformed vectors into the equation:</p>
+<p><span class="math display">\[(N \mathbf{n})^T (A \mathbf{t}) =
+0\]</span></p>
+<p>Using the transpose property <span class="math inline">\((A B)^T =
+B^T A^T\)</span>:</p>
+<p><span class="math display">\[\mathbf{n}^T N^T A \mathbf{t} =
+0\]</span></p>
+<p>For this equation to hold true for any arbitrary tangent and normal
+where <span class="math inline">\(\mathbf{n}^T \mathbf{t} = 0\)</span>,
+the product <span class="math inline">\(N^T A\)</span> must reduce to
+the identity matrix <span class="math inline">\(I\)</span>:</p>
+<p><span class="math display">\[N^T A = I\]</span></p>
+<p>Solving for <span class="math inline">\(N\)</span>:</p>
+<p><span class="math display">\[N^T = A^{-1}\]</span></p>
+<p><span class="math display">\[N = (A^{-1})^T\]</span></p>
+<h3 id="threejs-implementation-steps">Three.js Implementation Steps</h3>
+<p>When calling <code>normalMatrix.getNormalMatrix( matrix4 )</code>,
+Three.js executes three primary steps:</p>
+<ol type="1">
+<li><strong>Extraction (<code>setFromMatrix4</code>)</strong>: Discards
+the fourth row and fourth column of the 4×4 input matrix. This removes
+translation components and perspective projections, leaving only
+rotation, scale, and shear.</li>
+<li><strong>Inversion (<code>invert</code>)</strong>: Inverts the 3×3
+matrix. Scaling factors are inverted (e.g., a scale factor of 2 becomes
+0.5), which counteracts the distortion caused by non-uniform
+scaling.</li>
+<li><strong>Transposition (<code>transpose</code>)</strong>: Flips the
+matrix along its main diagonal (swapping rows and columns). This
+reorients the directional components correctly so the resulting vector
+remains orthogonal to the transformed surface.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

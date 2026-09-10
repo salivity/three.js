@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Depth Buffer Holes Using colorWrite - three.js</title>
+    <meta name="description" content="In Three.js, you can create an invisible "hole" or mask that occludes objects behind it without drawing any pixels to the screen. This optical effect is achieved by configuring a material with colorWrite: false and depthWrite: true, which populates the d">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-depth-buffer-holes-using-colorwrite">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Depth Buffer Holes Using colorWrite - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-depth-buffer-holes-using-colorwrite" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, you can create an invisible "hole" or mask that occludes objects behind it without drawing any pixels to the screen. This optical effect is achieved by configuring a material with colorWrite: false and depthWrite: true, which populates the d" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-depth-buffer-holes-using-colorwrite">Three.js Depth
+Buffer Holes Using colorWrite</h1>
+<p>In Three.js, you can create an invisible "hole" or mask that occludes
+objects behind it without drawing any pixels to the screen. This optical
+effect is achieved by configuring a material with
+<code>colorWrite: false</code> and <code>depthWrite: true</code>, which
+populates the depth buffer while leaving the color buffer untouched.
+This guide explains how this mechanism works, how to configure the
+render pipeline correctly, and how to implement it with a minimal code
+example.</p>
+<h3 id="how-the-depth-buffer-trick-works">How the Depth Buffer Trick
+Works</h3>
+<p>When rendering a 3D scene, the WebGL pipeline uses two primary
+buffers:</p>
+<ol type="1">
+<li><strong>The Color Buffer:</strong> Stores the visible RGB/alpha
+values displayed on the screen.</li>
+<li><strong>The Depth Buffer (Z-Buffer):</strong> Stores the distance of
+each fragment relative to the camera to determine which objects are in
+front of others.</li>
+</ol>
+<p>Setting <code>colorWrite = false</code> prevents the material from
+writing any color values to the screen, making the mesh completely
+transparent. Setting <code>depthWrite = true</code> forces the mesh to
+write its geometric depth directly into the depth buffer. Consequently,
+any geometry rendered afterward that sits behind this invisible mesh
+will fail the depth test and be discarded, creating a visible "cutout"
+or "portal."</p>
+<h3 id="the-importance-of-render-order">The Importance of Render
+Order</h3>
+<p>For an occlusion mask to work, the invisible masking mesh must be
+drawn <strong>before</strong> the objects it is supposed to hide. If the
+background objects render first, their pixels are already committed to
+the color buffer before the mask writes its depth.</p>
+<p>In Three.js, you control execution order explicitly using the
+<code>renderOrder</code> property on the <code>Object3D</code>
+instance:</p>
+<ul>
+<li><strong>Masking Object:</strong> Set a low <code>renderOrder</code>
+(e.g., <code>renderOrder = 0</code> or negative).</li>
+<li><strong>Occluded Objects:</strong> Set a higher
+<code>renderOrder</code> (e.g., <code>renderOrder = 1</code>).</li>
+</ul>
+<h3 id="implementation-example">Implementation Example</h3>
+<p>The following snippet demonstrates how to configure an invisible
+cylinder that punches a circular hole into a background cube:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create the invisible masking geometry (the hole)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> holeGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">CylinderGeometry</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="dv">32</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> holeMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshBasicMaterial</span>({</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">colorWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span> <span class="co">// Do not draw any color to the screen</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">true</span>   <span class="co">// Still write to the depth buffer</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> holeMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(holeGeometry<span class="op">,</span> holeMaterial)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>holeMesh<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// Ensure it renders first</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(holeMesh)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Create the target object that will be occluded</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetGeometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BoxGeometry</span>(<span class="dv">4</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff0000</span> })<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(targetGeometry<span class="op">,</span> targetMaterial)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>targetMesh<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">z</span> <span class="op">=</span> <span class="op">-</span><span class="dv">1</span><span class="op">;</span> <span class="co">// Placed behind the hole</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>targetMesh<span class="op">.</span><span class="at">renderOrder</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> <span class="co">// Renders after the hole mask</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(targetMesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="practical-use-cases">Practical Use Cases</h3>
+<ul>
+<li><strong>Portals and Windows:</strong> Showing a hidden interior
+scene through an aperture without rendering complex Boolean geometry
+operations.</li>
+<li><strong>Augmented Reality (AR):</strong> Occluding virtual 3D
+objects with real-world obstacles using a reconstructed invisible
+mesh.</li>
+<li><strong>Cross-Section Views:</strong> Cutting away layers of
+architectural or mechanical models dynamically in real time.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

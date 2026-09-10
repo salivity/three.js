@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js DodecahedronGeometry Detail Levels - three.js</title>
+    <meta name="description" content="This guide demonstrates how to construct and configure a DodecahedronGeometry with varying levels of detail in Three.js. By adjusting the detail parameter in the geometry constructor, you can transform a standard 12-sided platonic solid into an increasin">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-dodecahedrongeometry-detail-levels">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js DodecahedronGeometry Detail Levels - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-dodecahedrongeometry-detail-levels" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to construct and configure a DodecahedronGeometry with varying levels of detail in Three.js. By adjusting the detail parameter in the geometry constructor, you can transform a standard 12-sided platonic solid into an increasin" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-dodecahedrongeometry-detail-levels">Three.js
+DodecahedronGeometry Detail Levels</h1>
+<p>This guide demonstrates how to construct and configure a
+<code>DodecahedronGeometry</code> with varying levels of detail in
+Three.js. By adjusting the <code>detail</code> parameter in the geometry
+constructor, you can transform a standard 12-sided platonic solid into
+an increasingly complex, spherical polyhedron. You will learn the
+syntax, observe code examples across multiple detail settings, and
+understand how subdivisions affect vertex counts and rendering
+performance.</p>
+<h3 id="the-dodecahedrongeometry-constructor">The DodecahedronGeometry
+Constructor</h3>
+<p>In Three.js, the <code>DodecahedronGeometry</code> class creates a
+dodecahedron mesh using two primary parameters:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DodecahedronGeometry</span>(radius<span class="op">,</span> detail)<span class="op">;</span></span></code></pre></div>
+<ul>
+<li><strong><code>radius</code></strong> (<em>Float</em>): The distance
+from the center of the shape to its vertices. The default value is
+<code>1</code>.</li>
+<li><strong><code>detail</code></strong> (<em>Integer</em>): The number
+of subdivisions added to the faces. The default value is
+<code>0</code>.</li>
+</ul>
+<h3 id="understanding-the-detail-parameter">Understanding the Detail
+Parameter</h3>
+<p>When <code>detail</code> is set to <code>0</code>, Three.js renders a
+standard dodecahedron composed of 12 pentagonal faces (split into
+triangles for GPU rendering).</p>
+<p>Increasing the <code>detail</code> value subdivides each original
+face into smaller triangles and projects the new vertices outward to
+match the specified <code>radius</code>. This process turns the
+flat-faced geometric shape into a geodesic sphere.</p>
+<h3 id="implementation-examples">Implementation Examples</h3>
+<h4 id="1-default-dodecahedron-detail--0">1. Default Dodecahedron
+(Detail = 0)</h4>
+<p>Setting the detail to <code>0</code> maintains the sharp, classic
+12-faced polyhedron profile.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Radius: 5, Detail: 0</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometryLevel0 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DodecahedronGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0077ff</span><span class="op">,</span> <span class="dt">flatShading</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshLevel0 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometryLevel0<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(meshLevel0)<span class="op">;</span></span></code></pre></div>
+<h4 id="2-intermediate-subdivisions-detail--1-or-2">2. Intermediate
+Subdivisions (Detail = 1 or 2)</h4>
+<p>Setting the detail to <code>1</code> or <code>2</code> creates a
+faceted, "low-poly" sphere aesthetic.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// A slightly subdivided dodecahedron</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometryLevel1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DodecahedronGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshLevel1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometryLevel1<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// A denser low-poly geodesic mesh</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometryLevel2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DodecahedronGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">2</span>)<span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> meshLevel2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometryLevel2<span class="op">,</span> material)<span class="op">;</span></span></code></pre></div>
+<h4 id="3-smooth-geodesic-sphere-detail--3-to-5">3. Smooth Geodesic
+Sphere (Detail = 3 to 5)</h4>
+<p>Increasing the detail to <code>3</code> or higher generates enough
+triangles to create a visually smooth sphere, while preserving an
+underlying geodesic pattern rather than the standard latitude/longitude
+lines of a <code>SphereGeometry</code>.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// High-detail spherical mesh</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometryHighDetail <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DodecahedronGeometry</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> smoothMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0x0077ff</span><span class="op">,</span> <span class="dt">flatShading</span><span class="op">:</span> <span class="kw">false</span> })<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> smoothSphereMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometryHighDetail<span class="op">,</span> smoothMaterial)<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(smoothSphereMesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="performance-considerations">Performance Considerations</h3>
+<p>Each increment of the <code>detail</code> integer multiplies the
+polygon count significantly. While detail values between <code>0</code>
+and <code>3</code> are lightweight, values above <code>5</code> can
+rapidly inflate triangle and vertex counts, leading to memory overhead
+and reduced frame rates. For dynamic Level of Detail (LOD) systems, use
+<code>THREE.LOD</code> to swap between low-detail
+(<code>detail: 0</code> or <code>1</code>) and high-detail versions
+based on the camera's distance.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

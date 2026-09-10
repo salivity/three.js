@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Color.convertSRGBToLinear for Shader Math - three.js</title>
+    <meta name="description" content="When working with custom shaders in Three.js, using hex colors directly can lead to incorrect lighting, washed-out tones, or distorted blending. This article explains why color space conversion is necessary and demonstrates how to use the Color.convertSR">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-color-convertsrgbtolinear-for-shader-math">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Color.convertSRGBToLinear for Shader Math - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-color-convertsrgbtolinear-for-shader-math" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="When working with custom shaders in Three.js, using hex colors directly can lead to incorrect lighting, washed-out tones, or distorted blending. This article explains why color space conversion is necessary and demonstrates how to use the Color.convertSR" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-colorconvertsrgbtolinear-for-shader-math">Three.js
+Color.convertSRGBToLinear for Shader Math</h1>
+<p>When working with custom shaders in Three.js, using hex colors
+directly can lead to incorrect lighting, washed-out tones, or distorted
+blending. This article explains why color space conversion is necessary
+and demonstrates how to use the <code>Color.convertSRGBToLinear()</code>
+method to prepare hex colors for accurate shader mathematics.</p>
+<h2 id="why-color-space-conversion-is-required">Why Color Space
+Conversion Is Required</h2>
+<p>Hexadecimal color codes (such as <code>#ff5500</code>) are defined in
+the sRGB color space, which applies a non-linear gamma curve optimized
+for human vision on computer displays. Modern rendering engines,
+including Three.js, perform lighting calculations and mathematical
+operations in a linear color space.</p>
+<p>If you pass an sRGB hex color directly into a custom GLSL shader as a
+uniform, the GPU processes non-linear values as if they were linear.
+This breaks physically based lighting calculations, resulting in colors
+that appear too bright or incorrectly saturated. Converting the color to
+linear space beforehand aligns your custom shader inputs with Three.js's
+internal rendering pipeline.</p>
+<h2 id="converting-hex-colors-with-convertsrgbtolinear">Converting Hex
+Colors with <code>convertSRGBToLinear()</code></h2>
+<p>The <code>THREE.Color</code> class provides the
+<code>convertSRGBToLinear()</code> method, which mutates the color
+instance by converting its RGB values from sRGB gamma space to linear
+space.</p>
+<h3 id="step-by-step-implementation">Step-by-Step Implementation</h3>
+<ol type="1">
+<li><strong>Instantiate the Color:</strong> Initialize a
+<code>THREE.Color</code> instance with your hex value or string.</li>
+<li><strong>Convert the Color:</strong> Call
+<code>convertSRGBToLinear()</code> on the instance.</li>
+<li><strong>Pass to the Shader:</strong> Assign the converted color to
+your material's uniform object.</li>
+</ol>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Create a color from a hex value</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> baseColor <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="bn">0xff4500</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Convert from sRGB space to Linear space</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>baseColor<span class="op">.</span><span class="fu">convertSRGBToLinear</span>()<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Define the custom shader material</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customMaterial <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uniforms</span><span class="op">:</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">uColor</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> baseColor }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">vertexShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="vs">    varying vec2 vUv;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="vs">      vUv = uv;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="vs">      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span><span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="dt">fragmentShader</span><span class="op">:</span> <span class="vs">`</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="vs">    uniform vec3 uColor;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="vs">    varying vec2 vUv;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="vs">    void main() {</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a><span class="vs">      // uColor is now in linear space, ready for accurate lighting/math</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="vs">      vec3 finalColor = uColor * 0.5; // Example math operation</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="vs">      gl_FragColor = vec4(finalColor, 1.0);</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="vs">    }</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="vs">  `</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h2 id="handling-cloned-colors">Handling Cloned Colors</h2>
+<p>Because <code>convertSRGBToLinear()</code> modifies the original
+<code>THREE.Color</code> instance in place, you should clone the color
+if the original sRGB values are still needed for UI elements, HTML
+styling, or other non-shader operations:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> originalHexColor <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="st">&#39;#3498db&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Clone before converting to avoid mutating the original</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> shaderColor <span class="op">=</span> originalHexColor<span class="op">.</span><span class="fu">clone</span>()<span class="op">.</span><span class="fu">convertSRGBToLinear</span>()<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uniforms <span class="op">=</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">uColor</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> shaderColor }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<h2 id="modern-threejs-color-management-considerations">Modern Three.js
+Color Management Considerations</h2>
+<p>In recent releases of Three.js (r152 and newer),
+<code>THREE.ColorManagement.enabled</code> is set to <code>true</code>
+by default. While standard built-in materials (such as
+<code>MeshStandardMaterial</code>) handle color space conversions
+automatically, custom <code>ShaderMaterial</code> and
+<code>RawShaderMaterial</code> instances bypass the automated uniform
+conversion. Manually applying <code>Color.convertSRGBToLinear()</code>
+ensures your custom shader uniforms match the color fidelity and
+behavior of the engine's built-in materials.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

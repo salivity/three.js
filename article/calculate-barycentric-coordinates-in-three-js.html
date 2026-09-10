@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate Barycentric Coordinates in Three.js - three.js</title>
+    <meta name="description" content="This article provides an overview of the mathematical principles behind computing the exact barycentric coordinates of a point relative to a 3D triangle, followed by its implementation in Three.js. You will learn the underlying vector algebra based on Cr">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/calculate-barycentric-coordinates-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Calculate Barycentric Coordinates in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/calculate-barycentric-coordinates-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article provides an overview of the mathematical principles behind computing the exact barycentric coordinates of a point relative to a 3D triangle, followed by its implementation in Three.js. You will learn the underlying vector algebra based on Cr" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="calculate-barycentric-coordinates-in-threejs">Calculate
+Barycentric Coordinates in Three.js</h1>
+<p>This article provides an overview of the mathematical principles
+behind computing the exact barycentric coordinates of a point relative
+to a 3D triangle, followed by its implementation in Three.js. You will
+learn the underlying vector algebra based on Cramer's rule, how to
+handle non-coplanar projections, and how to execute this calculation
+both manually and using Three.js built-in utilities.</p>
+<h2 id="understanding-barycentric-coordinates">Understanding Barycentric
+Coordinates</h2>
+<p>Barycentric coordinates express any point <span
+class="math inline">\(P\)</span> lying on the plane of a triangle
+defined by vertices <span class="math inline">\(A\)</span>, <span
+class="math inline">\(B\)</span>, and <span
+class="math inline">\(C\)</span> as a weighted combination of those
+vertices:</p>
+<p><span class="math display">\[P = uA + vB + wC\]</span></p>
+<p>Subject to the partition of unity:</p>
+<p><span class="math display">\[u + v + w = 1 \implies u = 1 - v -
+w\]</span></p>
+<p>When all three weights (<span class="math inline">\(u, v, w\)</span>)
+fall within the range <span class="math inline">\([0, 1]\)</span>, the
+point <span class="math inline">\(P\)</span> lies strictly within or on
+the edges of the triangle.</p>
+<h2 id="mathematical-formulation-using-cramers-rule">Mathematical
+Formulation Using Cramer's Rule</h2>
+<p>To solve for the coordinates, define edge vectors originating from
+vertex <span class="math inline">\(A\)</span>:</p>
+<ul>
+<li><span class="math inline">\(\vec{v}_0 = B - A\)</span></li>
+<li><span class="math inline">\(\vec{v}_1 = C - A\)</span></li>
+<li><span class="math inline">\(\vec{v}_2 = P - A\)</span></li>
+</ul>
+<p>Substitute <span class="math inline">\(u = 1 - v - w\)</span> into
+the barycentric equation:</p>
+<p><span class="math display">\[\vec{v}_2 = v \vec{v}_0 + w
+\vec{v}_1\]</span></p>
+<p>Because this represents an overdetermined system in 3D space,
+multiply both sides by the dot product with <span
+class="math inline">\(\vec{v}_0\)</span> and <span
+class="math inline">\(\vec{v}_1\)</span> to project the vectors onto the
+triangle's 2D plane:</p>
+<ol type="1">
+<li><span class="math inline">\((\vec{v}_2 \cdot \vec{v}_0) = v
+(\vec{v}_0 \cdot \vec{v}_0) + w (\vec{v}_1 \cdot
+\vec{v}_0)\)</span></li>
+<li><span class="math inline">\((\vec{v}_2 \cdot \vec{v}_1) = v
+(\vec{v}_0 \cdot \vec{v}_1) + w (\vec{v}_1 \cdot
+\vec{v}_1)\)</span></li>
+</ol>
+<p>Let:</p>
+<ul>
+<li><span class="math inline">\(d_{00} = \vec{v}_0 \cdot
+\vec{v}_0\)</span></li>
+<li><span class="math inline">\(d_{01} = \vec{v}_0 \cdot
+\vec{v}_1\)</span></li>
+<li><span class="math inline">\(d_{11} = \vec{v}_1 \cdot
+\vec{v}_1\)</span></li>
+<li><span class="math inline">\(d_{20} = \vec{v}_2 \cdot
+\vec{v}_0\)</span></li>
+<li><span class="math inline">\(d_{21} = \vec{v}_2 \cdot
+\vec{v}_1\)</span></li>
+</ul>
+<p>This forms a linear <span class="math inline">\(2 \times 2\)</span>
+system:</p>
+<p><span class="math display">\[\begin{bmatrix} d_{00} &amp; d_{01} \\
+d_{01} &amp; d_{11} \end{bmatrix} \begin{bmatrix} v \\ w \end{bmatrix} =
+\begin{bmatrix} d_{20} \\ d_{21} \end{bmatrix}\]</span></p>
+<p>Using Cramer's Rule, calculate the determinant of the matrix:</p>
+<p><span class="math display">\[\text{denom} = d_{00} d_{11} -
+d_{01}^2\]</span></p>
+<p>If <span class="math inline">\(\text{denom} = 0\)</span>, the
+triangle is degenerate (collinear vertices). Otherwise, solve for <span
+class="math inline">\(v\)</span> and <span
+class="math inline">\(w\)</span>:</p>
+<p><span class="math display">\[v = \frac{d_{11} d_{20} - d_{01}
+d_{21}}{\text{denom}}\]</span></p>
+<p><span class="math display">\[w = \frac{d_{00} d_{21} - d_{01}
+d_{20}}{\text{denom}}\]</span></p>
+<p><span class="math display">\[u = 1.0 - v - w\]</span></p>
+<h2 id="implementation-in-threejs">Implementation in Three.js</h2>
+<h3 id="1-manual-vector-calculation">1. Manual Vector Calculation</h3>
+<p>You can implement this mathematical formulation directly using
+<code>THREE.Vector3</code> methods:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">computeBarycentric</span>(a<span class="op">,</span> b<span class="op">,</span> c<span class="op">,</span> p<span class="op">,</span> target <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v0 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">subVectors</span>(b<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v1 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">subVectors</span>(c<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v2 <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">.</span><span class="fu">subVectors</span>(p<span class="op">,</span> a)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> d00 <span class="op">=</span> v0<span class="op">.</span><span class="fu">dot</span>(v0)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> d01 <span class="op">=</span> v0<span class="op">.</span><span class="fu">dot</span>(v1)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> d11 <span class="op">=</span> v1<span class="op">.</span><span class="fu">dot</span>(v1)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> d20 <span class="op">=</span> v2<span class="op">.</span><span class="fu">dot</span>(v0)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> d21 <span class="op">=</span> v2<span class="op">.</span><span class="fu">dot</span>(v1)<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> denom <span class="op">=</span> d00 <span class="op">*</span> d11 <span class="op">-</span> d01 <span class="op">*</span> d01<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(denom) <span class="op">&lt;</span> <span class="fl">1e-6</span>) {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> target<span class="op">.</span><span class="fu">set</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// Degenerate triangle</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> v <span class="op">=</span> (d11 <span class="op">*</span> d20 <span class="op">-</span> d01 <span class="op">*</span> d21) <span class="op">/</span> denom<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> w <span class="op">=</span> (d00 <span class="op">*</span> d21 <span class="op">-</span> d01 <span class="op">*</span> d20) <span class="op">/</span> denom<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> u <span class="op">=</span> <span class="fl">1.0</span> <span class="op">-</span> v <span class="op">-</span> w<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> target<span class="op">.</span><span class="fu">set</span>(u<span class="op">,</span> v<span class="op">,</span> w)<span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="2-native-threejs-api">2. Native Three.js API</h3>
+<p>Three.js includes this calculation directly inside the
+<code>THREE.Triangle</code> utility class via
+<code>.getBarycoord()</code>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> a <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> b <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> c <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> point <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="fl">0.25</span><span class="op">,</span> <span class="fl">0.25</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> triangle <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Triangle</span>(a<span class="op">,</span> b<span class="op">,</span> c)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> barycoord <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>()<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>triangle<span class="op">.</span><span class="fu">getBarycoord</span>(point<span class="op">,</span> barycoord)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Output: barycoord.x corresponds to u (weight of a)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">//         barycoord.y corresponds to v (weight of b)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">//         barycoord.z corresponds to w (weight of c)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(barycoord)<span class="op">;</span> <span class="co">// Vector3 { x: 0.5, y: 0.25, z: 0.25 }</span></span></code></pre></div>
+<p>The native method performs the same algebraic steps, returning an
+exact set of barycentric coordinates <span class="math inline">\((u, v,
+w)\)</span> mapped to the components <span class="math inline">\((x, y,
+z)\)</span> of the target <code>THREE.Vector3</code>.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

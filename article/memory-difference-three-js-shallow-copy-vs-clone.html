@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Difference: Three.js Shallow Copy vs Clone - three.js</title>
+    <meta name="description" content="Understanding the memory difference between a shallow copy and a recursive clone of an Object3D in Three.js comes down to how JavaScript handles object allocation across a scene graph hierarchy. While a shallow copy only duplicates the immediate properti">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/memory-difference-three-js-shallow-copy-vs-clone">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Memory Difference: Three.js Shallow Copy vs Clone - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/memory-difference-three-js-shallow-copy-vs-clone" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Understanding the memory difference between a shallow copy and a recursive clone of an Object3D in Three.js comes down to how JavaScript handles object allocation across a scene graph hierarchy. While a shallow copy only duplicates the immediate properti" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="memory-difference-threejs-shallow-copy-vs-clone">Memory
+Difference: Three.js Shallow Copy vs Clone</h1>
+<p>Understanding the memory difference between a shallow copy and a
+recursive clone of an <code>Object3D</code> in Three.js comes down to
+how JavaScript handles object allocation across a scene graph hierarchy.
+While a shallow copy only duplicates the immediate properties and
+references of a single node in system RAM, a recursive clone traverses
+the entire descendant tree, instantiating new JavaScript objects,
+matrices, and arrays for every child. Crucially, neither method
+automatically duplicates heavy GPU resources like geometries or
+textures, meaning the memory impact is strictly isolated to the CPU
+heap.</p>
+<h2 id="cpu-memory-javascript-heap">CPU Memory (JavaScript Heap)</h2>
+<p>The primary difference in memory footprint occurs in standard system
+RAM (the JavaScript heap).</p>
+<ul>
+<li><strong>Shallow Copy:</strong> When performing a shallow copy (such
+as copying properties manually or invoking
+<code>.copy(source, false)</code>), Three.js only duplicates the
+top-level <code>Object3D</code> instance. This allocates memory for a
+single set of internal transformation matrices (<code>matrix</code>,
+<code>matrixWorld</code>), spatial vectors (<code>position</code>,
+<code>rotation</code>, <code>scale</code>), and core event listeners. It
+ignores all child nodes, keeping JavaScript heap allocation minimal
+(typically a few kilobytes).</li>
+<li><strong>Recursive Clone:</strong> Invoking <code>.clone(true)</code>
+(which is the default behavior in Three.js) recursively calls
+<code>.clone()</code> on every child, grandchild, and descendant in the
+<code>children</code> array. If an object hierarchy contains 500
+sub-nodes, the recursive clone instantiates 500 new
+<code>Object3D</code> (or <code>Mesh</code>, <code>Group</code>, etc.)
+instances. Each instance allocates its own transformation matrices,
+bounding data, and cache objects. The memory overhead scales linearly,
+<span class="math inline">\(O(N)\)</span>, where <span
+class="math inline">\(N\)</span> is the total number of descendants in
+the hierarchy.</li>
+</ul>
+<h2 id="gpu-memory-vram">GPU Memory (VRAM)</h2>
+<p>A common misconception is that cloning a Three.js mesh duplicates its
+geometry and textures in GPU memory.</p>
+<ul>
+<li><strong>Shared References:</strong> Both a shallow copy and a
+recursive clone share references to underlying
+<code>BufferGeometry</code> and <code>Material</code> instances.</li>
+<li><strong>VRAM Overhead:</strong> Because geometries (vertex buffers,
+normals, UVs) and material assets (textures, uniforms, shaders) reside
+in WebGL buffers on the GPU, neither cloning method increases VRAM
+consumption. The newly cloned meshes point to the exact same GPU buffers
+as the original.</li>
+<li><strong>Exceptions:</strong> If your application logic manually
+clones geometries (<code>mesh.geometry = source.geometry.clone()</code>)
+or materials alongside the recursive clone, VRAM usage will multiply
+proportionally to the size of the vertex buffers and texture maps.</li>
+</ul>
+<h2 id="summary-of-memory-trade-offs">Summary of Memory Trade-offs</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Resource Type</th>
+<th style="text-align: left;">Shallow Copy</th>
+<th style="text-align: left;">Recursive Clone
+(<code>recursive = true</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>JS Heap (Node
+Instances)</strong></td>
+<td style="text-align: left;">Allocates only 1 node</td>
+<td style="text-align: left;">Allocates <span
+class="math inline">\(N\)</span> nodes (entire tree)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Matrix &amp; Vector
+Allocations</strong></td>
+<td style="text-align: left;">1 set of transforms</td>
+<td style="text-align: left;"><span class="math inline">\(N\)</span>
+sets of transforms</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Child Array
+References</strong></td>
+<td style="text-align: left;">Not duplicated (or references kept)</td>
+<td style="text-align: left;">Entire hierarchy recreated</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GPU BufferGeometry
+(VRAM)</strong></td>
+<td style="text-align: left;">Shared (0 extra VRAM)</td>
+<td style="text-align: left;">Shared (0 extra VRAM)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GPU Textures &amp; Shaders
+(VRAM)</strong></td>
+<td style="text-align: left;">Shared (0 extra VRAM)</td>
+<td style="text-align: left;">Shared (0 extra VRAM)</td>
+</tr>
+</tbody>
+</table>
+<p>Use a shallow copy when you only need to mirror properties onto an
+existing node or duplicate a leaf object. Use a recursive clone when an
+independent hierarchical structure is required for independent
+transformations, being mindful of the CPU memory scaling if dealing with
+large, deeply nested scene graphs.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

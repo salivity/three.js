@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js AudioAnalyser: Drive Geometry with Audio - three.js</title>
+    <meta name="description" content="This guide explains how to extract real-time frequency domain data using Three.js's built-in AudioAnalyser and apply it to dynamically alter 3D mesh geometry. By capturing frequency amplitudes through the Web Audio API integration and mapping these value">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-audioanalyser-drive-geometry-with-audio">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js AudioAnalyser: Drive Geometry with Audio - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-audioanalyser-drive-geometry-with-audio" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to extract real-time frequency domain data using Three.js's built-in AudioAnalyser and apply it to dynamically alter 3D mesh geometry. By capturing frequency amplitudes through the Web Audio API integration and mapping these value" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-audioanalyser-drive-geometry-with-audio">Three.js
+AudioAnalyser: Drive Geometry with Audio</h1>
+<p>This guide explains how to extract real-time frequency domain data
+using Three.js's built-in <code>AudioAnalyser</code> and apply it to
+dynamically alter 3D mesh geometry. By capturing frequency amplitudes
+through the Web Audio API integration and mapping these values to vertex
+positions or transformations inside the render loop, you can create
+responsive, audio-reactive visualizers in real time.</p>
+<h3 id="1-set-up-the-audio-listener-and-analyser">1. Set Up the Audio
+Listener and Analyser</h3>
+<p>Three.js abstracts the Web Audio API using
+<code>THREE.AudioListener</code>, <code>THREE.Audio</code>, and
+<code>THREE.AudioAnalyser</code>. The <code>AudioAnalyser</code>
+processes audio signals and computes frequency data via Fast Fourier
+Transform (FFT).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a listener and attach it to the camera</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> listener <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioListener</span>()<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">add</span>(listener)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a non-positional audio source</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sound <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Audio</span>(listener)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Load an audio file</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> audioLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioLoader</span>()<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>audioLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;track.mp3&#39;</span><span class="op">,</span> (buffer) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setBuffer</span>(buffer)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setLoop</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">setVolume</span>(<span class="fl">0.5</span>)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  sound<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Initialize the AudioAnalyser</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// fftSize must be a power of 2 (e.g., 32, 64, 128, 256, 512)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> fftSize <span class="op">=</span> <span class="dv">128</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> analyser <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">AudioAnalyser</span>(sound<span class="op">,</span> fftSize)<span class="op">;</span></span></code></pre></div>
+<p>The frequency array will have a length equal to
+<code>fftSize / 2</code>. With an <code>fftSize</code> of 128, the
+analyser outputs 64 discrete frequency bins.</p>
+<h3 id="2-define-the-reactive-geometry">2. Define the Reactive
+Geometry</h3>
+<p>Create a mesh whose geometry can be deformed based on incoming audio.
+Store the original vertex positions so you can calculate displacements
+without compounding offsets each frame.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">IcosahedronGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x00ffcc</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> sphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(sphere)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Save initial vertex positions for baseline reference</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="fu">getAttribute</span>(<span class="st">&#39;position&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> initialPositions <span class="op">=</span> positionAttribute<span class="op">.</span><span class="at">array</span><span class="op">.</span><span class="fu">slice</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="3-extract-frequency-data-and-mutate-geometry">3. Extract
+Frequency Data and Mutate Geometry</h3>
+<p>In your main animation loop, call
+<code>analyser.getFrequencyData()</code>. This returns a
+<code>Uint8Array</code> containing normalized frequency amplitudes
+between <code>0</code> and <code>255</code>, where lower indices
+represent bass frequencies and higher indices represent treble.</p>
+<p>To animate the geometry, iterate through its vertices, calculate
+displacement using the frequency values, and flag the attribute for an
+update:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Retrieve the Uint8Array of frequency amplitudes</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> frequencyData <span class="op">=</span> analyser<span class="op">.</span><span class="fu">getFrequencyData</span>()<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Calculate an overall average or target specific frequency ranges</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> averageFrequency <span class="op">=</span> analyser<span class="op">.</span><span class="fu">getAverageFrequency</span>()<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positions <span class="op">=</span> geometry<span class="op">.</span><span class="fu">getAttribute</span>(<span class="st">&#39;position&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> positions<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> ix <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> iy <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> iz <span class="op">=</span> i <span class="op">*</span> <span class="dv">3</span> <span class="op">+</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Base position vector</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> uX <span class="op">=</span> initialPositions[ix]<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> uY <span class="op">=</span> initialPositions[iy]<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> uZ <span class="op">=</span> initialPositions[iz]<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Map a frequency bin to the vertex index</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> dataIndex <span class="op">=</span> i <span class="op">%</span> frequencyData<span class="op">.</span><span class="at">length</span><span class="op">;</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> amplitude <span class="op">=</span> frequencyData[dataIndex] <span class="op">/</span> <span class="fl">255.0</span><span class="op">;</span> <span class="co">// Normalize between 0 and 1</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Displace vertex outward along its normal</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> displacement <span class="op">=</span> <span class="dv">1</span> <span class="op">+</span> amplitude <span class="op">*</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    positions<span class="op">.</span><span class="at">array</span>[ix] <span class="op">=</span> uX <span class="op">*</span> displacement<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    positions<span class="op">.</span><span class="at">array</span>[iy] <span class="op">=</span> uY <span class="op">*</span> displacement<span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    positions<span class="op">.</span><span class="at">array</span>[iz] <span class="op">=</span> uZ <span class="op">*</span> displacement<span class="op">;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Signal Three.js that buffer attributes have changed</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>  positions<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Optional: Global scale adjustment using average volume</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> scale <span class="op">=</span> <span class="dv">1</span> <span class="op">+</span> averageFrequency <span class="op">/</span> <span class="dv">512</span><span class="op">;</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  sphere<span class="op">.</span><span class="at">scale</span><span class="op">.</span><span class="fu">set</span>(scale<span class="op">,</span> scale<span class="op">,</span> scale)<span class="op">;</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="4-performance-considerations">4. Performance Considerations</h3>
+<ul>
+<li><strong>Buffer Updates</strong>: Modifying
+<code>position.array</code> directly is fast, but keep your vertex count
+balanced. High-density geometries updated every frame can cause CPU
+bottlenecks.</li>
+<li><strong>FFT Size</strong>: Smaller <code>fftSize</code> values (32
+to 128) yield broader frequency groups and run faster. Higher values
+(512 to 2048) yield fine-grained data useful for visual bar
+equalizers.</li>
+<li><strong>Shader Alternative</strong>: For complex geometries with
+thousands of vertices, pass the frequency array as a
+<code>DataTexture</code> uniform to a custom vertex shader, offloading
+vertex displacement computation entirely to the GPU.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

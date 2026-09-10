@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js morphAttributes: Defining Position Targets - three.js</title>
+    <meta name="description" content="In Three.js, morph targets—often called blend shapes—allow meshes to deform smoothly between different geometric states. This article provides a concise, step-by-step guide on how to utilize the morphAttributes property of a BufferGeometry to define">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-morphattributes-defining-position-targets">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js morphAttributes: Defining Position Targets - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-morphattributes-defining-position-targets" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, morph targets—often called blend shapes—allow meshes to deform smoothly between different geometric states. This article provides a concise, step-by-step guide on how to utilize the morphAttributes property of a BufferGeometry to define" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-morphattributes-defining-position-targets">Three.js
+morphAttributes: Defining Position Targets</h1>
+<p>In Three.js, morph targets—often called blend shapes—allow meshes to
+deform smoothly between different geometric states. This article
+provides a concise, step-by-step guide on how to utilize the
+<code>morphAttributes</code> property of a <code>BufferGeometry</code>
+to define secondary position targets. You will learn how to structure
+target vertex data, register secondary attributes, and control the
+resulting deformation dynamically at runtime using target influence
+weights.</p>
+<h2 id="understanding-morphattributes">Understanding
+<code>morphAttributes</code></h2>
+<p>The <code>morphAttributes</code> property on a
+<code>BufferGeometry</code> is an object that stores arrays of
+<code>BufferAttribute</code> instances for various vertex channels, such
+as <code>position</code>, <code>normal</code>, and
+<code>color</code>.</p>
+<p>To define secondary position targets, you populate an array under
+<code>geometry.morphAttributes.position</code>. Each entry in this array
+must contain the exact same number of vertices as the primary
+<code>geometry.attributes.position</code>. Modern Three.js shader
+implementations calculate morph targets as relative offsets (deltas)
+added to the base positions, meaning target values represent the
+displacement <code>(targetPosition - basePosition)</code>.</p>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-create-the-base-geometry">1. Create the Base Geometry</h3>
+<p>Start with a standard <code>BufferGeometry</code> or any built-in
+geometry primitive:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a simple base plane</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PlaneGeometry</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">2</span><span class="op">,</span> <span class="dv">4</span><span class="op">,</span> <span class="dv">4</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="2-generate-the-target-position-data">2. Generate the Target
+Position Data</h3>
+<p>To morph the geometry, create an array of vertex positions
+representing the deformation offset. Every vertex in the base geometry
+must have a corresponding delta vector in the target array.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> geometry<span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetPositions <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> positionAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Read the original vertex position</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> x <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getX</span>(i)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> y <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getY</span>(i)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> z <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getZ</span>(i)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Compute a target position (e.g., displacing vertices along the Z axis)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetX <span class="op">=</span> x<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetY <span class="op">=</span> y<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetZ <span class="op">=</span> z <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(x <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span>) <span class="op">*</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Modern Three.js expects relative deltas: (target - base)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  targetPositions<span class="op">.</span><span class="fu">push</span>(</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    targetX <span class="op">-</span> x<span class="op">,</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    targetY <span class="op">-</span> y<span class="op">,</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    targetZ <span class="op">-</span> z</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="3-attach-the-bufferattribute-to-morphattributes">3. Attach the
+BufferAttribute to <code>morphAttributes</code></h3>
+<p>Wrap your target array into a <code>Float32BufferAttribute</code>
+with an item size of <code>3</code> (for X, Y, and Z components), and
+assign it to the <code>morphAttributes.position</code> array:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Convert array to Float32BufferAttribute</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> morphTarget <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float32BufferAttribute</span>(targetPositions<span class="op">,</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign the target to the geometry&#39;s morphAttributes</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="at">morphAttributes</span><span class="op">.</span><span class="at">position</span> <span class="op">=</span> [morphTarget]<span class="op">;</span></span></code></pre></div>
+<p>You can define multiple position targets by pushing additional
+<code>Float32BufferAttribute</code> instances into this array.</p>
+<h3 id="4-create-the-mesh-and-enable-morphing">4. Create the Mesh and
+Enable Morphing</h3>
+<p>Instantiate a <code>Mesh</code> using your geometry and a compatible
+material. Standard materials (such as <code>MeshBasicMaterial</code>,
+<code>MeshStandardMaterial</code>, or <code>MeshPhongMaterial</code>)
+support morph targets automatically.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x3498db</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">wireframe</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h3 id="5-control-target-influences">5. Control Target Influences</h3>
+<p>Once attached to a mesh, Three.js automatically exposes a
+<code>morphTargetInfluences</code> array on the mesh object. Each index
+in this array corresponds to the target at the same index in
+<code>geometry.morphAttributes.position</code>. Values range from
+<code>0</code> (no deformation) to <code>1</code> (full
+deformation).</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Set the first morph target to 50% influence</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>mesh<span class="op">.</span><span class="at">morphTargetInfluences</span>[<span class="dv">0</span>] <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Animate the deformation inside your render loop</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Oscillate the morph target influence between 0 and 1</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  mesh<span class="op">.</span><span class="at">morphTargetInfluences</span>[<span class="dv">0</span>] <span class="op">=</span> (<span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(<span class="bu">Date</span><span class="op">.</span><span class="fu">now</span>() <span class="op">*</span> <span class="fl">0.003</span>) <span class="op">+</span> <span class="dv">1</span>) <span class="op">/</span> <span class="dv">2</span><span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="considerations-for-normals">Considerations for Normals</h2>
+<p>When morphing surfaces that require lighting calculations, changing
+only the <code>position</code> channel can cause shading artifacts
+because surface normals will not reflect the deformed shape. To fix
+this, you can compute or supply corresponding morph normals under
+<code>geometry.morphAttributes.normal</code> using the same indexing and
+sizing pattern used for positions.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

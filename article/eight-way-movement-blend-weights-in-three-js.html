@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eight-Way Movement Blend Weights in Three.js - three.js</title>
+    <meta name="description" content="Creating an eight-way directional movement system in Three.js requires calculating dynamic blend weights for character animations based on a player's directional input vector. By mapping keyboard or joystick inputs onto a 2D plane, normalizing the result">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/eight-way-movement-blend-weights-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Eight-Way Movement Blend Weights in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/eight-way-movement-blend-weights-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Creating an eight-way directional movement system in Three.js requires calculating dynamic blend weights for character animations based on a player's directional input vector. By mapping keyboard or joystick inputs onto a 2D plane, normalizing the result" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="eight-way-movement-blend-weights-in-threejs">Eight-Way Movement
+Blend Weights in Three.js</h1>
+<p>Creating an eight-way directional movement system in Three.js
+requires calculating dynamic blend weights for character animations
+based on a player's directional input vector. By mapping keyboard or
+joystick inputs onto a 2D plane, normalizing the resulting vector, and
+evaluating the angular difference or dot product against eight
+directional reference vectors (Forward, Backward, Left, Right, and the
+four diagonals), you can adjust each <code>AnimationAction</code>'s
+weight in real-time. This guide details the mathematical approach and
+provides a direct code implementation for dynamically blending multiple
+animations using Three.js's <code>AnimationMixer</code>.</p>
+<h3 id="defining-the-directional-space">Defining the Directional
+Space</h3>
+<p>An eight-way movement system relies on eight distinct movement
+animations:</p>
+<ul>
+<li><strong>Forward (N)</strong>: <span class="math inline">\((0,
+1)\)</span></li>
+<li><strong>Forward-Right (NE)</strong>: <span
+class="math inline">\((\frac{\sqrt{2}}{2},
+\frac{\sqrt{2}}{2})\)</span></li>
+<li><strong>Right (E)</strong>: <span class="math inline">\((1,
+0)\)</span></li>
+<li><strong>Backward-Right (SE)</strong>: <span
+class="math inline">\((\frac{\sqrt{2}}{2},
+-\frac{\sqrt{2}}{2})\)</span></li>
+<li><strong>Backward (S)</strong>: <span class="math inline">\((0,
+-1)\)</span></li>
+<li><strong>Backward-Left (SW)</strong>: <span
+class="math inline">\((-\frac{\sqrt{2}}{2},
+-\frac{\sqrt{2}}{2})\)</span></li>
+<li><strong>Left (W)</strong>: <span class="math inline">\((-1,
+0)\)</span></li>
+<li><strong>Forward-Left (NW)</strong>: <span
+class="math inline">\((-\frac{\sqrt{2}}{2},
+\frac{\sqrt{2}}{2})\)</span></li>
+</ul>
+<p>Store your directional clips in an array or map containing the action
+and its corresponding unit direction vector.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> directions <span class="op">=</span> [</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;idle&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;idle&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>) }<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;forward&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_n&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>) }<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;forward_right&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_ne&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">.</span><span class="fu">normalize</span>() }<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;right&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_e&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>) }<span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;backward_right&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_se&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">.</span><span class="fu">normalize</span>() }<span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;backward&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_s&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="dv">0</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>) }<span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;backward_left&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_sw&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="op">-</span><span class="dv">1</span>)<span class="op">.</span><span class="fu">normalize</span>() }<span class="op">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;left&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_w&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>) }<span class="op">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  { <span class="dt">name</span><span class="op">:</span> <span class="st">&#39;forward_left&#39;</span><span class="op">,</span> <span class="dt">action</span><span class="op">:</span> actions[<span class="st">&#39;walk_nw&#39;</span>]<span class="op">,</span> <span class="dt">dir</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>(<span class="op">-</span><span class="dv">1</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">.</span><span class="fu">normalize</span>() }</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">// Start all actions playing with an initial weight of 0</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>directions<span class="op">.</span><span class="fu">forEach</span>(({ action }) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  action<span class="op">.</span><span class="fu">play</span>()<span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  action<span class="op">.</span><span class="fu">setEffectiveWeight</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>actions[<span class="st">&#39;idle&#39;</span>]<span class="op">.</span><span class="fu">setEffectiveWeight</span>(<span class="dv">1</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="calculating-dynamic-blend-weights">Calculating Dynamic Blend
+Weights</h3>
+<p>To blend between the animations, determine the current movement
+vector from input (such as WASD keys) and calculate how closely it
+aligns with each reference vector. A common and efficient method uses
+the clamped dot product or angular distance between the input vector and
+the direction vectors.</p>
+<p>When the input vector is non-zero, calculate the angle <span
+class="math inline">\(\theta = \text{atan2}(y, x)\)</span> of the input,
+locate the two adjacent directional vectors, and interpolate weights
+between them so their total sum equals 1.0.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> inputVector <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector2</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateMovementWeights</span>(inputX<span class="op">,</span> inputY<span class="op">,</span> delta) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  inputVector<span class="op">.</span><span class="fu">set</span>(inputX<span class="op">,</span> inputY)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> magnitude <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">min</span>(inputVector<span class="op">.</span><span class="fu">length</span>()<span class="op">,</span> <span class="fl">1.0</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (magnitude <span class="op">&gt;</span> <span class="fl">0.001</span>) {</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    inputVector<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Calculate angle in radians [0, 2PI)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> angle <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan2</span>(inputVector<span class="op">.</span><span class="at">y</span><span class="op">,</span> inputVector<span class="op">.</span><span class="at">x</span>)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (angle <span class="op">&lt;</span> <span class="dv">0</span>) angle <span class="op">+=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span><span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Each segment is PI / 4 radians (45 degrees)</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> segmentAngle <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">/</span> <span class="dv">4</span><span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    directions<span class="op">.</span><span class="fu">forEach</span>(({ name<span class="op">,</span> action<span class="op">,</span> dir }) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (name <span class="op">===</span> <span class="st">&#39;idle&#39;</span>) {</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> targetWeight <span class="op">=</span> (<span class="fl">1.0</span> <span class="op">-</span> magnitude)<span class="op">;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="fu">blendActionWeight</span>(action<span class="op">,</span> targetWeight<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> dirAngle <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">atan2</span>(dir<span class="op">.</span><span class="at">y</span><span class="op">,</span> dir<span class="op">.</span><span class="at">x</span>)<span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (dirAngle <span class="op">&lt;</span> <span class="dv">0</span>) dirAngle <span class="op">+=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span><span class="op">;</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Find shortest angular difference</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> diff <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">abs</span>(angle <span class="op">-</span> dirAngle)<span class="op">;</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (diff <span class="op">&gt;</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span>) diff <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">-</span> diff<span class="op">;</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Assign weight if within the 45-degree blending window</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> targetWeight <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (diff <span class="op">&lt;</span> segmentAngle) {</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>        targetWeight <span class="op">=</span> (<span class="fl">1.0</span> <span class="op">-</span> (diff <span class="op">/</span> segmentAngle)) <span class="op">*</span> magnitude<span class="op">;</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>      <span class="fu">blendActionWeight</span>(action<span class="op">,</span> targetWeight<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Return to idle</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    directions<span class="op">.</span><span class="fu">forEach</span>(({ name<span class="op">,</span> action }) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> targetWeight <span class="op">=</span> (name <span class="op">===</span> <span class="st">&#39;idle&#39;</span>) <span class="op">?</span> <span class="fl">1.0</span> <span class="op">:</span> <span class="fl">0.0</span><span class="op">;</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>      <span class="fu">blendActionWeight</span>(action<span class="op">,</span> targetWeight<span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="smoothing-and-applying-weights">Smoothing and Applying
+Weights</h3>
+<p>Setting weights instantly can produce jerky transitions when inputs
+switch rapidly. Use linear interpolation (<code>MathUtils.lerp</code>)
+within your animation loop to transition current action weights toward
+their target weights.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">blendActionWeight</span>(action<span class="op">,</span> targetWeight<span class="op">,</span> delta<span class="op">,</span> blendSpeed <span class="op">=</span> <span class="dv">10</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> currentWeight <span class="op">=</span> action<span class="op">.</span><span class="fu">getEffectiveWeight</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> newWeight <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">lerp</span>(currentWeight<span class="op">,</span> targetWeight<span class="op">,</span> <span class="dv">1</span> <span class="op">-</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">exp</span>(<span class="op">-</span>blendSpeed <span class="op">*</span> delta))<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  action<span class="op">.</span><span class="fu">setEffectiveWeight</span>(newWeight)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="synchronization-across-movement-clips">Synchronization Across
+Movement Clips</h3>
+<p>For movement animations to blend naturally without foot-sliding or
+phase discrepancies, all eight movement clips must be synchronized.
+Synchronize the playback by matching the <code>time</code> parameter of
+all active movement actions to a reference action or setting their
+<code>timeScale</code> values proportionally if they vary in length.</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">synchronizeActions</span>(masterAction<span class="op">,</span> secondaryActions) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> progress <span class="op">=</span> masterAction<span class="op">.</span><span class="at">time</span> <span class="op">/</span> masterAction<span class="op">.</span><span class="fu">getClip</span>()<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  secondaryActions<span class="op">.</span><span class="fu">forEach</span>(action <span class="kw">=&gt;</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (action<span class="op">.</span><span class="fu">getEffectiveWeight</span>() <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>      action<span class="op">.</span><span class="at">time</span> <span class="op">=</span> progress <span class="op">*</span> action<span class="op">.</span><span class="fu">getClip</span>()<span class="op">.</span><span class="at">duration</span><span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Call <code>updateMovementWeights(inputX, inputY, delta)</code>,
+synchronize the clips, and invoke <code>mixer.update(delta)</code>
+inside the primary render loop to achieve responsive, smooth eight-way
+directional blending.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

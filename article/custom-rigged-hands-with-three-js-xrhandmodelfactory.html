@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Rigged Hands with Three.js XRHandModelFactory - three.js</title>
+    <meta name="description" content="This guide explains how to dynamically bind and animate custom rigged 3D hand models to WebXR tracked hands in Three.js using XRHandModelFactory. By understanding how the factory parses skeleton hierarchies and joint data, you can replace default hand pr">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/custom-rigged-hands-with-three-js-xrhandmodelfactory">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Custom Rigged Hands with Three.js XRHandModelFactory - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/custom-rigged-hands-with-three-js-xrhandmodelfactory" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to dynamically bind and animate custom rigged 3D hand models to WebXR tracked hands in Three.js using XRHandModelFactory. By understanding how the factory parses skeleton hierarchies and joint data, you can replace default hand pr" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="custom-rigged-hands-with-threejs-xrhandmodelfactory">Custom
+Rigged Hands with Three.js XRHandModelFactory</h1>
+<p>This guide explains how to dynamically bind and animate custom rigged
+3D hand models to WebXR tracked hands in Three.js using
+<code>XRHandModelFactory</code>. By understanding how the factory parses
+skeleton hierarchies and joint data, you can replace default hand
+primitives with custom avatars while maintaining accurate real-time
+tracking across all 25 WebXR joint points.</p>
+<h2 id="understanding-webxr-hand-joint-requirements">Understanding WebXR
+Hand Joint Requirements</h2>
+<p>WebXR defines a standard hierarchy of 25 joints per hand, spanning
+from the wrist to the finger tips (metacarpals, phalanxes, and tips).
+For <code>XRHandModelFactory</code> to dynamically bind your custom
+rigged <code>SkinnedMesh</code>, your model must follow the WebXR
+skeleton specification:</p>
+<ul>
+<li><strong>Wrist:</strong> <code>wrist</code></li>
+<li><strong>Thumb:</strong> <code>thumb-metacarpal</code>,
+<code>thumb-phalanx-proximal</code>, <code>thumb-phalanx-distal</code>,
+<code>thumb-tip</code></li>
+<li><strong>Index:</strong> <code>index-finger-metacarpal</code>,
+<code>index-finger-phalanx-proximal</code>,
+<code>index-finger-phalanx-intermediate</code>,
+<code>index-finger-phalanx-distal</code>,
+<code>index-finger-tip</code></li>
+<li><strong>Middle:</strong> <code>middle-finger-metacarpal</code>,
+<code>middle-finger-phalanx-proximal</code>,
+<code>middle-finger-phalanx-intermediate</code>,
+<code>middle-finger-phalanx-distal</code>,
+<code>middle-finger-tip</code></li>
+<li><strong>Ring:</strong> <code>ring-finger-metacarpal</code>,
+<code>ring-finger-phalanx-proximal</code>,
+<code>ring-finger-phalanx-intermediate</code>,
+<code>ring-finger-phalanx-distal</code>,
+<code>ring-finger-tip</code></li>
+<li><strong>Pinky:</strong> <code>pinky-finger-metacarpal</code>,
+<code>pinky-finger-phalanx-proximal</code>,
+<code>pinky-finger-phalanx-intermediate</code>,
+<code>pinky-finger-phalanx-distal</code>,
+<code>pinky-finger-tip</code></li>
+</ul>
+<p>Ensure that the bone names in your 3D asset (FBX/GLTF) match these
+identifiers exactly or follow the standard OpenXR bone hierarchy.</p>
+<h2 id="configuring-the-factory-for-custom-assets">Configuring the
+Factory for Custom Assets</h2>
+<p><code>XRHandModelFactory</code> utilizes <code>XRHandMeshModel</code>
+under the hood when the <code>"mesh"</code> profile is requested. By
+default, it retrieves generic GLTF assets from standard repositories. To
+point the factory to your custom rigged models, pass your custom path
+using <code>setPath()</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { XRHandModelFactory } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/webxr/XRHandModelFactory.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { GLTFLoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/GLTFLoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Initialize Loader and Factory</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gltfLoader <span class="op">=</span> <span class="kw">new</span> <span class="fu">GLTFLoader</span>()<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> handModelFactory <span class="op">=</span> <span class="kw">new</span> <span class="fu">XRHandModelFactory</span>(gltfLoader)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Set the directory path where your custom left.glb and right.glb reside</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>handModelFactory<span class="op">.</span><span class="fu">setPath</span>(<span class="st">&#39;./assets/models/hands/&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<p>When naming your files, ensure the directory contains
+<code>left.glb</code> and <code>right.glb</code> (or
+<code>.gltf</code>), as <code>XRHandMeshModel</code> internally builds
+the file URL based on hand handedness.</p>
+<h2 id="initializing-and-binding-hand-controllers">Initializing and
+Binding Hand Controllers</h2>
+<p>Attach the hand models generated by the factory to the WebXR hand
+instances managed by the renderer.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Enable XR on the WebGLRenderer</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="at">enabled</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup Hand 0 (e.g., Left)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hand0 <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getHand</span>(<span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> handModel0 <span class="op">=</span> handModelFactory<span class="op">.</span><span class="fu">createHandModel</span>(hand0<span class="op">,</span> <span class="st">&#39;mesh&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>hand0<span class="op">.</span><span class="fu">add</span>(handModel0)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hand0)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup Hand 1 (e.g., Right)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hand1 <span class="op">=</span> renderer<span class="op">.</span><span class="at">xr</span><span class="op">.</span><span class="fu">getHand</span>(<span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> handModel1 <span class="op">=</span> handModelFactory<span class="op">.</span><span class="fu">createHandModel</span>(hand1<span class="op">,</span> <span class="st">&#39;mesh&#39;</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>hand1<span class="op">.</span><span class="fu">add</span>(handModel1)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(hand1)<span class="op">;</span></span></code></pre></div>
+<p>When WebXR hand tracking connects, <code>XRHandModelFactory</code>
+fetches the custom model from your specified path, matches the bone
+names to the WebXR joint inputs, and begins copying bone transformations
+automatically on each render tick.</p>
+<h2 id="dynamically-swapping-a-rigged-mesh-at-runtime">Dynamically
+Swapping a Rigged Mesh at Runtime</h2>
+<p>If your custom mesh uses non-standard bone names, or if you need to
+dynamically switch character hand meshes during a session without
+reloading assets from disk, you can bypass the default path loader and
+bind the bones manually within an event listener.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> handJoints <span class="op">=</span> [</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;wrist&#39;</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;thumb-metacarpal&#39;</span><span class="op">,</span> <span class="st">&#39;thumb-phalanx-proximal&#39;</span><span class="op">,</span> <span class="st">&#39;thumb-phalanx-distal&#39;</span><span class="op">,</span> <span class="st">&#39;thumb-tip&#39;</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;index-finger-metacarpal&#39;</span><span class="op">,</span> <span class="st">&#39;index-finger-phalanx-proximal&#39;</span><span class="op">,</span> <span class="st">&#39;index-finger-phalanx-intermediate&#39;</span><span class="op">,</span> <span class="st">&#39;index-finger-phalanx-distal&#39;</span><span class="op">,</span> <span class="st">&#39;index-finger-tip&#39;</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;middle-finger-metacarpal&#39;</span><span class="op">,</span> <span class="st">&#39;middle-finger-phalanx-proximal&#39;</span><span class="op">,</span> <span class="st">&#39;middle-finger-phalanx-intermediate&#39;</span><span class="op">,</span> <span class="st">&#39;middle-finger-phalanx-distal&#39;</span><span class="op">,</span> <span class="st">&#39;middle-finger-tip&#39;</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;ring-finger-metacarpal&#39;</span><span class="op">,</span> <span class="st">&#39;ring-finger-phalanx-proximal&#39;</span><span class="op">,</span> <span class="st">&#39;ring-finger-phalanx-intermediate&#39;</span><span class="op">,</span> <span class="st">&#39;ring-finger-phalanx-distal&#39;</span><span class="op">,</span> <span class="st">&#39;ring-finger-tip&#39;</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;pinky-finger-metacarpal&#39;</span><span class="op">,</span> <span class="st">&#39;pinky-finger-phalanx-proximal&#39;</span><span class="op">,</span> <span class="st">&#39;pinky-finger-phalanx-intermediate&#39;</span><span class="op">,</span> <span class="st">&#39;pinky-finger-phalanx-distal&#39;</span><span class="op">,</span> <span class="st">&#39;pinky-finger-tip&#39;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">applyCustomRig</span>(hand<span class="op">,</span> loadedGltfMesh) {</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> bones <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Cache the corresponding bones from the custom loaded GLTF</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  handJoints<span class="op">.</span><span class="fu">forEach</span>(jointName <span class="kw">=&gt;</span> {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> bone <span class="op">=</span> loadedGltfMesh<span class="op">.</span><span class="fu">getObjectByName</span>(jointName)<span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    bones<span class="op">.</span><span class="fu">push</span>(bone)<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Attach mesh to the hand controller</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  hand<span class="op">.</span><span class="fu">add</span>(loadedGltfMesh)<span class="op">;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Update transformations on render loop</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  hand<span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;joint-tracking-updated&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> handJoints<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> joint <span class="op">=</span> hand<span class="op">.</span><span class="at">joints</span>[handJoints[i]]<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> targetBone <span class="op">=</span> bones[i]<span class="op">;</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (joint <span class="op">&amp;&amp;</span> targetBone) {</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        targetBone<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">copy</span>(joint<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        targetBone<span class="op">.</span><span class="at">quaternion</span><span class="op">.</span><span class="fu">copy</span>(joint<span class="op">.</span><span class="at">quaternion</span>)<span class="op">;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h2 id="considerations-for-accuracy">Considerations for Accuracy</h2>
+<ul>
+<li><strong>Rest Pose (Bind Pose):</strong> Rig your 3D hand in the
+standard OpenXR bind pose (palm flat facing forward, fingers extended,
+thumb angled at roughly 45 degrees). Failing to match the standard rest
+pose causes rotated or distorted fingers during runtime tracking.</li>
+<li><strong>Scale:</strong> Ensure hand scale is exported at a 1:1
+metric scale (1 unit = 1 meter), as WebXR joint offsets represent
+real-world physical distances.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

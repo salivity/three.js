@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Loader vs ObjectLoader: Structural Differences - three.js</title>
+    <meta name="description" content="In Three.js, loading external assets relies on a structured inheritance pattern where the generic Loader class serves as the abstract base, and specialized classes like ObjectLoader extend it to handle specific data formats. This article examines the str">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-loader-vs-objectloader-structural-differences">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Loader vs ObjectLoader: Structural Differences - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-loader-vs-objectloader-structural-differences" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, loading external assets relies on a structured inheritance pattern where the generic Loader class serves as the abstract base, and specialized classes like ObjectLoader extend it to handle specific data formats. This article examines the str" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-loader-vs-objectloader-structural-differences">Three.js
+Loader vs ObjectLoader: Structural Differences</h1>
+<p>In Three.js, loading external assets relies on a structured
+inheritance pattern where the generic <code>Loader</code> class serves
+as the abstract base, and specialized classes like
+<code>ObjectLoader</code> extend it to handle specific data formats.
+This article examines the structural hierarchy between the foundational
+<code>Loader</code> and the concrete <code>ObjectLoader</code>,
+highlighting their inheritance relationship, architectural
+responsibilities, and how data parsing diverges between the two.</p>
+<h3 id="the-loader-base-class">The <code>Loader</code> Base Class</h3>
+<p>The <code>Loader</code> class sits near the top of the Three.js
+asset-loading hierarchy. It acts as an abstract base class designed to
+establish a consistent API across all specific loader implementations,
+including texture, audio, and model loaders.</p>
+<p>Key characteristics of <code>Loader</code> include:</p>
+<ul>
+<li><strong>Base Configuration:</strong> It maintains common properties
+shared across all loaders, such as the <code>LoadingManager</code>
+(<code>manager</code>), cross-origin policies
+(<code>crossOrigin</code>), base paths (<code>path</code>), resource
+paths (<code>resourcePath</code>), and custom request headers
+(<code>requestHeader</code>).</li>
+<li><strong>Interface Definition:</strong> It outlines generic method
+signatures—such as <code>.load()</code>, <code>.loadAsync()</code>, and
+<code>.parse()</code>—without providing the specific implementation
+details for decoding asset files.</li>
+<li><strong>No Direct Instantiation for Assets:</strong> Because it
+lacks parsing routines, <code>Loader</code> is not used on its own to
+load models; it merely serves as the blueprint for subclasses.</li>
+</ul>
+<h3 id="the-objectloader-derived-class">The <code>ObjectLoader</code>
+Derived Class</h3>
+<p><code>ObjectLoader</code> directly inherits from <code>Loader</code>
+(<code>ObjectLoader extends Loader</code>). It is a concrete
+implementation dedicated to parsing the native Three.js JSON
+Object/Scene format—typically the structure generated by calling
+<code>.toJSON()</code> on a Three.js scene graph or object.</p>
+<p>Key characteristics of <code>ObjectLoader</code> include:</p>
+<ul>
+<li><strong>Inherited Foundation:</strong> It inherits all configuration
+properties and network-handling methods directly from
+<code>Loader</code>.</li>
+<li><strong>Concrete Parsing Pipeline:</strong> Unlike the base class,
+<code>ObjectLoader</code> fully implements <code>.parse()</code> and
+<code>.load()</code>. It reads JSON definitions and constructs
+functional Three.js components, including geometries, materials,
+animations, textures, and images.</li>
+<li><strong>Scene Graph Reconstruction:</strong> It produces
+ready-to-render objects, returning an instance of
+<code>THREE.Object3D</code> (or subclasses such as
+<code>THREE.Mesh</code> or <code>THREE.Scene</code>) complete with all
+bound metadata and hierarchy.</li>
+</ul>
+<h3 id="structural-hierarchy-comparison">Structural Hierarchy
+Comparison</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature</th>
+<th style="text-align: left;"><code>Loader</code></th>
+<th style="text-align: left;"><code>ObjectLoader</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Position in
+Hierarchy</strong></td>
+<td style="text-align: left;">Root base class for asset loaders</td>
+<td style="text-align: left;">Direct subclass of
+<code>Loader</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Class Type</strong></td>
+<td style="text-align: left;">Abstract / Base</td>
+<td style="text-align: left;">Concrete implementation</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Primary
+Responsibility</strong></td>
+<td style="text-align: left;">Configuration and loading management</td>
+<td style="text-align: left;">Deserializing Three.js JSON structures
+into 3D objects</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Input Target</strong></td>
+<td style="text-align: left;">Format-agnostic</td>
+<td style="text-align: left;">JSON exported via Three.js
+<code>.toJSON()</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;">None (interface only)</td>
+<td style="text-align: left;">Fully assembled <code>Object3D</code> or
+scene components</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Internal Loaders</strong></td>
+<td style="text-align: left;">Relies solely on the passed
+<code>LoadingManager</code></td>
+<td style="text-align: left;">Coordinates internal parsers for
+geometries, materials, and textures</td>
+</tr>
+</tbody>
+</table>
+<p>By separating core asset configuration into <code>Loader</code> and
+format-specific logic into subclasses like <code>ObjectLoader</code>,
+Three.js ensures that all file loaders share a unified setup while
+isolating the deserialization logic required for complex 3D scenes.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premultiplied Alpha in Three.js Fragment Shaders - three.js</title>
+    <meta name="description" content="This guide demonstrates how to manually handle premultiplied alpha blending within a custom RawShaderMaterial in Three.js. By understanding the underlying mathematical equations and the necessary WebGL state configurations, you will learn how to write GL">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/premultiplied-alpha-in-three-js-fragment-shaders">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Premultiplied Alpha in Three.js Fragment Shaders - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/premultiplied-alpha-in-three-js-fragment-shaders" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide demonstrates how to manually handle premultiplied alpha blending within a custom RawShaderMaterial in Three.js. By understanding the underlying mathematical equations and the necessary WebGL state configurations, you will learn how to write GL" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="premultiplied-alpha-in-threejs-fragment-shaders">Premultiplied
+Alpha in Three.js Fragment Shaders</h1>
+<p>This guide demonstrates how to manually handle premultiplied alpha
+blending within a custom <code>RawShaderMaterial</code> in Three.js. By
+understanding the underlying mathematical equations and the necessary
+WebGL state configurations, you will learn how to write GLSL fragment
+code that correctly scales color components by opacity and configure
+Three.js material blend factors to eliminate dark fringe artifacts along
+transparent boundaries.</p>
+<h3 id="the-premultiplied-alpha-equation">The Premultiplied Alpha
+Equation</h3>
+<p>In standard (straight) alpha blending, the color values (<span
+class="math inline">\(RGB\)</span>) and opacity (<span
+class="math inline">\(A\)</span>) are stored independently. The
+rendering engine calculates the output pixel on screen using the
+following equation:</p>
+<p><span class="math display">\[\text{Final Color} = (\text{Source
+Color} \times \text{Source Alpha}) + (\text{Destination Color} \times (1
+- \text{Source Alpha}))\]</span></p>
+<p>When using premultiplied alpha, the source RGB values are multiplied
+by the source alpha inside the fragment shader <em>before</em> the
+hardware blending stage:</p>
+<p><span class="math display">\[\text{RGB}_{\text{premultiplied}} =
+\text{RGB}_{\text{straight}} \times \text{A}\]</span></p>
+<p>Because the color is already scaled by its alpha, the blending
+hardware no longer needs to multiply the source color by the source
+alpha. The hardware blending equation becomes:</p>
+<p><span class="math display">\[\text{Final Color} =
+(\text{RGB}_{\text{premultiplied}} \times 1) + (\text{Destination Color}
+\times (1 - \text{Source Alpha}))\]</span></p>
+<p>This technique prevents interpolation artifacts (such as dark borders
+around semi-transparent edges) that occur when texture filtering or
+color blending blends fully transparent black (<code>0, 0, 0, 0</code>)
+with non-zero colors.</p>
+<h3 id="fragment-shader-implementation">Fragment Shader
+Implementation</h3>
+<p>In a <code>RawShaderMaterial</code>, Three.js does not inject default
+precision qualifiers, variables, or built-in chunks. You must explicitly
+declare precision and calculate the premultiplication before writing to
+<code>gl_FragColor</code>.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dt">precision</span> <span class="dt">mediump</span> <span class="dt">float</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec2</span> vUv<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">sampler2D</span> uTexture<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">float</span> uOpacity<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Sample straight alpha texture or define base color</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec4</span> texColor <span class="op">=</span> <span class="dt">texture2D</span><span class="op">(</span>uTexture<span class="op">,</span> vUv<span class="op">);</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Compute final straight alpha</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> alpha <span class="op">=</span> texColor<span class="op">.</span><span class="fu">a</span> <span class="op">*</span> uOpacity<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Premultiply RGB components by alpha</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> premultipliedRGB <span class="op">=</span> texColor<span class="op">.</span><span class="fu">rgb</span> <span class="op">*</span> alpha<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Output the final premultiplied vector</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span>premultipliedRGB<span class="op">,</span> alpha<span class="op">);</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<p>If you are computing colors procedurally (e.g., gradients or
+anti-aliased geometry with <code>fwidth</code> or
+<code>smoothstep</code>), calculate the final color and alpha, then
+multiply the RGB channels by the resulting alpha factor:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="dt">precision</span> <span class="dt">mediump</span> <span class="dt">float</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">vec3</span> uColor<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">float</span> uAlpha<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Explicit premultiplication</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span>uColor <span class="op">*</span> uAlpha<span class="op">,</span> uAlpha<span class="op">);</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="configuring-threejs-material-blend-modes">Configuring Three.js
+Material Blend Modes</h3>
+<p>For WebGL to correctly display premultiplied output, you must set the
+blend function factors to match the equation: Source Factor =
+<code>ONE</code>, Destination Factor =
+<code>ONE_MINUS_SRC_ALPHA</code>.</p>
+<p>You can configure this using <code>THREE.CustomBlending</code> on the
+<code>RawShaderMaterial</code>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">RawShaderMaterial</span>({</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vertexShader</span><span class="op">:</span> customVertexShader<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fragmentShader</span><span class="op">:</span> customFragmentShader<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">uniforms</span><span class="op">:</span> {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">uTexture</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> loadedTexture }<span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="dt">uOpacity</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> <span class="fl">0.8</span> }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">depthWrite</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Explicit blending factors for premultiplied alpha</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blending</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">CustomBlending</span><span class="op">,</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blendSrc</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">OneFactor</span><span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blendDst</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">OneMinusSrcAlphaFactor</span><span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blendSrcAlpha</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">OneFactor</span><span class="op">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blendDstAlpha</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">OneMinusSrcAlphaFactor</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Alternatively, Three.js provides a built-in flag that automatically
+updates <code>NormalBlending</code> to use <code>OneFactor</code> for
+the source:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">RawShaderMaterial</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vertexShader</span><span class="op">:</span> customVertexShader<span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fragmentShader</span><span class="op">:</span> customFragmentShader<span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">uniforms</span><span class="op">:</span> {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">uTexture</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> loadedTexture }<span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">uOpacity</span><span class="op">:</span> { <span class="dt">value</span><span class="op">:</span> <span class="fl">0.8</span> }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">transparent</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">premultipliedAlpha</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>When <code>premultipliedAlpha: true</code> is combined with standard
+<code>blending: THREE.NormalBlending</code>, Three.js sets the source
+blend factor to <code>gl.ONE</code> and destination blend factor to
+<code>gl.ONE_MINUS_SRC_ALPHA</code> under the hood.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

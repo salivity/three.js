@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using projectionMatrixInverse in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to access and utilize the projectionMatrixInverse property of a camera in Three.js to manually unproject 2D screen coordinates into 3D view space. You will learn how to obtain Normalized Device Coordinates (NDC), apply the inver">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/using-projectionmatrixinverse-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Using projectionMatrixInverse in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/using-projectionmatrixinverse-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to access and utilize the projectionMatrixInverse property of a camera in Three.js to manually unproject 2D screen coordinates into 3D view space. You will learn how to obtain Normalized Device Coordinates (NDC), apply the inver" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="using-projectionmatrixinverse-in-threejs">Using
+projectionMatrixInverse in Three.js</h1>
+<p>This article explains how to access and utilize the
+<code>projectionMatrixInverse</code> property of a camera in Three.js to
+manually unproject 2D screen coordinates into 3D view space. You will
+learn how to obtain Normalized Device Coordinates (NDC), apply the
+inverted projection matrix, ensure the matrix is properly updated, and
+understand how this process compares to Three.js's built-in
+<code>Vector3.unproject</code> method.</p>
+<h2 id="accessing-projectionmatrixinverse">Accessing
+<code>projectionMatrixInverse</code></h2>
+<p>In Three.js, both <code>PerspectiveCamera</code> and
+<code>OrthographicCamera</code> inherit from <code>Camera</code>, which
+possesses the <code>projectionMatrixInverse</code> property
+(<code>THREE.Matrix4</code>). This matrix is automatically maintained by
+the camera to invert the projection transformation, mapping points from
+clip space (NDC) back into camera (view) space.</p>
+<p>You can directly access it from your camera instance:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> invProjectionMatrix <span class="op">=</span> camera<span class="op">.</span><span class="at">projectionMatrixInverse</span><span class="op">;</span></span></code></pre></div>
+<h3 id="keeping-the-matrix-updated">Keeping the Matrix Updated</h3>
+<p>Whenever you alter camera properties that affect projection—such as
+<code>fov</code>, <code>aspect</code>, <code>near</code>,
+<code>far</code>, or orthographic bounds—you must call
+<code>camera.updateProjectionMatrix()</code>. This method updates both
+<code>camera.projectionMatrix</code> and immediately recalculates
+<code>camera.projectionMatrixInverse</code>.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">aspect</span> <span class="op">=</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="fu">updateProjectionMatrix</span>()<span class="op">;</span> <span class="co">// Recalculates projectionMatrix and projectionMatrixInverse</span></span></code></pre></div>
+<h2
+id="step-by-step-unprojecting-coordinates-to-view-space">Step-by-Step:
+Unprojecting Coordinates to View Space</h2>
+<p>To manually unproject screen coordinates into camera space using
+<code>projectionMatrixInverse</code>, follow these steps:</p>
+<h3
+id="1-convert-screen-coordinates-to-normalized-device-coordinates-ndc">1.
+Convert Screen Coordinates to Normalized Device Coordinates (NDC)</h3>
+<p>Screen coordinates (pixels) must be mapped to a range of
+<code>[-1, 1]</code> for both the X and Y axes, where
+<code>(0, 0)</code> represents the center of the screen:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mouseX <span class="op">=</span> <span class="bu">event</span><span class="op">.</span><span class="at">clientX</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mouseY <span class="op">=</span> <span class="bu">event</span><span class="op">.</span><span class="at">clientY</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ndcX <span class="op">=</span> (mouseX <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span>) <span class="op">*</span> <span class="dv">2</span> <span class="op">-</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ndcY <span class="op">=</span> <span class="op">-</span>(mouseY <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span>) <span class="op">*</span> <span class="dv">2</span> <span class="op">+</span> <span class="dv">1</span><span class="op">;</span> <span class="co">// Invert Y axis</span></span></code></pre></div>
+<h3 id="2-create-the-vector">2. Create the Vector</h3>
+<p>Define a <code>THREE.Vector3</code> using the calculated NDC values.
+The Z value typically ranges from <code>-1</code> (near plane) to
+<code>1</code> (far plane) depending on the desired depth:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> targetDepth <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span> <span class="co">// Depth in NDC space</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> pointInNDC <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(ndcX<span class="op">,</span> ndcY<span class="op">,</span> targetDepth)<span class="op">;</span></span></code></pre></div>
+<h3 id="3-apply-the-inverted-projection-matrix">3. Apply the Inverted
+Projection Matrix</h3>
+<p>Transform the vector from NDC space to camera/view space using
+<code>applyMatrix4</code>:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>pointInNDC<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">projectionMatrixInverse</span>)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">// pointInNDC is now in 3D camera space (relative to the camera&#39;s local origin)</span></span></code></pre></div>
+<h2 id="transforming-from-camera-space-to-world-space">Transforming from
+Camera Space to World Space</h2>
+<p>If your objective is to obtain world-space coordinates, the
+camera-space point must also be transformed by the camera's world
+matrix:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>pointInNDC<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">// pointInNDC is now in full 3D world space</span></span></code></pre></div>
+<h2 id="manual-matrix-multiplication-vs-vector3unproject">Manual Matrix
+Multiplication vs. <code>Vector3.unproject</code></h2>
+<p>Three.js provides a built-in helper method,
+<code>Vector3.unproject(camera)</code>. Internally, this helper
+performs:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>vector<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">projectionMatrixInverse</span>)<span class="op">.</span><span class="fu">applyMatrix4</span>(camera<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span></code></pre></div>
+<p>Accessing <code>camera.projectionMatrixInverse</code> directly is
+primarily useful when:</p>
+<ul>
+<li>You need the coordinates in local camera space rather than global
+world space (e.g., custom post-processing, screen-space reflections, or
+depth reconstructions).</li>
+<li>You are constructing custom shaders or compute passes and need to
+pass the view-space reconstruction matrix as a uniform.</li>
+<li>You are optimizing performance inside a loop and want to avoid
+recomputing or applying world-matrix steps.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

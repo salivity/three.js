@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atmospheric Scattering in Three.js Using Sky.js - three.js</title>
+    <meta name="description" content="This article explains how the Three.js Sky.js shader module generates photorealistic skies by simulating Rayleigh and Mie light scattering. It covers the physical principles behind these two scattering models, how they are translated into GLSL shaders, a">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/atmospheric-scattering-in-three-js-using-sky-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Atmospheric Scattering in Three.js Using Sky.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/atmospheric-scattering-in-three-js-using-sky-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how the Three.js Sky.js shader module generates photorealistic skies by simulating Rayleigh and Mie light scattering. It covers the physical principles behind these two scattering models, how they are translated into GLSL shaders, a" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="atmospheric-scattering-in-threejs-using-skyjs">Atmospheric
+Scattering in Three.js Using Sky.js</h1>
+<p>This article explains how the Three.js <code>Sky.js</code> shader
+module generates photorealistic skies by simulating Rayleigh and Mie
+light scattering. It covers the physical principles behind these two
+scattering models, how they are translated into GLSL shaders, and how
+runtime parameters like turbidity, sun position, and scattering
+coefficients determine the visual appearance of the atmosphere from
+midday blue to sunset red.</p>
+<h2 id="the-physics-of-atmospheric-scattering">The Physics of
+Atmospheric Scattering</h2>
+<p>When sunlight enters a planetary atmosphere, photons interact with
+particles suspended in the air. The visual appearance of the sky is
+predominantly dictated by two physical processes:</p>
+<ol type="1">
+<li><p><strong>Rayleigh Scattering:</strong> Occurs when light interacts
+with particles much smaller than its wavelength, primarily nitrogen and
+oxygen molecules. The scattering intensity is inversely proportional to
+the fourth power of the wavelength (<span
+class="math inline">\(\lambda^{-4}\)</span>). Consequently, shorter
+wavelengths (blue light) scatter roughly ten times more efficiently than
+longer wavelengths (red light). During midday, scattered blue light
+floods the sky dome. At sunrise or sunset, sunlight travels through a
+thicker column of air, scattering out almost all short wavelengths
+before reaching the observer and leaving only reds, oranges, and deep
+yellows.</p></li>
+<li><p><strong>Mie Scattering:</strong> Occurs when light collides with
+particles comparable to or larger than its wavelength, such as water
+droplets, dust, smoke, and pollen (aerosols). Mie scattering is
+predominantly wavelength-independent, causing all colors to scatter
+relatively equally and producing a whitish haze. It is also highly
+directional, creating strong forward scattering that manifests as a
+distinct bright halo around the sun disk.</p></li>
+</ol>
+<h2 id="how-skyjs-implements-the-model">How Sky.js Implements the
+Model</h2>
+<p><code>Sky.js</code> is an official Three.js add-on based on
+analytical sky models (primarily derived from the Preetham and
+Bruneton/Nishita atmospheric scattering approximations). Instead of
+simulating millions of individual volumetric air slices in real
+time—which is computationally prohibitive—<code>Sky.js</code> executes
+an analytical solution entirely within a WebGL fragment shader mapped
+across a massive geometric sky dome.</p>
+<h3 id="1-geometry-setup">1. Geometry Setup</h3>
+<p><code>Sky.js</code> creates an internal <code>Mesh</code> utilizing a
+large bounding geometry, typically a cube or sphere scaled to encompass
+the entire camera view range. The inside faces are rendered, ensuring
+that regardless of camera position or rotation, every viewing ray
+intersects the atmospheric dome.</p>
+<h3 id="2-optical-depth-and-ray-marching-approximations">2. Optical
+Depth and Ray Marching Approximations</h3>
+<p>To compute the color of any pixel on the sky dome, the fragment
+shader determines a viewing ray vector originating from the camera
+through the pixel, alongside a directional vector pointing toward the
+sun. The shader calculates:</p>
+<ul>
+<li>The <strong>optical path length</strong> through the atmospheric
+boundary layer.</li>
+<li>The <strong>scattering angle</strong> (<span
+class="math inline">\(\theta\)</span>), which is the angle between the
+camera view vector and the sun vector.</li>
+</ul>
+<h3 id="3-applying-the-phase-functions-in-glsl">3. Applying the Phase
+Functions in GLSL</h3>
+<p>The shader calculates the intensity and color of light arriving at
+the camera using two specialized phase functions:</p>
+<ul>
+<li><p><strong>The Rayleigh Phase Function:</strong> Models symmetric
+forward and backward scattering with uniform circular distribution:
+<span class="math display">\[P_R(\theta) = \frac{3}{16\pi} (1 +
+\cos^2\theta)\]</span> The shader applies this function scaled by the
+inverse fourth power of the RGB wavelengths. This colors the general
+expanse of the sky based on optical path length.</p></li>
+<li><p><strong>The Mie Phase Function (Henyey-Greenstein
+Approximation):</strong> Models asymmetric forward scattering to
+generate the solar glow: <span class="math display">\[P_M(\theta) =
+\frac{1 - g^2}{4\pi (1 + g^2 - 2g \cos\theta)^{3/2}}\]</span> The
+asymmetry factor <span class="math inline">\(g\)</span>
+(<code>mieDirectionalG</code>) dictates how tightly light scatters
+forward. A value close to <code>1.0</code> produces a sharp, localized
+sun disk, while lower values produce a broad, hazy glare.</p></li>
+</ul>
+<h3 id="4-integration-of-configurable-uniforms">4. Integration of
+Configurable Uniforms</h3>
+<p><code>Sky.js</code> exposes several uniforms to JavaScript that allow
+real-time control over the fragment shader's variables:</p>
+<ul>
+<li><strong><code>sunPosition</code> (Vector3):</strong> Controls the
+trajectory and altitude of the sun. As the sun lowers toward the
+horizon, the optical thickness increases exponentially, automatically
+shifting the sky color from pale blue to sunset crimson.</li>
+<li><strong><code>rayleigh</code> (Float):</strong> Directly scales the
+strength of molecular scattering. Low values remove the blue hue and
+turn the sky black (simulating an airless moon environment), while
+higher values intensify the sky color.</li>
+<li><strong><code>turbidity</code> (Float):</strong> Represents the
+concentration of aerosol particles. Higher turbidity increases Mie
+scattering and shifts the atmosphere from clear blue to an overcast or
+smog-filled appearance.</li>
+<li><strong><code>mieCoefficient</code> (Float):</strong> Determines the
+overall amount of Mie scattering present in the volume.</li>
+<li><strong><code>mieDirectionalG</code> (Float):</strong> Controls the
+directionality of the sun’s halo via the Henyey-Greenstein
+function.</li>
+</ul>
+<p>Through this combination of analytical phase calculations and
+hardware-accelerated fragment shading, <code>Sky.js</code> provides
+dynamic, physically grounded atmospheric visuals with negligible CPU
+overhead.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix SSRPass Reflection Bleeding in Three.js - three.js</title>
+    <meta name="description" content="Screen-space reflection (SSR) bleeding in Three.js occurs when reflected rays incorrectly register hits on surfaces hidden behind foreground geometry. Because screen-space passes only have access to 2.5D depth buffer data representing the visible front f">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/fix-ssrpass-reflection-bleeding-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fix SSRPass Reflection Bleeding in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/fix-ssrpass-reflection-bleeding-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Screen-space reflection (SSR) bleeding in Three.js occurs when reflected rays incorrectly register hits on surfaces hidden behind foreground geometry. Because screen-space passes only have access to 2.5D depth buffer data representing the visible front f" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="fix-ssrpass-reflection-bleeding-in-threejs">Fix SSRPass
+Reflection Bleeding in Three.js</h1>
+<p>Screen-space reflection (SSR) bleeding in Three.js occurs when
+reflected rays incorrectly register hits on surfaces hidden behind
+foreground geometry. Because screen-space passes only have access to
+2.5D depth buffer data representing the visible front faces of meshes,
+you must explicitly define how the shader calculates object depth.
+Tuning the <code>thickness</code> property and disabling
+<code>infiniteThick</code> on the <code>SSRPass</code> instance resolves
+this artifact by establishing strict front-to-back volumetric boundaries
+for ray intersections.</p>
+<h2 id="key-parameters-to-prevent-ssr-bleeding">Key Parameters to
+Prevent SSR Bleeding</h2>
+<h3 id="1-ssrpassthickness">1. <code>ssrPass.thickness</code></h3>
+<p>The <code>thickness</code> property defines the assumed depth (in
+world/view units) of geometry rendered in the depth buffer.</p>
+<ul>
+<li><strong>The Problem:</strong> By default, the shader cannot know how
+deep an object is. If <code>thickness</code> is set too high, a ray that
+travels behind a foreground mesh will be registered as an intersection
+within the object's body, creating distorted reflections of objects
+located behind the occluder. If it is set too low, rays will pass
+through edges without triggering valid hits.</li>
+<li><strong>The Fix:</strong> Tune <code>ssrPass.thickness</code> to
+closely match the typical dimensions of the thinnest occluding geometry
+in your scene. A common baseline starts around <code>0.018</code> to
+<code>0.1</code>, but this must be scaled proportionally to your scene's
+coordinate system. For metric-scale scenes, values between
+<code>0.01</code> and <code>0.05</code> generally prevent background
+leakages while maintaining clean edge reflections.</li>
+</ul>
+<h3 id="2-ssrpassinfinitethick">2.
+<code>ssrPass.infiniteThick</code></h3>
+<p>The <code>infiniteThick</code> boolean controls whether geometry is
+treated as having an infinite boundary behind its front-facing
+surface.</p>
+<ul>
+<li><strong>The Problem:</strong> When <code>infiniteThick</code> is set
+to <code>true</code>, any ray that steps deeper than the front depth
+value is evaluated as a collision. This virtually guarantees severe
+reflection bleeding through walls, pillars, and small props.</li>
+<li><strong>The Fix:</strong> Explicitly set
+<code>ssrPass.infiniteThick = false;</code>. This enforces the
+<code>thickness</code> threshold, forcing the ray-marching algorithm to
+continue through open space behind the defined thickness threshold
+rather than falsely colliding with the back of an occluder.</li>
+</ul>
+<h2 id="secondary-parameters-for-fine-tuning">Secondary Parameters for
+Fine-Tuning</h2>
+<p>To eliminate residual edge artifacts and depth-test errors around
+object contours, adjust these supporting settings:</p>
+<ul>
+<li><strong><code>ssrPass.maxDistance</code></strong>: Limits the
+absolute travel distance of reflection rays. Lowering this value
+prevents distant background objects from bleeding into foreground floor
+reflections.</li>
+<li><strong><code>ssrPass.surfNormalBias</code></strong>: Offsets the
+ray origin along the surface normal. Setting this to a small non-zero
+value prevents self-intersection (surface acne) without projecting the
+ray far enough to bypass thin geometry.</li>
+</ul>
+<h2 id="configuration-example">Configuration Example</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { SSRPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/SSRPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ssrPass <span class="op">=</span> <span class="kw">new</span> <span class="fu">SSRPass</span>({</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  scene<span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  camera<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">width</span><span class="op">:</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">height</span><span class="op">:</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">groundReflector</span><span class="op">:</span> <span class="kw">null</span><span class="op">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">selects</span><span class="op">:</span> reflectiveObjects</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Enforce finite geometry bounds</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>ssrPass<span class="op">.</span><span class="at">infiniteThick</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Calibrate depth hit-box to scene units (adjust to asset scale)</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>ssrPass<span class="op">.</span><span class="at">thickness</span> <span class="op">=</span> <span class="fl">0.025</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Restrict ray length to suppress far-field bleeding</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>ssrPass<span class="op">.</span><span class="at">maxDistance</span> <span class="op">=</span> <span class="fl">5.0</span><span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(ssrPass)<span class="op">;</span></span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

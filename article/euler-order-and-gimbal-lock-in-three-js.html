@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euler Order and Gimbal Lock in Three.js - three.js</title>
+    <meta name="description" content="In Three.js, rotational transformations depend entirely on the sequence in which axis rotations are calculated and applied. While Three.js defaults to an 'XYZ' Euler order, explicitly defining an alternate order like 'YXZ' changes the underlying matrix m">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/euler-order-and-gimbal-lock-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Euler Order and Gimbal Lock in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/euler-order-and-gimbal-lock-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, rotational transformations depend entirely on the sequence in which axis rotations are calculated and applied. While Three.js defaults to an 'XYZ' Euler order, explicitly defining an alternate order like 'YXZ' changes the underlying matrix m" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="euler-order-and-gimbal-lock-in-threejs">Euler Order and Gimbal
+Lock in Three.js</h1>
+<p>In Three.js, rotational transformations depend entirely on the
+sequence in which axis rotations are calculated and applied. While
+Three.js defaults to an 'XYZ' Euler order, explicitly defining an
+alternate order like 'YXZ' changes the underlying matrix multiplication
+sequence. This change dictates which rotational axis occupies the
+vulnerable "middle" position where Gimbal lock occurs, allowing
+developers to tailor rotation behavior to specific use cases—such as
+first-person cameras—and prevent axes from collapsing into one
+another.</p>
+<h3 id="how-euler-rotations-are-evaluated-mathematically">How Euler
+Rotations Are Evaluated Mathematically</h3>
+<p>Euler rotations represent orientation through three sequential
+rotations around specific axes. In Three.js, rotations are intrinsic,
+meaning each subsequent rotation occurs around the object's newly
+reoriented local coordinate system.</p>
+<p>When you define an Euler order such as <code>'YXZ'</code>, Three.js
+evaluates the transformations sequentially:</p>
+<ol type="1">
+<li>Rotate around the local Y-axis (Yaw)</li>
+<li>Rotate around the modified local X-axis (Pitch)</li>
+<li>Rotate around the modified local Z-axis (Roll)</li>
+</ol>
+<p>Mathematically, this translates to multiplying elemental rotation
+matrices. Because matrix multiplication is non-commutative (<span
+class="math inline">\(A \times B \neq B \times A\)</span>), the order
+directly alters the resulting transformation matrix (<span
+class="math inline">\(R\)</span>):</p>
+<p><span class="math display">\[R = R_Y \times R_X \times
+R_Z\]</span></p>
+<p>Altering the string value of <code>Euler.order</code> alters the
+construction sequence of this transformation matrix before it is
+uploaded to the GPU or combined with position and scale in the object's
+<code>matrixWorld</code>.</p>
+<h3 id="the-mechanism-of-gimbal-lock">The Mechanism of Gimbal Lock</h3>
+<p>Gimbal lock is the mathematical loss of one degree of rotational
+freedom. It occurs when a rotation of <span class="math inline">\(\pm
+90^\circ\)</span> (<span class="math inline">\(\pi/2\)</span> radians)
+around the <strong>middle axis</strong> in the sequence aligns the first
+axis with the third axis.</p>
+<p>Under the default <code>'XYZ'</code> configuration:</p>
+<ul>
+<li>Rotation occurs around X, then Y, then Z.</li>
+<li>If the middle axis (Y) rotates by <span
+class="math inline">\(90^\circ\)</span>, the local Z-axis rotates
+directly into alignment with the initial X-axis.</li>
+<li>As a result, rotating around X or Z produces the exact same motion
+in world space. You lose the ability to rotate independently across
+three distinct planes.</li>
+</ul>
+<h3 id="how-yxz-solves-gimbal-lock-for-cameras">How 'YXZ' Solves Gimbal
+Lock for Cameras</h3>
+<p>In applications like first-person shooters (FPS), character
+controllers, and architectural walkthroughs, users primarily perform
+horizontal panning (Yaw around Y) and vertical tilting (Pitch around X),
+while bank or roll (Roll around Z) is typically locked to zero.</p>
+<p>When using the default <code>'XYZ'</code> order for an FPS
+camera:</p>
+<ul>
+<li>Pitching the camera up or down affects subsequent yaw calculations,
+often causing the camera to twist uncontrollably or freeze when looking
+directly upward or downward.</li>
+</ul>
+<p>By explicitly setting the order to <code>'YXZ'</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>camera<span class="op">.</span><span class="at">rotation</span><span class="op">.</span><span class="at">order</span> <span class="op">=</span> <span class="st">&#39;YXZ&#39;</span><span class="op">;</span></span></code></pre></div>
+<ol type="1">
+<li><strong>Y is applied first:</strong> The camera yaws horizontally
+around the global-up vector without being influenced by pitch.</li>
+<li><strong>X is the middle axis:</strong> Vertical pitch is applied
+second. Even if the camera pitches <span
+class="math inline">\(90^\circ\)</span> straight up or down, Gimbal lock
+only aligns the first axis (Y) with the third axis (Z).</li>
+<li><strong>Z is applied last:</strong> Because standard camera controls
+do not apply roll (<span class="math inline">\(Z = 0\)</span>), the
+alignment between the Y and Z axes does not degrade user control. The
+yaw movement remains fully decoupled from pitch.</li>
+</ol>
+<p>Explicitly controlling the Euler order allows you to place the axis
+least likely to conflict—or the axis reserved for unused degrees of
+freedom—into the sequence positions where mathematical alignment cannot
+disrupt the intended user interaction.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

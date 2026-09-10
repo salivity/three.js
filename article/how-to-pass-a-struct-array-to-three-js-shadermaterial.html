@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Pass a Struct Array to Three.js ShaderMaterial - three.js</title>
+    <meta name="description" content="Passing a custom struct array to a Three.js ShaderMaterial enables you to send structured, complex datasets—such as multiple light sources, particle properties, or bounding volumes—directly to WebGL shaders. To achieve this properly, you must define">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/how-to-pass-a-struct-array-to-three-js-shadermaterial">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="How to Pass a Struct Array to Three.js ShaderMaterial - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/how-to-pass-a-struct-array-to-three-js-shadermaterial" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Passing a custom struct array to a Three.js ShaderMaterial enables you to send structured, complex datasets—such as multiple light sources, particle properties, or bounding volumes—directly to WebGL shaders. To achieve this properly, you must define" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="how-to-pass-a-struct-array-to-threejs-shadermaterial">How to
+Pass a Struct Array to Three.js ShaderMaterial</h1>
+<p>Passing a custom struct array to a Three.js
+<code>ShaderMaterial</code> enables you to send structured, complex
+datasets—such as multiple light sources, particle properties, or
+bounding volumes—directly to WebGL shaders. To achieve this properly,
+you must define the struct within the GLSL shader code, initialize a
+matching array of JavaScript objects in your material uniforms, and map
+property types to compatible Three.js classes. This guide details the
+complete setup, from shader declaration to runtime updates.</p>
+<h3 id="1-define-the-struct-in-glsl">1. Define the Struct in GLSL</h3>
+<p>Declare your custom <code>struct</code> and a fixed-size uniform
+array of that struct type inside your vertex or fragment shader. WebGL
+requires uniform array lengths to be static constants at compile
+time.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Fragment Shader</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> LightSource <span class="op">{</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> position<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> color<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">float</span> intensity<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Fixed-size array declaration</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> LightSource uLights<span class="op">[</span><span class="dv">2</span><span class="op">];</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="dt">varying</span> <span class="dt">vec2</span> vUv<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span><span class="op">()</span> <span class="op">{</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vec3</span> finalColor <span class="op">=</span> <span class="dt">vec3</span><span class="op">(</span><span class="fl">0.0</span><span class="op">);</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">for</span> <span class="op">(</span><span class="dt">int</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> <span class="dv">2</span><span class="op">;</span> i<span class="op">++)</span> <span class="op">{</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">float</span> dist <span class="op">=</span> <span class="bu">distance</span><span class="op">(</span>vUv<span class="op">,</span> uLights<span class="op">[</span>i<span class="op">].</span><span class="fu">position</span><span class="op">.</span><span class="fu">xy</span><span class="op">);</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>        finalColor <span class="op">+=</span> uLights<span class="op">[</span>i<span class="op">].</span><span class="fu">color</span> <span class="op">*</span> <span class="op">(</span>uLights<span class="op">[</span>i<span class="op">].</span><span class="fu">intensity</span> <span class="op">/</span> <span class="op">(</span><span class="fl">1.0</span> <span class="op">+</span> dist<span class="op">));</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="va">gl_FragColor</span> <span class="op">=</span> <span class="dt">vec4</span><span class="op">(</span>finalColor<span class="op">,</span> <span class="fl">1.0</span><span class="op">);</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
+<h3 id="2-format-the-uniforms-in-javascript">2. Format the Uniforms in
+JavaScript</h3>
+<p>In JavaScript, define the uniform using an object whose
+<code>value</code> property contains an array of plain JavaScript
+objects. Each object in the array must mirror the exact field names
+defined in your GLSL struct.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lightData <span class="op">=</span> [</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">position</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="fl">0.2</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.0</span>)<span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">color</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="fl">1.0</span><span class="op">,</span> <span class="fl">0.2</span><span class="op">,</span> <span class="fl">0.2</span>)<span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">intensity</span><span class="op">:</span> <span class="fl">1.5</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="dt">position</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="fl">0.8</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">0.0</span>)<span class="op">,</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">color</span><span class="op">:</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Color</span>(<span class="fl">0.2</span><span class="op">,</span> <span class="fl">0.5</span><span class="op">,</span> <span class="fl">1.0</span>)<span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">intensity</span><span class="op">:</span> <span class="fl">2.0</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customUniforms <span class="op">=</span> {</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">uLights</span><span class="op">:</span> {</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>        <span class="dt">value</span><span class="op">:</span> lightData</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<h3 id="3-attach-uniforms-to-the-shadermaterial">3. Attach Uniforms to
+the ShaderMaterial</h3>
+<p>Assign the formatted uniforms object directly to your
+<code>ShaderMaterial</code> instance:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">ShaderMaterial</span>({</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="dt">vertexShader</span><span class="op">:</span> vertexShaderSource<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">fragmentShader</span><span class="op">:</span> fragmentShaderSource<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">uniforms</span><span class="op">:</span> customUniforms</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p>Three.js automatically detects the nested structure and uploads each
+element to the corresponding WebGL uniform location (such as
+<code>uLights[0].position</code>, <code>uLights[0].color</code>, and
+<code>uLights[0].intensity</code>).</p>
+<h3 id="4-updating-uniforms-dynamically">4. Updating Uniforms
+Dynamically</h3>
+<p>To update values during the render loop, modify the nested properties
+on the existing objects directly:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>(time) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Update individual values inside the struct array</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    material<span class="op">.</span><span class="at">uniforms</span><span class="op">.</span><span class="at">uLights</span><span class="op">.</span><span class="at">value</span>[<span class="dv">0</span>]<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="at">x</span> <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(time <span class="op">*</span> <span class="fl">0.002</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    material<span class="op">.</span><span class="at">uniforms</span><span class="op">.</span><span class="at">uLights</span><span class="op">.</span><span class="at">value</span>[<span class="dv">1</span>]<span class="op">.</span><span class="at">intensity</span> <span class="op">=</span> <span class="fl">1.0</span> <span class="op">+</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(time <span class="op">*</span> <span class="fl">0.003</span>)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-considerations">Key Considerations</h3>
+<ul>
+<li><strong>Type Matching</strong>: Ensure Three.js types map precisely
+to the GLSL types (<code>THREE.Vector2</code> for <code>vec2</code>,
+<code>THREE.Vector3</code> or <code>THREE.Color</code> for
+<code>vec3</code>, <code>THREE.Matrix4</code> for <code>mat4</code>, and
+native JavaScript numbers for <code>float</code> or
+<code>int</code>).</li>
+<li><strong>Static Array Sizing</strong>: GLSL arrays must have a
+predetermined length. If you need dynamic sizing, allocate an array to
+the maximum expected capacity in the shader and pass an additional
+<code>uniform int uActiveCount</code> to limit the loop iterations in
+GLSL.</li>
+<li><strong>Avoid Reassigning the Array</strong>: Mutate the properties
+of the existing objects in the array rather than assigning a new array
+reference on every frame to avoid unnecessary memory allocations and
+uniform re-linking.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

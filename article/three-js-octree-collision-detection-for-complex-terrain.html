@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Octree Collision Detection for Complex Terrain - three.js</title>
+    <meta name="description" content="Performing collision detection against complex, high-polygon terrains in Three.js can quickly degrade performance if done using standard brute-force raycasting. An Octree solves this problem by partitioning 3D space hierarchically into an eight-child tre">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-octree-collision-detection-for-complex-terrain">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js Octree Collision Detection for Complex Terrain - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-octree-collision-detection-for-complex-terrain" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Performing collision detection against complex, high-polygon terrains in Three.js can quickly degrade performance if done using standard brute-force raycasting. An Octree solves this problem by partitioning 3D space hierarchically into an eight-child tre" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-octree-collision-detection-for-complex-terrain">Three.js
+Octree Collision Detection for Complex Terrain</h1>
+<p>Performing collision detection against complex, high-polygon terrains
+in Three.js can quickly degrade performance if done using standard
+brute-force raycasting. An Octree solves this problem by partitioning 3D
+space hierarchically into an eight-child tree structure, reducing
+collision query complexity from linear <span
+class="math inline">\(O(N)\)</span> to logarithmic <span
+class="math inline">\(O(\log N)\)</span>. This guide explains the
+mechanics of an Octree, demonstrates how to construct and update one
+using Three.js utilities, and details how to execute fast collision
+queries against massive terrain geometries.</p>
+<h3 id="the-problem-with-brute-force-testing">The Problem with
+Brute-Force Testing</h3>
+<p>Three.js includes a built-in <code>Raycaster</code> that can test
+intersections against meshes. However, when applied to a dense terrain
+geometry containing tens or hundreds of thousands of triangles, the
+raycaster must evaluate every individual triangle to test for an
+intersection. At 60 frames per second, running these checks for
+characters, projectiles, or camera clipping causes severe frame
+drops.</p>
+<h3 id="how-an-octree-optimizes-queries">How an Octree Optimizes
+Queries</h3>
+<p>An Octree is a tree data structure where each internal node has
+exactly eight children, corresponding to the octants of a 3D bounding
+box (Axis-Aligned Bounding Box, or AABB).</p>
+<ol type="1">
+<li><strong>Root Creation:</strong> An initial bounding box envelops the
+entire terrain mesh.</li>
+<li><strong>Subdivision:</strong> If a node contains more than a defined
+threshold of triangles (e.g., 16 to 32 triangles) and has not reached
+the maximum depth limit, it subdivides into eight equal sub-boxes.</li>
+<li><strong>Distribution:</strong> Triangles from the parent are sorted
+into whichever child octants they intersect.</li>
+<li><strong>Querying:</strong> When a ray, sphere, or player capsule is
+tested for collision, the algorithm traverses only the branches whose
+bounding boxes intersect the query volume, ignoring the vast majority of
+non-relevant triangles in the terrain.</li>
+</ol>
+<h3 id="implementing-an-octree-with-threejs">Implementing an Octree with
+Three.js</h3>
+<p>Three.js provides an optimized Octree implementation within its
+add-ons library (<code>three/addons/math/Octree.js</code>), alongside a
+<code>Capsule</code> primitive
+(<code>three/addons/math/Capsule.js</code>) commonly used for player
+collision.</p>
+<h4 id="1-import-and-setup">1. Import and Setup</h4>
+<p>Import the necessary modules alongside your core Three.js
+dependencies:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Octree } <span class="im">from</span> <span class="st">&#39;three/addons/math/Octree.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Capsule } <span class="im">from</span> <span class="st">&#39;three/addons/math/Capsule.js&#39;</span><span class="op">;</span></span></code></pre></div>
+<h4 id="2-build-the-octree-from-terrain-geometry">2. Build the Octree
+from Terrain Geometry</h4>
+<p>Once your terrain mesh is loaded or generated, construct the Octree
+by passing the mesh directly. Ensure the terrain's world matrix is fully
+updated before generation:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> worldOctree <span class="op">=</span> <span class="kw">new</span> <span class="fu">Octree</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Assume terrainMesh is your loaded GLTF or generated PlaneGeometry</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>terrainMesh<span class="op">.</span><span class="fu">updateMatrixWorld</span>(<span class="kw">true</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Populate the octree with the terrain&#39;s geometry</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>worldOctree<span class="op">.</span><span class="fu">fromGraphNode</span>(terrainMesh)<span class="op">;</span></span></code></pre></div>
+<p>The <code>fromGraphNode</code> method traverses the target object,
+extracts all triangle faces, and places them into the spatial tree.</p>
+<h4 id="3-defining-the-collider">3. Defining the Collider</h4>
+<p>For player movement on uneven terrain, a vertical capsule provides
+smooth traversal over steps and slopes:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> playerRadius <span class="op">=</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> playerHeight <span class="op">=</span> <span class="fl">1.8</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> playerCollider <span class="op">=</span> <span class="kw">new</span> <span class="fu">Capsule</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> playerRadius<span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> playerHeight <span class="op">-</span> playerRadius<span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    playerRadius</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<h4 id="4-executing-the-collision-check">4. Executing the Collision
+Check</h4>
+<p>Inside your animation loop, check for collisions between the collider
+and the Octree. The <code>capsuleIntersect</code> method returns an
+object containing the penetration depth and normal if a collision
+occurs:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">playerCollisions</span>() {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> result <span class="op">=</span> worldOctree<span class="op">.</span><span class="fu">capsuleIntersect</span>(playerCollider)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (result) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Push the collider out of the geometry along the collision normal</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        playerCollider<span class="op">.</span><span class="fu">translate</span>(result<span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="fu">multiplyScalar</span>(result<span class="op">.</span><span class="at">depth</span>))<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Optional: Check if the surface is walkable</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> isGrounded <span class="op">=</span> result<span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="at">y</span> <span class="op">&gt;</span> <span class="fl">0.5</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> { <span class="dt">collided</span><span class="op">:</span> <span class="kw">true</span><span class="op">,</span> isGrounded }<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> { <span class="dt">collided</span><span class="op">:</span> <span class="kw">false</span><span class="op">,</span> <span class="dt">isGrounded</span><span class="op">:</span> <span class="kw">false</span> }<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="5-raycasting-against-the-octree">5. Raycasting Against the
+Octree</h4>
+<p>If you need point-to-point line-of-sight checks or projectile impacts
+rather than volume collisions, query the Octree directly with a ray:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ray <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Ray</span>(originPoint<span class="op">,</span> directionVector)<span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hit <span class="op">=</span> worldOctree<span class="op">.</span><span class="fu">rayIntersect</span>(ray)<span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (hit) {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Collision at distance: </span><span class="sc">${</span>hit<span class="op">.</span><span class="at">distance</span><span class="sc">}</span><span class="vs">`</span>)<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">console</span><span class="op">.</span><span class="fu">log</span>(<span class="vs">`Hit point:`</span><span class="op">,</span> hit<span class="op">.</span><span class="at">point</span>)<span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="key-performance-best-practices">Key Performance Best
+Practices</h3>
+<ul>
+<li><strong>Separate Visuals from Collisions:</strong> Never build an
+Octree from high-resolution visual meshes that include micro-details
+like foliage or tiny rock ridges. Create a low-poly invisible collision
+proxy of the terrain, and generate the Octree strictly from that
+proxy.</li>
+<li><strong>Precompute Static Terrains:</strong> Building an Octree via
+<code>fromGraphNode</code> incurs a one-time CPU cost. For production
+environments, build the Octree once during initialization or offload the
+structure generation to a Web Worker so the main thread remains
+responsive.</li>
+<li><strong>Chunked Terrains:</strong> For open-world environments that
+stream terrain tiles, maintain an individual Octree for each terrain
+chunk. Load, query, and dispose of Octrees dynamically relative to the
+player's current coordinate zone to keep memory consumption low.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

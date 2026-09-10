@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Culling Projectiles in Three.js with Sphere.containsPoint - three.js</title>
+    <meta name="description" content="Managing hundreds of active projectiles in a Three.js game can quickly lead to performance bottlenecks if off-screen or out-of-bounds entities are continuously updated and rendered. This guide demonstrates how to establish a central boundary sphere and l">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/culling-projectiles-in-three-js-with-sphere-containspoint">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Culling Projectiles in Three.js with Sphere.containsPoint - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/culling-projectiles-in-three-js-with-sphere-containspoint" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Managing hundreds of active projectiles in a Three.js game can quickly lead to performance bottlenecks if off-screen or out-of-bounds entities are continuously updated and rendered. This guide demonstrates how to establish a central boundary sphere and l" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="culling-projectiles-in-threejs-with-spherecontainspoint">Culling
+Projectiles in Three.js with Sphere.containsPoint</h1>
+<p>Managing hundreds of active projectiles in a Three.js game can
+quickly lead to performance bottlenecks if off-screen or out-of-bounds
+entities are continuously updated and rendered. This guide demonstrates
+how to establish a central boundary sphere and leverage the built-in
+<code>THREE.Sphere.containsPoint</code> method to rapidly detect, cull,
+or recycle incoming projectiles that stray outside your playable
+area.</p>
+<h3 id="setting-up-the-bounding-sphere">Setting Up the Bounding
+Sphere</h3>
+<p>Instead of running expensive distance calculations manually using
+<code>Math.sqrt</code>, Three.js provides the <code>THREE.Sphere</code>
+class. You can define a boundary around your player, camera, or the
+center of the world:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Define the center of your gameplay area and the despawn radius</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> arenaCenter <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> arenaRadius <span class="op">=</span> <span class="dv">150</span><span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Create the boundary sphere</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> boundarySphere <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Sphere</span>(arenaCenter<span class="op">,</span> arenaRadius)<span class="op">;</span></span></code></pre></div>
+<h3 id="implementing-the-culling-loop">Implementing the Culling
+Loop</h3>
+<p>During your main animation loop, iterate through your active
+projectiles. Use <code>containsPoint</code> against each projectile's
+current <code>Vector3</code> position. If the method returns
+<code>false</code>, the projectile has exited the valid play zone and
+should be removed or returned to an object pool.</p>
+<p>When removing elements from an array during iteration, always
+traverse the array in reverse to avoid skipping indices after
+deletion:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> activeProjectiles <span class="op">=</span> []<span class="op">;</span> <span class="co">// Array of projectile meshes or custom objects</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">updateProjectiles</span>(delta) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> activeProjectiles<span class="op">.</span><span class="at">length</span> <span class="op">-</span> <span class="dv">1</span><span class="op">;</span> i <span class="op">&gt;=</span> <span class="dv">0</span><span class="op">;</span> i<span class="op">--</span>) {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        <span class="kw">const</span> projectile <span class="op">=</span> activeProjectiles[i]<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Move the projectile forward</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        projectile<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">addScaledVector</span>(projectile<span class="op">.</span><span class="at">velocity</span><span class="op">,</span> delta)<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Check if the projectile is outside the sphere boundary</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span>boundarySphere<span class="op">.</span><span class="fu">containsPoint</span>(projectile<span class="op">.</span><span class="at">position</span>)) {</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Remove from the scene to stop rendering</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            scene<span class="op">.</span><span class="fu">remove</span>(projectile)<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Dispose resources if not pooling</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            projectile<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            projectile<span class="op">.</span><span class="at">material</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            <span class="co">// Remove from the active tracking array</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>            activeProjectiles<span class="op">.</span><span class="fu">splice</span>(i<span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="moving-boundaries-dynamic-with-the-player">Moving Boundaries
+Dynamic with the Player</h3>
+<p>If your game features a moving player and projectiles need to be
+culled relative to the player's position, dynamically update the
+sphere’s center property each frame:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">update</span>(delta) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Keep the culling volume centered on the player</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    boundarySphere<span class="op">.</span><span class="at">center</span><span class="op">.</span><span class="fu">copy</span>(player<span class="op">.</span><span class="at">position</span>)<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">updateProjectiles</span>(delta)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="performance-advantages">Performance Advantages</h3>
+<p>The <code>containsPoint</code> method is computationally lightweight.
+Internally, Three.js calculates the squared Euclidean distance between
+the target point and the sphere's center
+(<code>center.distanceToSquared(point)</code>), then checks if it is
+less than or equal to <code>radius * radius</code>. By avoiding square
+root operations, you can evaluate hundreds of projectiles per frame with
+negligible impact on your frame rate.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assign Custom Lightmap UVs in Three.js - three.js</title>
+    <meta name="description" content="This article explains how to configure a custom UV channel for baking and displaying light maps on 3D meshes in Three.js. You will learn how to assign a secondary UV attribute to your geometry, bind a light map texture to a mesh material, and calibrate i">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/assign-custom-lightmap-uvs-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Assign Custom Lightmap UVs in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/assign-custom-lightmap-uvs-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This article explains how to configure a custom UV channel for baking and displaying light maps on 3D meshes in Three.js. You will learn how to assign a secondary UV attribute to your geometry, bind a light map texture to a mesh material, and calibrate i" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="assign-custom-lightmap-uvs-in-threejs">Assign Custom Lightmap
+UVs in Three.js</h1>
+<p>This article explains how to configure a custom UV channel for baking
+and displaying light maps on 3D meshes in Three.js. You will learn how
+to assign a secondary UV attribute to your geometry, bind a light map
+texture to a mesh material, and calibrate its visual strength using the
+<code>lightMapIntensity</code> property.</p>
+<h2 id="understanding-lightmap-uv-channels-in-threejs">Understanding
+Lightmap UV Channels in Three.js</h2>
+<p>By default, standard materials in Three.js (such as
+<code>MeshStandardMaterial</code> or <code>MeshBasicMaterial</code>)
+sample standard diffuse maps using the primary UV channel
+(<code>geometry.attributes.uv</code>). For lightmaps, the shader
+pipeline targets a secondary UV channel typically named <code>uv2</code>
+(or mapped via the texture's <code>channel</code> property in modern
+Three.js releases).</p>
+<p>To route a light map to a custom UV layout, you must ensure that your
+geometry contains this secondary UV attribute and that the material is
+configured to interpret it properly.</p>
+<h2 id="step-by-step-implementation">Step-by-Step Implementation</h2>
+<h3 id="1-define-the-custom-uv-channel">1. Define the Custom UV
+Channel</h3>
+<p>If your 3D asset already contains a secondary UV set from a modeling
+package (like Blender), loaders such as <code>GLTFLoader</code> often
+map these to <code>uv2</code>. If you need to manually assign custom UV
+coordinates or copy them from an existing attribute, set the
+<code>uv2</code> attribute on the <code>BufferGeometry</code>:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Example: Copying or assigning custom UV data to &#39;uv2&#39;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> customUvArray <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>([</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// u, v coordinate pairs for each vertex</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.0</span><span class="op">,</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.0</span><span class="op">,</span> <span class="fl">0.0</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.0</span><span class="op">,</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.0</span><span class="op">,</span> <span class="fl">1.0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>])<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign to the geometry as &#39;uv2&#39;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;uv2&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(customUvArray<span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span></code></pre></div>
+<p>In newer versions of Three.js (r151+), you can also designate which
+UV channel a texture reads by modifying the texture's
+<code>channel</code> property directly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Sets the texture to read from geometry.attributes.uv2 (channel index 1)</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>lightMapTexture<span class="op">.</span><span class="at">channel</span> <span class="op">=</span> <span class="dv">1</span><span class="op">;</span> </span></code></pre></div>
+<h3 id="2-apply-the-lightmap-and-adjust-intensity">2. Apply the Lightmap
+and Adjust Intensity</h3>
+<p>Assign the loaded texture to the <code>lightMap</code> slot of your
+material. Then, use the <code>lightMapIntensity</code> property to scale
+the brightness and influence of the baked lighting:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> textureLoader <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TextureLoader</span>()<span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> lightMapTexture <span class="op">=</span> textureLoader<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;path/to/lightmap.png&#39;</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure proper color space</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>lightMapTexture<span class="op">.</span><span class="at">colorSpace</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">LinearSRGBColorSpace</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0xffffff</span><span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lightMap</span><span class="op">:</span> lightMapTexture<span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">lightMapIntensity</span><span class="op">:</span> <span class="fl">1.5</span> <span class="co">// Multiplier for the baked light intensity</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="3-assemble-the-mesh">3. Assemble the Mesh</h3>
+<p>Combine the geometry containing the custom UV channel with the
+configured material:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span></code></pre></div>
+<h2 id="controlling-brightness-with-lightmapintensity">Controlling
+Brightness with <code>lightMapIntensity</code></h2>
+<p>The <code>lightMapIntensity</code> property acts as a linear scalar
+multiplied against the RGB channels of the light map texture in the
+fragment shader:</p>
+<ul>
+<li><strong>Default (<code>1.0</code>):</strong> Renders the light map
+at its native texture brightness.</li>
+<li><strong>Dimming (<code>&lt; 1.0</code>):</strong> Values between
+<code>0.0</code> and <code>1.0</code> reduce the impact of baked
+lighting, useful for nighttime or shadowed scenarios.</li>
+<li><strong>Overdriving (<code>&gt; 1.0</code>):</strong> Values greater
+than <code>1.0</code> amplify the baked light intensity, which helps
+balance baked global illumination against high-intensity direct scene
+lights.</li>
+</ul>
+<p>Changes to <code>lightMapIntensity</code> do not require recompiling
+the shader, allowing for real-time runtime adjustments during
+performance or scene transitions.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

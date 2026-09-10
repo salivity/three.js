@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js TorusGeometry Radius and Tube Explained - three.js</title>
+    <meta name="description" content="In Three.js, TorusGeometry generates a three-dimensional ring or doughnut shape governed primarily by its radius and tube parameters. This article breaks down the mathematical relationship between these two properties, detailing how they correspond to cl">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/three-js-torusgeometry-radius-and-tube-explained">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Three.js TorusGeometry Radius and Tube Explained - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/three-js-torusgeometry-radius-and-tube-explained" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, TorusGeometry generates a three-dimensional ring or doughnut shape governed primarily by its radius and tube parameters. This article breaks down the mathematical relationship between these two properties, detailing how they correspond to cl" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="threejs-torusgeometry-radius-and-tube-explained">Three.js
+TorusGeometry Radius and Tube Explained</h1>
+<p>In Three.js, <code>TorusGeometry</code> generates a three-dimensional
+ring or doughnut shape governed primarily by its <code>radius</code> and
+<code>tube</code> parameters. This article breaks down the mathematical
+relationship between these two properties, detailing how they correspond
+to classic geometric torus definitions, dictate the dimensions of the
+final mesh, and determine the structural topology of the resulting
+shape.</p>
+<h3 id="major-vs-minor-radii">Major vs. Minor Radii</h3>
+<p>In classical geometry, a torus is formed by revolving a circle around
+an axis coplanar with the circle. It is defined by two fundamental
+values:</p>
+<ul>
+<li><strong>Major Radius (<span
+class="math inline">\(R\)</span>):</strong> The distance from the center
+of the torus to the center of the cross-sectional tube. In Three.js,
+this is the <code>radius</code> argument.</li>
+<li><strong>Minor Radius (<span
+class="math inline">\(r\)</span>):</strong> The radius of the
+cross-sectional tube itself. In Three.js, this is the <code>tube</code>
+argument.</li>
+</ul>
+<p>The constructor signature reflects this hierarchy:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>THREE<span class="op">.</span><span class="fu">TorusGeometry</span>(radius<span class="op">,</span> tube<span class="op">,</span> radialSegments<span class="op">,</span> tubularSegments<span class="op">,</span> arc)<span class="op">;</span></span></code></pre></div>
+<h3 id="boundary-dimensions">Boundary Dimensions</h3>
+<p>The overall physical boundaries of the generated geometry depend
+entirely on the sum and difference of the <code>radius</code> (<span
+class="math inline">\(R\)</span>) and the <code>tube</code> (<span
+class="math inline">\(r\)</span>):</p>
+<ul>
+<li><strong>Outer Radius (<span
+class="math inline">\(R_{outer}\)</span>):</strong> The distance from
+the central axis to the outermost edge of the geometry. <span
+class="math display">\[\text{Outer Radius} = \text{radius} +
+\text{tube}\]</span></li>
+<li><strong>Inner Radius (<span
+class="math inline">\(R_{inner}\)</span>):</strong> The distance from
+the central axis to the innermost edge (the hole's boundary). <span
+class="math display">\[\text{Inner Radius} = \text{radius} -
+\text{tube}\]</span></li>
+<li><strong>Total Width / Outer Diameter:</strong> The full width of the
+mesh along the X or Y plane. <span class="math display">\[\text{Outer
+Diameter} = 2 \times (\text{radius} + \text{tube})\]</span></li>
+<li><strong>Hole Diameter:</strong> The diameter of the central open
+space. <span class="math display">\[\text{Hole Diameter} = 2 \times
+(\text{radius} - \text{tube})\]</span></li>
+<li><strong>Total Height / Thickness:</strong> The thickness along the Z
+axis (the axis perpendicular to the revolution plane). <span
+class="math display">\[\text{Thickness} = 2 \times
+\text{tube}\]</span></li>
+</ul>
+<h3 id="topological-states-based-on-the-ratio">Topological States Based
+on the Ratio</h3>
+<p>The relationship between <code>radius</code> and <code>tube</code>
+determines the topological classification of the resulting 3D model:</p>
+<ol type="1">
+<li><strong>Standard Ring Torus
+(<code>radius &gt; tube</code>):</strong> When the major radius is
+strictly greater than the minor radius, the inner radius is positive
+(<span class="math inline">\(R - r &gt; 0\)</span>). The torus features
+an open central hole. This is the standard configuration for doughnut or
+ring shapes.</li>
+<li><strong>Horn Torus (<code>radius === tube</code>):</strong> When the
+major radius equals the minor radius, the inner radius becomes zero
+(<span class="math inline">\(R - r = 0\)</span>). The central hole
+closes completely, meeting at a single tangent point along the
+revolution axis.</li>
+<li><strong>Spindle Torus (<code>radius &lt; tube</code>):</strong> When
+the tube radius exceeds the primary radius, the inner radius becomes
+negative (<span class="math inline">\(R - r &lt; 0\)</span>). The
+geometry self-intersects at the center, creating an overlapping core
+with outer cusps instead of a central hole.</li>
+</ol>
+<h3 id="surface-area-and-volume-calculations">Surface Area and Volume
+Calculations</h3>
+<p>Because Three.js constructs the vertices using standard parametric
+torus equations, the mathematical surface area (<span
+class="math inline">\(A\)</span>) and enclosed volume (<span
+class="math inline">\(V\)</span>) of the ideal smooth torus can be
+derived directly using <code>radius</code> (<span
+class="math inline">\(R\)</span>) and <code>tube</code> (<span
+class="math inline">\(r\)</span>):</p>
+<ul>
+<li><strong>Surface Area:</strong> <span class="math display">\[A =
+4\pi^2 \times \text{radius} \times \text{tube}\]</span></li>
+<li><strong>Enclosed Volume:</strong> <span class="math display">\[V =
+2\pi^2 \times \text{radius} \times \text{tube}^2\]</span></li>
+</ul>
+<p>Maintaining an intended design scale requires modifying both
+parameters simultaneously. Increasing <code>tube</code> while holding
+<code>radius</code> constant increases both the thickness of the body
+and the outer diameter while shrinking the central void.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

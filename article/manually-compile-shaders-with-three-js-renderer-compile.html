@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manually Compile Shaders with Three.js renderer.compile - three.js</title>
+    <meta name="description" content="In Three.js, shaders are compiled lazily by default, meaning compilation occurs on the very first frame an object enters the camera view. This frequently results in noticeable frame drops or stuttering during gameplay or interactive experiences. This art">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/manually-compile-shaders-with-three-js-renderer-compile">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Manually Compile Shaders with Three.js renderer.compile - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/manually-compile-shaders-with-three-js-renderer-compile" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, shaders are compiled lazily by default, meaning compilation occurs on the very first frame an object enters the camera view. This frequently results in noticeable frame drops or stuttering during gameplay or interactive experiences. This art" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="manually-compile-shaders-with-threejs-renderercompile">Manually
+Compile Shaders with Three.js renderer.compile</h1>
+<p>In Three.js, shaders are compiled lazily by default, meaning
+compilation occurs on the very first frame an object enters the camera
+view. This frequently results in noticeable frame drops or stuttering
+during gameplay or interactive experiences. This article explains how to
+use the <code>WebGLRenderer.compile()</code> method to manually
+pre-compile all materials and shaders in your scene before rendering
+anything to the screen.</p>
+<h3 id="the-problem-with-lazy-compilation">The Problem with Lazy
+Compilation</h3>
+<p>When a mesh enters the rendering pipeline, Three.js must build and
+link the corresponding WebGL shader program based on the material
+properties, lights, shadows, and fog present in the scene. Because GPU
+shader compilation is computationally heavy and blocks the main thread,
+doing this dynamically causes noticeable latency spikes (commonly known
+as "jank").</p>
+<h3 id="using-renderercompile">Using <code>renderer.compile</code></h3>
+<p>The <code>renderer.compile()</code> method forces Three.js to
+construct and link the underlying WebGL programs for all objects within
+a given hierarchy immediately, without drawing pixels to the canvas.</p>
+<p>To use it, pass your scene (or any <code>Object3D</code>) along with
+the camera you intend to use for viewing:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scene <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Scene</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> camera <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PerspectiveCamera</span>(<span class="dv">75</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span> <span class="op">/</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> <span class="fl">0.1</span><span class="op">,</span> <span class="dv">1000</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup geometry, material, and lights</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">TorusKnotGeometry</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">3</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">16</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({ <span class="dt">color</span><span class="op">:</span> <span class="bn">0xff6347</span><span class="op">,</span> <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.2</span> })<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> mesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(geometry<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(mesh)<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> light <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">DirectionalLight</span>(<span class="bn">0xffffff</span><span class="op">,</span> <span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>light<span class="op">.</span><span class="at">position</span><span class="op">.</span><span class="fu">set</span>(<span class="dv">5</span><span class="op">,</span> <span class="dv">10</span><span class="op">,</span> <span class="dv">7</span>)<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(light)<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">// Pre-compile the scene before starting the render loop</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">compile</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">// Start the render loop afterward</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">animate</span>() {</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">requestAnimationFrame</span>(animate)<span class="op">;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  renderer<span class="op">.</span><span class="fu">render</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="fu">animate</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="compiling-specific-objects">Compiling Specific Objects</h3>
+<p>You do not have to pass the entire active scene. If you are loading
+an asset in the background that you want to prepare before adding it to
+your main scene, you can compile that specific object tree using a
+temporary scene or by passing the object directly:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> assetGroup <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Group</span>()<span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">// ...populate assetGroup with loaded meshes...</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Pre-compile only this group</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="fu">compile</span>(assetGroup<span class="op">,</span> camera)<span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Add to the main scene when ready to display</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(assetGroup)<span class="op">;</span></span></code></pre></div>
+<h3 id="non-blocking-compilation-with-compileasync">Non-Blocking
+Compilation with <code>compileAsync</code></h3>
+<p>In modern versions of Three.js (r154+), you can also use
+<code>renderer.compileAsync()</code>. This method takes advantage of the
+<code>KHR_parallel_shader_compile</code> WebGL extension if available on
+the user's hardware, compiling shaders asynchronously in the background
+so the main execution thread does not freeze:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> renderer<span class="op">.</span><span class="fu">compileAsync</span>(scene<span class="op">,</span> camera)<span class="op">;</span></span></code></pre></div>
+<h3 id="important-considerations">Important Considerations</h3>
+<ol type="1">
+<li><strong>Scene Context Matters:</strong> Shader generation in
+Three.js depends heavily on lighting, shadows, tone mapping, and fog
+configurations. If you compile a material with a scene that contains no
+lights, and later render it with multiple directional lights and shadows
+enabled, Three.js will be forced to recompile the shader to incorporate
+the lighting calculations.</li>
+<li><strong>Camera Settings:</strong> Always use the same camera (or
+identical camera configuration) for compilation that will be used for
+rendering, as projection characteristics can influence the generated
+shader code.</li>
+<li><strong>Execution Placement:</strong> Call
+<code>renderer.compile()</code> during your initial loading phase or
+right after dynamically instantiating complex materials to ensure smooth
+playback once user interaction begins.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

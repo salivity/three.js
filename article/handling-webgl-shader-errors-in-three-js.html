@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handling WebGL Shader Errors in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to safely intercept, debug, and handle WebGL initialization and shader compilation issues in Three.js. You will learn how to detect WebGL context creation failures, how to leverage the WebGLRenderer.debug.checkShaderErrors propert">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/handling-webgl-shader-errors-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Handling WebGL Shader Errors in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/handling-webgl-shader-errors-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to safely intercept, debug, and handle WebGL initialization and shader compilation issues in Three.js. You will learn how to detect WebGL context creation failures, how to leverage the WebGLRenderer.debug.checkShaderErrors propert" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="handling-webgl-shader-errors-in-threejs">Handling WebGL Shader
+Errors in Three.js</h1>
+<p>This guide explains how to safely intercept, debug, and handle WebGL
+initialization and shader compilation issues in Three.js. You will learn
+how to detect WebGL context creation failures, how to leverage the
+<code>WebGLRenderer.debug.checkShaderErrors</code> property to catch
+broken shaders during development, and how to safely toggle these checks
+to maintain high frame rates in production environments.</p>
+<h3 id="detecting-webgl-context-creation-failures">Detecting WebGL
+Context Creation Failures</h3>
+<p>Before dealing with shader errors, you must ensure the client device
+successfully creates a WebGL context. If the browser or hardware lacks
+WebGL support, instantiating <code>THREE.WebGLRenderer</code> throws an
+error.</p>
+<p>Wrap the renderer initialization in a <code>try...catch</code> block
+to handle setup failures gracefully:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> renderer<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> {</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  renderer <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">WebGLRenderer</span>({ <span class="dt">antialias</span><span class="op">:</span> <span class="kw">true</span> })<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>} <span class="cf">catch</span> (error) {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span>(<span class="st">&quot;WebGL context creation failed:&quot;</span><span class="op">,</span> error)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">displayFallbackUI</span>(<span class="st">&quot;WebGL is not supported or disabled on your device.&quot;</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">displayFallbackUI</span>(message) {</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> notice <span class="op">=</span> <span class="bu">document</span><span class="op">.</span><span class="fu">createElement</span>(<span class="st">&#39;div&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  notice<span class="op">.</span><span class="at">className</span> <span class="op">=</span> <span class="st">&#39;webgl-error-fallback&#39;</span><span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  notice<span class="op">.</span><span class="at">innerText</span> <span class="op">=</span> message<span class="op">;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(notice)<span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="using-webglrendererdebugcheckshadererrors">Using
+<code>WebGLRenderer.debug.checkShaderErrors</code></h3>
+<p>The <code>renderer.debug.checkShaderErrors</code> property is a
+boolean flag that determines whether Three.js checks material shader
+programs for compilation and linking errors.</p>
+<ul>
+<li><strong>Enabled (<code>true</code>)</strong>: Three.js queries the
+WebGL context using <code>gl.getShaderParameter()</code> and
+<code>gl.getProgramParameter()</code> after compiling materials. If
+errors occur, detailed logs—including the invalid GLSL code line—are
+output to <code>console.error</code>.</li>
+<li><strong>Disabled (<code>false</code>)</strong>: Three.js bypasses
+shader validation calls. This eliminates synchronous GPU-to-CPU stalls,
+drastically improving performance when uploading many materials.</li>
+</ul>
+<p>By default, <code>checkShaderErrors</code> is set to
+<code>true</code>. You can configure it immediately after instantiating
+your renderer:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">debug</span><span class="op">.</span><span class="at">checkShaderErrors</span> <span class="op">=</span> <span class="bu">process</span><span class="op">.</span><span class="at">env</span><span class="op">.</span><span class="at">NODE_ENV</span> <span class="op">!==</span> <span class="st">&#39;production&#39;</span><span class="op">;</span></span></code></pre></div>
+<h3 id="safely-intercepting-shader-compilation-errors">Safely
+Intercepting Shader Compilation Errors</h3>
+<p>Three.js logs shader errors directly to the browser console rather
+than throwing catchable JavaScript exceptions during draw calls. To
+capture, report, or display these errors within your application UI,
+intercept <code>console.error</code> calls originating from the WebGL
+program validation routine:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">monitorShaderErrors</span>(renderer<span class="op">,</span> onErrorCallback) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> originalConsoleError <span class="op">=</span> <span class="bu">console</span><span class="op">.</span><span class="fu">error</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">error</span> <span class="op">=</span> <span class="kw">function</span> (<span class="op">...</span>args) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> message <span class="op">=</span> args<span class="op">.</span><span class="fu">join</span>(<span class="st">&#39; &#39;</span>)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Check if the log matches Three.js shader compilation failures</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (message<span class="op">.</span><span class="fu">includes</span>(<span class="st">&#39;THREE.WebGLShader: gl.getShaderInfoLog()&#39;</span>) <span class="op">||</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        message<span class="op">.</span><span class="fu">includes</span>(<span class="st">&#39;THREE.WebGLProgram: gl.getProgramInfoLog()&#39;</span>)) {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">onErrorCallback</span>({</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="dt">type</span><span class="op">:</span> <span class="st">&#39;ShaderCompilationError&#39;</span><span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="dt">details</span><span class="op">:</span> args</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      })<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Preserve standard console output</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    originalConsoleError<span class="op">.</span><span class="fu">apply</span>(<span class="bu">console</span><span class="op">,</span> args)<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co">// Usage:</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>renderer<span class="op">.</span><span class="at">debug</span><span class="op">.</span><span class="at">checkShaderErrors</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="fu">monitorShaderErrors</span>(renderer<span class="op">,</span> (error) <span class="kw">=&gt;</span> {</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reportToTelemetryService</span>(error)<span class="op">;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="managing-webgl-context-loss">Managing WebGL Context Loss</h3>
+<p>Shader errors and runtime GPU crashes can trigger WebGL context loss.
+To prevent unhandled crashes, attach listeners for
+<code>webglcontextlost</code> and <code>webglcontextrestored</code> to
+the renderer's canvas:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canvas <span class="op">=</span> renderer<span class="op">.</span><span class="at">domElement</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;webglcontextlost&#39;</span><span class="op">,</span> (<span class="bu">event</span>) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="bu">event</span><span class="op">.</span><span class="fu">preventDefault</span>()<span class="op">;</span> <span class="co">// Informs the browser not to discard the context permanently</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">warn</span>(<span class="st">&#39;WebGL context lost. Pausing rendering loop.&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cancelAnimationFrame</span>(animationFrameId)<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>canvas<span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">&#39;webglcontextrestored&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="bu">console</span><span class="op">.</span><span class="fu">info</span>(<span class="st">&#39;WebGL context restored. Re-initializing resources.&#39;</span>)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reinitializeScene</span>()<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>}<span class="op">,</span> <span class="kw">false</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="recommended-best-practices">Recommended Best Practices</h3>
+<ol type="1">
+<li><strong>Development Mode</strong>: Set
+<code>renderer.debug.checkShaderErrors = true</code> to catch GLSL
+syntax and linking errors immediately during development.</li>
+<li><strong>Production Mode</strong>: Explicitly set
+<code>renderer.debug.checkShaderErrors = false</code>. Querying shader
+status requires synchronous round-trips to the GPU, causing pipeline
+stalls when loading new assets dynamically.</li>
+<li><strong>Custom Shader Development</strong>: When building custom
+<code>ShaderMaterial</code> or <code>RawShaderMaterial</code> instances,
+test with <code>checkShaderErrors</code> enabled locally to capture
+malformed vertex and fragment source code before deploying.</li>
+</ol></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

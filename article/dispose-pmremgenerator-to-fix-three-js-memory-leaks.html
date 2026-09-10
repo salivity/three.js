@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispose PMREMGenerator to Fix Three.js Memory Leaks - three.js</title>
+    <meta name="description" content="Managing WebGL memory is critical in Three.js applications, especially when working with high-dynamic-range (HDR) environment maps. The PMREMGenerator (Prefiltered Mipmapped Radiance Environment Map Generator) allocates internal framebuffers and textures">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/dispose-pmremgenerator-to-fix-three-js-memory-leaks">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dispose PMREMGenerator to Fix Three.js Memory Leaks - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/dispose-pmremgenerator-to-fix-three-js-memory-leaks" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Managing WebGL memory is critical in Three.js applications, especially when working with high-dynamic-range (HDR) environment maps. The PMREMGenerator (Prefiltered Mipmapped Radiance Environment Map Generator) allocates internal framebuffers and textures" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="dispose-pmremgenerator-to-fix-threejs-memory-leaks">Dispose
+PMREMGenerator to Fix Three.js Memory Leaks</h1>
+<p>Managing WebGL memory is critical in Three.js applications,
+especially when working with high-dynamic-range (HDR) environment maps.
+The <code>PMREMGenerator</code> (Prefiltered Mipmapped Radiance
+Environment Map Generator) allocates internal framebuffers and textures
+to generate prefiltered environment maps. Failing to release these
+resources will result in persistent GPU memory leaks. This article
+outlines the exact process required to thoroughly dispose of a
+<code>PMREMGenerator</code> instance, its internal render targets, the
+source assets, and the resulting textures.</p>
+<h3 id="why-pmremgenerator-causes-memory-leaks">Why PMREMGenerator
+Causes Memory Leaks</h3>
+<p>When you instantiate a <code>PMREMGenerator</code>, it allocates
+internal WebGL render targets and compile-specific shaders to blur and
+process cubemaps across multiple mipmap levels. Additionally, methods
+like <code>.fromEquirectangular()</code> or <code>.fromScene()</code>
+produce a new <code>WebGLRenderTarget</code>. If you re-generate
+environment maps dynamically (e.g., during scene changes or time-of-day
+transitions) without clearing both the generator and the generated
+targets, the orphaned textures remain allocated in GPU memory.</p>
+<h3 id="complete-disposal-steps">Complete Disposal Steps</h3>
+<p>To completely clear all allocated memory associated with environment
+map prefiltering, you must handle three separate components: the
+generated render target, the <code>PMREMGenerator</code> instance
+itself, and the original source texture.</p>
+<h4 id="1-dispose-of-the-output-render-target">1. Dispose of the Output
+Render Target</h4>
+<p>The prefiltered texture is held within a
+<code>WebGLRenderTarget</code>. You must dispose of the render target
+when swapping or unloading the environment:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// If you stored the generated render target</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (envRenderTarget) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    envRenderTarget<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>If you assigned the texture directly to
+<code>scene.environment</code> or <code>scene.background</code>, dispose
+of the texture reference:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (scene<span class="op">.</span><span class="at">environment</span>) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="at">environment</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="at">environment</span> <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="2-dispose-of-the-pmremgenerator-instance">2. Dispose of the
+PMREMGenerator Instance</h4>
+<p>Calling <code>.dispose()</code> directly on the
+<code>PMREMGenerator</code> instance frees its internal ping-pong render
+targets and processing materials from the GPU:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pmremGenerator<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<p><em>Note: If you only need to process an environment map once at
+startup, dispose of the generator immediately after generating your
+texture rather than keeping the instance in memory.</em></p>
+<h4 id="3-dispose-of-the-source-texture">3. Dispose of the Source
+Texture</h4>
+<p>If the source HDR or equirectangular texture is no longer needed
+after the PMREM output is created, explicitly dispose of it:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>hdrTexture<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span></code></pre></div>
+<h3 id="full-implementation-example">Full Implementation Example</h3>
+<p>Below is a robust implementation demonstrating generation and
+complete cleanup:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RGBELoader } <span class="im">from</span> <span class="st">&#39;three/examples/jsm/loaders/RGBELoader.js&#39;</span><span class="op">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> pmremGenerator <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">PMREMGenerator</span>(renderer)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>pmremGenerator<span class="op">.</span><span class="fu">compileEquirectangularShader</span>()<span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="kw">let</span> envMapRenderTarget <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">// Load and process the environment map</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="kw">new</span> <span class="fu">RGBELoader</span>()<span class="op">.</span><span class="fu">load</span>(<span class="st">&#39;environment.hdr&#39;</span><span class="op">,</span> (texture) <span class="kw">=&gt;</span> {</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Generate the prefiltered render target</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    envMapRenderTarget <span class="op">=</span> pmremGenerator<span class="op">.</span><span class="fu">fromEquirectangular</span>(texture)<span class="op">;</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assign to scene</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">.</span><span class="at">environment</span> <span class="op">=</span> envMapRenderTarget<span class="op">.</span><span class="at">texture</span><span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// The source texture is no longer needed once processed</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    texture<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">// If no more environment maps will be generated, dispose of the generator now</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    pmremGenerator<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    pmremGenerator <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="co">// Cleanup function to call when unloading the scene or changing environments</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">cleanupEnvironment</span>() {</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (scene<span class="op">.</span><span class="at">environment</span>) {</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="at">environment</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>        scene<span class="op">.</span><span class="at">environment</span> <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (envMapRenderTarget) {</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        envMapRenderTarget<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        envMapRenderTarget <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (pmremGenerator) {</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>        pmremGenerator<span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>        pmremGenerator <span class="op">=</span> <span class="kw">null</span><span class="op">;</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>By ensuring the generated output target, the source image, and the
+generator's internal buffers are all explicitly released via their
+respective <code>.dispose()</code> methods, your application avoids
+WebGL context bloat and eliminates environment-related memory leaks.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

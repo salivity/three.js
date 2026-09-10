@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adjust HalftonePass Angles for CMYK in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to configure screen separation angles in the Three.js HalftonePass to replicate traditional comic book halftone printing. By translating standard subtractive CMYK (Cyan, Magenta, Yellow, Key/Black) screen angles into the additive">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/adjust-halftonepass-angles-for-cmyk-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Adjust HalftonePass Angles for CMYK in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/adjust-halftonepass-angles-for-cmyk-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to configure screen separation angles in the Three.js HalftonePass to replicate traditional comic book halftone printing. By translating standard subtractive CMYK (Cyan, Magenta, Yellow, Key/Black) screen angles into the additive" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="adjust-halftonepass-angles-for-cmyk-in-threejs">Adjust
+HalftonePass Angles for CMYK in Three.js</h1>
+<p>This guide explains how to configure screen separation angles in the
+Three.js <code>HalftonePass</code> to replicate traditional comic book
+halftone printing. By translating standard subtractive CMYK (Cyan,
+Magenta, Yellow, Key/Black) screen angles into the additive RGB
+properties utilized by the shader, you can prevent visual moiré patterns
+and produce an authentic vintage print aesthetic.</p>
+<h3 id="standard-printing-angles-vs-rgb-channels">Standard Printing
+Angles vs. RGB Channels</h3>
+<p>Traditional offset lithography and vintage comic printing orient
+screen grids at specific angles to prevent overlapping dot patterns from
+forming distracting moiré artifacts:</p>
+<ul>
+<li><strong>Cyan:</strong> 15°</li>
+<li><strong>Magenta:</strong> 75°</li>
+<li><strong>Yellow:</strong> 0° (or 90°)</li>
+<li><strong>Black (Key):</strong> 45°</li>
+</ul>
+<p>Because Three.js processes colors in additive RGB space rather than
+subtractive CMYK, <code>HalftonePass</code> applies dot matrices to the
+Red, Green, and Blue channels. Each primary additive channel corresponds
+inversely to a subtractive printing ink:</p>
+<ul>
+<li><strong>Red channel</strong> maps to <strong>Cyan</strong>
+(15°)</li>
+<li><strong>Green channel</strong> maps to <strong>Magenta</strong>
+(75°)</li>
+<li><strong>Blue channel</strong> maps to <strong>Yellow</strong>
+(0°)</li>
+</ul>
+<h3 id="configuring-halftonepass-parameters">Configuring HalftonePass
+Parameters</h3>
+<p>The <code>HalftonePass</code> accepts an options object during
+instantiation where angles are defined in radians. Convert the standard
+degree values to radians using <code>THREE.MathUtils.degToRad()</code>
+or standard JavaScript math
+(<code>degrees * (Math.PI / 180)</code>).</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { EffectComposer } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/EffectComposer.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { RenderPass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/RenderPass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { HalftonePass } <span class="im">from</span> <span class="st">&#39;three/addons/postprocessing/HalftonePass.js&#39;</span><span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Setup composer</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> composer <span class="op">=</span> <span class="kw">new</span> <span class="fu">EffectComposer</span>(renderer)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(<span class="kw">new</span> <span class="fu">RenderPass</span>(scene<span class="op">,</span> camera))<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Define CMYK-aligned parameters</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> halftoneParams <span class="op">=</span> {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">shape</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span> <span class="co">// 1 = Dot, 2 = Ellipse, 3 = Line, 4 = Square</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">radius</span><span class="op">:</span> <span class="dv">4</span><span class="op">,</span> <span class="co">// Dot size</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="dt">rotateR</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">15</span>)<span class="op">,</span> <span class="co">// Cyan equivalent</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="dt">rotateG</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">75</span>)<span class="op">,</span> <span class="co">// Magenta equivalent</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="dt">rotateB</span><span class="op">:</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">0</span>)<span class="op">,</span>  <span class="co">// Yellow equivalent</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">scatter</span><span class="op">:</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blending</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">blendingMode</span><span class="op">:</span> <span class="dv">1</span><span class="op">,</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">greyscale</span><span class="op">:</span> <span class="kw">false</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> halftonePass <span class="op">=</span> <span class="kw">new</span> <span class="fu">HalftonePass</span>(<span class="bu">window</span><span class="op">.</span><span class="at">innerWidth</span><span class="op">,</span> <span class="bu">window</span><span class="op">.</span><span class="at">innerHeight</span><span class="op">,</span> halftoneParams)<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>composer<span class="op">.</span><span class="fu">addPass</span>(halftonePass)<span class="op">;</span></span></code></pre></div>
+<h3 id="modifying-angles-at-runtime">Modifying Angles at Runtime</h3>
+<p>If the pass has already been instantiated, modify the internal shader
+uniforms directly. The pass stores these values inside its
+<code>uniforms</code> dictionary:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Dynamically update the separation angles</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>halftonePass<span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;rAngle&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">15</span>)<span class="op">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>halftonePass<span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;gAngle&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">75</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>halftonePass<span class="op">.</span><span class="at">uniforms</span>[<span class="st">&#39;bAngle&#39;</span>]<span class="op">.</span><span class="at">value</span> <span class="op">=</span> THREE<span class="op">.</span><span class="at">MathUtils</span><span class="op">.</span><span class="fu">degToRad</span>(<span class="dv">0</span>)<span class="op">;</span></span></code></pre></div>
+<h3 id="fine-tuning-for-comic-aesthetics">Fine-Tuning for Comic
+Aesthetics</h3>
+<p>To heighten the vintage comic look alongside correct angles:</p>
+<ul>
+<li><strong>Dot Radius (<code>radius</code>):</strong> Keep dot sizes
+between <code>3</code> and <code>6</code> pixels. Overly large dots
+degrade the underlying 3D detail, while values below <code>2</code> fail
+to show distinct angle separations.</li>
+<li><strong>Scatter (<code>scatter</code>):</strong> Set this parameter
+between <code>0.05</code> and <code>0.15</code> to emulate minor ink
+bleed and paper imperfections found in vintage pulp printing.</li>
+<li><strong>Blending Mode (<code>blendingMode</code>):</strong> Leave at
+<code>1</code> (Linear blend) to let color dots visually mix in the eye,
+mirroring mechanical four-color process printing.</li>
+</ul></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

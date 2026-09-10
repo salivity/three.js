@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reduce Three.js Geometry Memory with Float16BufferAttribute - three.js</title>
+    <meta name="description" content="In graphics-heavy Three.js applications, high-density meshes can quickly saturate GPU memory and degrade performance. By replacing standard 32-bit floating-point geometry attributes with THREE.Float16BufferAttribute, you can cut the buffer memory footpri">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/reduce-three-js-geometry-memory-with-float16bufferattribute">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Reduce Three.js Geometry Memory with Float16BufferAttribute - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/reduce-three-js-geometry-memory-with-float16bufferattribute" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In graphics-heavy Three.js applications, high-density meshes can quickly saturate GPU memory and degrade performance. By replacing standard 32-bit floating-point geometry attributes with THREE.Float16BufferAttribute, you can cut the buffer memory footpri" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="reduce-threejs-geometry-memory-with-float16bufferattribute">Reduce
+Three.js Geometry Memory with Float16BufferAttribute</h1>
+<p>In graphics-heavy Three.js applications, high-density meshes can
+quickly saturate GPU memory and degrade performance. By replacing
+standard 32-bit floating-point geometry attributes with
+<code>THREE.Float16BufferAttribute</code>, you can cut the buffer memory
+footprint of your vertex attributes directly in half. This optimization
+leverages half-precision floating-point numbers (16-bit) to retain
+visual fidelity across models while lowering memory bandwidth overhead
+and mobile crash rates.</p>
+<h3 id="understanding-32-bit-vs-16-bit-floats">Understanding 32-Bit vs.
+16-Bit Floats</h3>
+<p>By default, Three.js uses <code>THREE.Float32BufferAttribute</code>
+for vertex data such as positions, normals, and texture coordinates
+(UVs). A 32-bit float requires 4 bytes per component, meaning a standard
+position vector <span class="math inline">\((x, y, z)\)</span> consumes
+12 bytes per vertex.</p>
+<p><code>THREE.Float16BufferAttribute</code> uses half-precision floats
+conforming to the IEEE 754 standard, requiring only 2 bytes per
+component. This instantly reduces the memory footprint of that attribute
+by 50% without altering the geometry's vertex count or topology.</p>
+<h3 id="when-to-use-float16-without-quality-loss">When to Use Float16
+Without Quality Loss</h3>
+<p>Half-precision provides 1 sign bit, 5 exponent bits, and 10 mantissa
+bits (roughly 3 to 4 decimal digits of precision). Because of this:</p>
+<ul>
+<li><strong>UV Coordinates:</strong> UVs generally range between
+<code>0.0</code> and <code>1.0</code>. A 16-bit float offers more than
+enough precision to map textures seamlessly without visible mapping
+shifts or seams.</li>
+<li><strong>Vertex Normals:</strong> Normals are unit vectors with
+values strictly constrained between <code>-1.0</code> and
+<code>1.0</code>. Precision loss at this scale is negligible, meaning
+lighting and shading calculations remain virtually identical to 32-bit
+representations.</li>
+<li><strong>Vertex Colors:</strong> RGB/RGBA channels clamped between
+<code>0.0</code> and <code>1.0</code> will look identical when stored in
+half-precision.</li>
+<li><strong>Vertex Positions:</strong> Best suited for models normalized
+within local bounds (e.g., centered around origin and scaled
+moderately). If an object is extremely large or placed far from the
+origin in world coordinates, precision issues can cause visible mesh
+distortion or jitter.</li>
+</ul>
+<h3 id="implementation">Implementation</h3>
+<p>To use <code>Float16BufferAttribute</code>, populate it with a
+<code>Uint16Array</code> containing half-precision binary
+representations, or use the <code>DataUtils.toHalfFloat</code> helper
+provided by Three.js to convert standard JavaScript numbers.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. Example: Creating a new Float16BufferAttribute manually</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> uvValues <span class="op">=</span> [<span class="dv">0</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">1</span>]<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> halfFloatArray <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint16Array</span>(uvValues<span class="op">.</span><span class="at">length</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> uvValues<span class="op">.</span><span class="at">length</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  halfFloatArray[i] <span class="op">=</span> THREE<span class="op">.</span><span class="at">DataUtils</span><span class="op">.</span><span class="fu">toHalfFloat</span>(uvValues[i])<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;uv&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float16BufferAttribute</span>(halfFloatArray<span class="op">,</span> <span class="dv">2</span>))<span class="op">;</span></span></code></pre></div>
+<h3 id="converting-existing-geometries">Converting Existing
+Geometries</h3>
+<p>To optimize imported models (such as GLTF or OBJ models), you can
+iterate over the attributes of existing geometries and convert select
+attributes from 32-bit to 16-bit in place:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">optimizeGeometryAttributes</span>(geometry) {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> targetAttributes <span class="op">=</span> [<span class="st">&#39;uv&#39;</span><span class="op">,</span> <span class="st">&#39;normal&#39;</span>]<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  targetAttributes<span class="op">.</span><span class="fu">forEach</span>((attrName) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> attr <span class="op">=</span> geometry<span class="op">.</span><span class="fu">getAttribute</span>(attrName)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Only convert if it&#39;s currently a Float32BufferAttribute</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (attr <span class="op">&amp;&amp;</span> attr <span class="kw">instanceof</span> THREE<span class="op">.</span><span class="at">Float32BufferAttribute</span>) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> count <span class="op">=</span> attr<span class="op">.</span><span class="at">count</span> <span class="op">*</span> attr<span class="op">.</span><span class="at">itemSize</span><span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      <span class="kw">const</span> halfArray <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint16Array</span>(count)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> count<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        halfArray[i] <span class="op">=</span> THREE<span class="op">.</span><span class="at">DataUtils</span><span class="op">.</span><span class="fu">toHalfFloat</span>(attr<span class="op">.</span><span class="at">array</span>[i])<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      geometry<span class="op">.</span><span class="fu">setAttribute</span>(</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>        attrName<span class="op">,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float16BufferAttribute</span>(halfArray<span class="op">,</span> attr<span class="op">.</span><span class="at">itemSize</span><span class="op">,</span> attr<span class="op">.</span><span class="at">normalized</span>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>      )<span class="op">;</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Dispose old attribute buffer to free GPU resources</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>      attr<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="hardware-support-and-considerations">Hardware Support and
+Considerations</h3>
+<p>WebGL 2.0 natively supports half-float vertex attributes, making this
+method universally supported on modern desktop and mobile browsers. When
+applied selectively to UVs, normals, and appropriately scaled position
+buffers, <code>Float16BufferAttribute</code> slashes buffer storage
+requirements across both CPU RAM and GPU VRAM with zero discernible
+difference in visual quality.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

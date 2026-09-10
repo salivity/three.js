@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HalfFloatType Extensions for Three.js Rendering - three.js</title>
+    <meta name="description" content="Rendering textures configured with THREE.HalfFloatType in Three.js provides high dynamic range (HDR) color precision while conserving memory compared to standard 32-bit float textures. Depending on whether your application runs on WebGL 1.0 or WebGL 2.0,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/halffloattype-extensions-for-three-js-rendering">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="HalfFloatType Extensions for Three.js Rendering - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/halffloattype-extensions-for-three-js-rendering" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Rendering textures configured with THREE.HalfFloatType in Three.js provides high dynamic range (HDR) color precision while conserving memory compared to standard 32-bit float textures. Depending on whether your application runs on WebGL 1.0 or WebGL 2.0," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="halffloattype-extensions-for-threejs-rendering">HalfFloatType
+Extensions for Three.js Rendering</h1>
+<p>Rendering textures configured with <code>THREE.HalfFloatType</code>
+in Three.js provides high dynamic range (HDR) color precision while
+conserving memory compared to standard 32-bit float textures. Depending
+on whether your application runs on WebGL 1.0 or WebGL 2.0, different
+GPU extensions are mandatory to support creating, sampling, and
+rendering to 16-bit floating-point textures. This guide details the
+exact hardware extensions required in both environments.</p>
+<h3 id="webgl-10-requirements">WebGL 1.0 Requirements</h3>
+<p>In a legacy WebGL 1 context, half-precision floating-point textures
+are not natively supported and rely entirely on extensions:</p>
+<ol type="1">
+<li><p><strong><code>OES_texture_half_float</code></strong><br />
+This base extension allows WebGL 1 to allocate, upload, and read pixel
+data in half-precision format (<code>gl.HALF_FLOAT_OES</code>). Without
+this, configuring a texture with <code>THREE.HalfFloatType</code> will
+cause a WebGL error during texture upload.</p></li>
+<li><p><strong><code>OES_texture_half_float_linear</code></strong><br />
+By default, <code>OES_texture_half_float</code> only supports
+nearest-neighbor filtering (<code>THREE.NearestFilter</code>). If you
+configure <code>minFilter</code> or <code>magFilter</code> to use
+<code>THREE.LinearFilter</code> or mipmap linear interpolation, this
+extension must be present on the client hardware. Without it, sampling
+the texture returns invalid data or causes rendering artifacts.</p></li>
+<li><p><strong><code>EXT_color_buffer_half_float</code></strong><br />
+If you use <code>THREE.WebGLRenderTarget</code> with
+<code>type: THREE.HalfFloatType</code> to render a scene or
+post-processing pass into a half-float buffer, this extension is
+required. It enables the GPU to bind 16-bit floating-point textures to
+framebuffers as color attachments.</p></li>
+</ol>
+<h3 id="webgl-20-requirements">WebGL 2.0 Requirements</h3>
+<p>WebGL 2.0 includes standard texture storage for half-float formats
+natively, removing the need for base allocation extensions. However,
+advanced operations still depend on specific extensions:</p>
+<ol type="1">
+<li><p><strong>Native Support (Core)</strong><br />
+Basic storage, pixel transfers, and nearest-neighbor sampling for
+half-float formats (such as <code>RGBA16F</code>, <code>RGB16F</code>,
+and <code>R16F</code>) are built into core WebGL 2.0. No extension is
+needed solely to define or upload a <code>THREE.HalfFloatType</code>
+texture.</p></li>
+<li><p><strong><code>OES_texture_float_linear</code></strong><br />
+While nearest filtering is built-in, linear filtering for both 32-bit
+and 16-bit floating-point textures requires this extension in WebGL 2.0.
+If an application attempts to use <code>THREE.LinearFilter</code> on a
+<code>HalfFloatType</code> texture without this extension, WebGL 2 will
+fall back to returning black/incomplete texture data.</p></li>
+<li><p><strong><code>EXT_color_buffer_float</code></strong><br />
+In WebGL 2.0, rendering into a <code>THREE.WebGLRenderTarget</code>
+configured with <code>THREE.HalfFloatType</code> requires
+<code>EXT_color_buffer_float</code>. This extension permits rendering to
+16-bit floating-point framebuffers (such as <code>RGBA16F</code>) as
+well as 32-bit floating-point buffers.</p></li>
+</ol>
+<h3 id="verifying-extension-availability-in-threejs">Verifying Extension
+Availability in Three.js</h3>
+<p>Three.js checks and activates these extensions automatically when
+needed, but you can verify hardware support programmatically through the
+renderer:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> gl <span class="op">=</span> renderer<span class="op">.</span><span class="fu">getContext</span>()<span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">// WebGL 2 checks</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hasLinearFilter <span class="op">=</span> renderer<span class="op">.</span><span class="at">extensions</span><span class="op">.</span><span class="fu">has</span>(<span class="st">&#39;OES_texture_float_linear&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canRenderToHalfFloat <span class="op">=</span> renderer<span class="op">.</span><span class="at">extensions</span><span class="op">.</span><span class="fu">has</span>(<span class="st">&#39;EXT_color_buffer_float&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">// WebGL 1 checks (if applicable)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hasHalfFloat <span class="op">=</span> renderer<span class="op">.</span><span class="at">extensions</span><span class="op">.</span><span class="fu">has</span>(<span class="st">&#39;OES_texture_half_float&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> hasHalfFloatLinear <span class="op">=</span> renderer<span class="op">.</span><span class="at">extensions</span><span class="op">.</span><span class="fu">has</span>(<span class="st">&#39;OES_texture_half_float_linear&#39;</span>)<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> canRenderToHalfFloatWGL1 <span class="op">=</span> renderer<span class="op">.</span><span class="at">extensions</span><span class="op">.</span><span class="fu">has</span>(<span class="st">&#39;EXT_color_buffer_half_float&#39;</span>)<span class="op">;</span></span></code></pre></div>
+<p>If the hardware lacks linear filtering support, set
+<code>texture.minFilter = THREE.NearestFilter</code> and
+<code>texture.magFilter = THREE.NearestFilter</code> to maintain
+functional rendering.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

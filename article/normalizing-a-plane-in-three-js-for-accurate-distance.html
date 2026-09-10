@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normalizing a Plane in Three.js for Accurate Distance - three.js</title>
+    <meta name="description" content="In Three.js, measuring the exact Euclidean distance from a point to a plane requires a unit-length normal vector. This guide explains why non-normalized THREE.Plane instances return distorted measurements, the critical mathematical distinction between no">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/normalizing-a-plane-in-three-js-for-accurate-distance">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Normalizing a Plane in Three.js for Accurate Distance - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/normalizing-a-plane-in-three-js-for-accurate-distance" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="In Three.js, measuring the exact Euclidean distance from a point to a plane requires a unit-length normal vector. This guide explains why non-normalized THREE.Plane instances return distorted measurements, the critical mathematical distinction between no" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1
+id="normalizing-a-plane-in-threejs-for-accurate-distance">Normalizing a
+Plane in Three.js for Accurate Distance</h1>
+<p>In Three.js, measuring the exact Euclidean distance from a point to a
+plane requires a unit-length normal vector. This guide explains why
+non-normalized <code>THREE.Plane</code> instances return distorted
+measurements, the critical mathematical distinction between normalizing
+just the normal vector versus the entire plane definition, and how to
+strictly normalize a plane using built-in methods to guarantee
+physically accurate <code>distanceToPoint</code> results.</p>
+<h2 id="why-unnormalized-planes-yield-inaccurate-distances">Why
+Unnormalized Planes Yield Inaccurate Distances</h2>
+<p>The <code>THREE.Plane</code> object represents a plane in Hessian
+normal form using a 3D direction vector (<code>normal</code>) and a
+scalar offset (<code>constant</code>). The mathematical formula used
+internally by <code>distanceToPoint(point)</code> is:</p>
+<p><span class="math display">\[\text{Distance} = (\mathbf{n} \cdot
+\mathbf{p}) + d\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(\mathbf{n}\)</span> is
+<code>plane.normal</code></li>
+<li><span class="math inline">\(\mathbf{p}\)</span> is the target
+<code>Vector3</code> point</li>
+<li><span class="math inline">\(d\)</span> is
+<code>plane.constant</code></li>
+</ul>
+<p>For this formula to represent true Euclidean distance, the length
+(magnitude) of <span class="math inline">\(\mathbf{n}\)</span> must
+equal exactly <code>1.0</code>. If the normal vector has a magnitude
+other than 1—which often happens after applying non-uniform matrix
+transformations or constructing planes from unnormalized vectors—the
+returned distance is scaled by <span
+class="math inline">\(\|\mathbf{n}\|\)</span>, resulting in an
+overestimation or underestimation of the actual physical distance.</p>
+<h2 id="the-common-pitfall-normalizing-only-the-normal">The Common
+Pitfall: Normalizing Only the Normal</h2>
+<p>A frequent mistake is directly normalizing the plane's normal
+property:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// INCORRECT: Modifies the plane&#39;s position in space</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span></code></pre></div>
+<p>Normalizing only the vector component without scaling the
+<code>constant</code> distorts the plane equation. The scalar
+<code>constant</code> represents the signed distance from the origin to
+the plane <em>relative to the length of the normal vector</em>. If the
+vector is rescaled independently, the plane physically shifts toward or
+away from the origin.</p>
+<h2 id="the-correct-method-planenormalize">The Correct Method:
+<code>Plane.normalize()</code></h2>
+<p>To strictly normalize a <code>THREE.Plane</code>, call the
+<code>normalize()</code> method directly on the plane instance.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Create a plane with an unnormalized normal vector</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> normal <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">2</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span> <span class="co">// Magnitude is 2</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> constant <span class="op">=</span> <span class="op">-</span><span class="dv">10</span><span class="op">;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> plane <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Plane</span>(normal<span class="op">,</span> constant)<span class="op">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// Normalize both the normal and constant uniformly</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>plane<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Verify the result</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> testPoint <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">10</span><span class="op">,</span> <span class="dv">0</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> accurateDistance <span class="op">=</span> plane<span class="op">.</span><span class="fu">distanceToPoint</span>(testPoint)<span class="op">;</span> </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">// Returns 5 (the true physical distance)</span></span></code></pre></div>
+<h3 id="what-planenormalize-does-internally">What
+<code>Plane.normalize()</code> Does Internally</h3>
+<p>When invoking <code>plane.normalize()</code>, Three.js executes the
+following logic:</p>
+<ol type="1">
+<li>Computes the inverse length:
+<code>1.0 / plane.normal.length()</code></li>
+<li>Multiplies <code>plane.normal</code> by the inverse length, setting
+its length to <code>1.0</code>.</li>
+<li>Multiplies <code>plane.constant</code> by the same inverse length
+scalar.</li>
+</ol>
+<p>This preserves the plane's exact position and orientation in 3D space
+while enforcing <span class="math inline">\(\|\mathbf{n}\| = 1\)</span>,
+ensuring all subsequent calls to <code>distanceToPoint</code> return
+geometrically and physically accurate units.</p>
+<h2 id="handling-degenerate-planes">Handling Degenerate Planes</h2>
+<p>If the normal vector has a length of zero (e.g.,
+<code>Vector3(0, 0, 0)</code>), dividing by the length results in
+<code>Infinity</code> or <code>NaN</code>. Before normalizing
+dynamically calculated planes, verify that the normal is non-zero:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (plane<span class="op">.</span><span class="at">normal</span><span class="op">.</span><span class="fu">lengthSq</span>() <span class="op">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    plane<span class="op">.</span><span class="fu">normalize</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Fallback: assign a valid default orientation</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    plane<span class="op">.</span><span class="fu">set</span>(<span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(<span class="dv">0</span><span class="op">,</span> <span class="dv">1</span><span class="op">,</span> <span class="dv">0</span>)<span class="op">,</span> <span class="dv">0</span>)<span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

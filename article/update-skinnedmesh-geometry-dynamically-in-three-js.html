@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update SkinnedMesh Geometry Dynamically in Three.js - three.js</title>
+    <meta name="description" content="Updating the geometry of a SkinnedMesh dynamically in Three.js requires careful management of vertex attributes, bone matrices, and skinning data. This article explains how to modify geometry coordinates in-place without corrupting the skeletal bindings,">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/update-skinnedmesh-geometry-dynamically-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Update SkinnedMesh Geometry Dynamically in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/update-skinnedmesh-geometry-dynamically-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="Updating the geometry of a SkinnedMesh dynamically in Three.js requires careful management of vertex attributes, bone matrices, and skinning data. This article explains how to modify geometry coordinates in-place without corrupting the skeletal bindings," />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="update-skinnedmesh-geometry-dynamically-in-threejs">Update
+SkinnedMesh Geometry Dynamically in Three.js</h1>
+<p>Updating the geometry of a <code>SkinnedMesh</code> dynamically in
+Three.js requires careful management of vertex attributes, bone
+matrices, and skinning data. This article explains how to modify
+geometry coordinates in-place without corrupting the skeletal bindings,
+how to handle structural topology changes that alter vertex counts, and
+how to properly recalculate normals and bounding volumes to ensure
+seamless skeletal animation.</p>
+<h2 id="modifying-existing-vertices-in-place">Modifying Existing
+Vertices In-Place</h2>
+<p>If the vertex count and topology remain unchanged (such as sculpting,
+morphing, or applying displacement offsets), the connection between
+vertices, bones, and skin weights remains valid. You only need to update
+the <code>position</code> attribute buffer directly.</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> positionAttribute <span class="op">=</span> skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="at">attributes</span><span class="op">.</span><span class="at">position</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> positionAttribute<span class="op">.</span><span class="at">count</span><span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Read original vertex position</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> x <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getX</span>(i)<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> y <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getY</span>(i)<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> z <span class="op">=</span> positionAttribute<span class="op">.</span><span class="fu">getZ</span>(i)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Apply your dynamic modifications</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    y <span class="op">+=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(x) <span class="op">*</span> <span class="fl">0.1</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Write back to buffer</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    positionAttribute<span class="op">.</span><span class="fu">setXYZ</span>(i<span class="op">,</span> x<span class="op">,</span> y<span class="op">,</span> z)<span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">// Flag the buffer for a GPU upload</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>positionAttribute<span class="op">.</span><span class="at">needsUpdate</span> <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">// Recalculate normals and bounding volumes</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span></code></pre></div>
+<p>Because <code>skinIndex</code> and <code>skinWeight</code> buffer
+attributes map directly to vertex indices, preserving the index count
+prevents any skeletal desynchronization.</p>
+<h2 id="changing-geometry-topology-or-vertex-count">Changing Geometry
+Topology or Vertex Count</h2>
+<p>If your dynamic update adds, removes, or rebuilds vertices, the
+standard vertex-to-weight mapping is destroyed. In Three.js, every
+vertex requires four bone indices (<code>skinIndex</code>) and four bone
+weights (<code>skinWeight</code>).</p>
+<p>When supplying a completely new <code>BufferGeometry</code>:</p>
+<ol type="1">
+<li><strong>Construct Matching Attribute Buffers</strong>: Ensure your
+new geometry has both <code>skinIndex</code> and <code>skinWeight</code>
+attributes initialized with four components per vertex.</li>
+<li><strong>Transfer or Calculate Weights</strong>: For newly generated
+vertices, calculate weights by interpolating the weights of adjacent
+original vertices (e.g., using barycentric coordinates) or by finding
+the nearest neighbor on the original surface.</li>
+</ol>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> vertexCount <span class="op">=</span> newPositions<span class="op">.</span><span class="at">length</span> <span class="op">/</span> <span class="dv">3</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> skinIndices <span class="op">=</span> <span class="kw">new</span> <span class="bu">Uint16Array</span>(vertexCount <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> skinWeights <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(vertexCount <span class="op">*</span> <span class="dv">4</span>)<span class="op">;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// Populate skinIndices and skinWeights corresponding to each new vertex</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">populateSkinData</span>(skinIndices<span class="op">,</span> skinWeights)<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(newPositions<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;skinIndex&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Uint16BufferAttribute</span>(skinIndices<span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>newGeometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;skinWeight&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Float32BufferAttribute</span>(skinWeights<span class="op">,</span> <span class="dv">4</span>))<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">// Assign new geometry to the existing mesh</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">dispose</span>()<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span> <span class="op">=</span> newGeometry<span class="op">;</span></span></code></pre></div>
+<p>Weights for each vertex must sum to <code>1.0</code>. Normalizing
+values avoids unnatural pinching or mesh tearing during bone
+movement.</p>
+<h2 id="preserving-the-bind-pose">Preserving the Bind Pose</h2>
+<p>A common issue when swapping or updating geometries on a
+<code>SkinnedMesh</code> is visual collapse caused by mismatched bind
+matrices. A <code>SkinnedMesh</code> uses <code>bindMatrix</code> and
+<code>bindMatrixInverse</code> to record the transformation of the mesh
+relative to its bones at the moment of binding.</p>
+<p>If the base transformation of the new geometry differs from the
+original rest pose, you must re-bind the skeleton:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Ensure skeleton inverses are up to date</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">skeleton</span><span class="op">.</span><span class="fu">calculateInverses</span>()<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Re-bind using the current skeleton and mesh world matrix</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="fu">bind</span>(skinnedMesh<span class="op">.</span><span class="at">skeleton</span><span class="op">,</span> skinnedMesh<span class="op">.</span><span class="at">matrixWorld</span>)<span class="op">;</span></span></code></pre></div>
+<p>If the new geometry is generated directly in the mesh's local rest
+coordinate system, manual re-binding is unnecessary; retaining the
+original <code>skeleton</code> reference on the mesh is sufficient.</p>
+<h2 id="recalculating-bounds-for-frustum-culling">Recalculating Bounds
+for Frustum Culling</h2>
+<p>Three.js relies on the bounding sphere and bounding box for view
+frustum culling. Animated and dynamically modified geometries can easily
+step outside stale bounding volumes, causing the mesh to disappear
+unexpectedly.</p>
+<p>After every geometry modification:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingSphere</span>()<span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>skinnedMesh<span class="op">.</span><span class="at">geometry</span><span class="op">.</span><span class="fu">computeBoundingBox</span>()<span class="op">;</span></span></code></pre></div>
+<p>If the mesh deforms heavily through bone animation after updating,
+expand the bounding sphere radius manually or set
+<code>skinnedMesh.frustumCulled = false</code> to prevent culling issues
+entirely.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>

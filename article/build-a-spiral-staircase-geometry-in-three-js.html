@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build a Spiral Staircase Geometry in Three.js - three.js</title>
+    <meta name="description" content="This guide explains how to construct a procedural, custom geometry generator function for a spiral staircase in Three.js using BufferGeometry. By understanding the parametric equations of a helix, calculating inner and outer radial offsets, and mapping t">
+    <link rel="canonical" href="https://salivity.github.io/three.js/article/build-a-spiral-staircase-geometry-in-three-js">
+    <link rel="search" type="application/opensearchdescription+xml" title="three.js" href="/three.js/opensearch.xml">
+    <link rel="icon" href="/three.js/favicon.ico">
+    <link rel="stylesheet" href="/three.js/css/style.css">
+    <link media="print" rel="stylesheet" href="/three.js/css/print.css">
+    <script src="/three.js/js/fuse.min.js"></script>
+    <script src="/three.js/js/script.js"></script>
+    <script id="MathJax-script" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/4.1.3/tex-chtml.min.js" defer></script>
+    <script src="/monetize/monetize.js"></script>
+    <script src="/social/social.js"></script>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Build a Spiral Staircase Geometry in Three.js - three.js" />
+    <meta property="og:url" content="https://salivity.github.io/three.js/article/build-a-spiral-staircase-geometry-in-three-js" />
+    <meta property="og:image:url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:secure_url" content="https://salivity.github.io/three.js/images/open-graph/default.webp" />
+    <meta property="og:image:width" content="1120" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:description" content="This guide explains how to construct a procedural, custom geometry generator function for a spiral staircase in Three.js using BufferGeometry. By understanding the parametric equations of a helix, calculating inner and outer radial offsets, and mapping t" />
+    <link rel="manifest" href="/three.js/pwa/manifest.json" />
+</head>
+<body>
+    <header>
+        <a href="/three.js/" aria-label="Go To Home Page" title="Go To Home Page" id="logo">
+            <span>salivity.github.io/</span><span>three.js</span>
+        </a>
+        <nav>
+            <ul class="header-links">
+                <li><a href="/three.js/search" title="Search" aria-label="Go To Search Page"><svg class="svg-icon" aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"></path></svg></a></li>
+                <li><a id="theme-toggle" title="Theme" href="javascript:void(0);" aria-label="Toggle Website Theme"></a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <article><h1 id="build-a-spiral-staircase-geometry-in-threejs">Build a Spiral
+Staircase Geometry in Three.js</h1>
+<p>This guide explains how to construct a procedural, custom geometry
+generator function for a spiral staircase in Three.js using
+<code>BufferGeometry</code>. By understanding the parametric equations
+of a helix, calculating inner and outer radial offsets, and mapping
+triangle indices, you can generate a single, performant mesh without
+relying on expensive boolean operations or combining numerous individual
+meshes.</p>
+<hr />
+<h3 id="mathematical-principles-of-a-spiral-staircase">Mathematical
+Principles of a Spiral Staircase</h3>
+<p>A spiral staircase distributes sequential steps along a central
+vertical axis (<span class="math inline">\(Y\)</span>) while
+simultaneously rotating them around that axis at a constant angular
+interval.</p>
+<p>Each step can be modeled as a truncated cylindrical wedge defined
+by:</p>
+<ul>
+<li><strong>Inner Radius (<span
+class="math inline">\(r_1\)</span>):</strong> Distance from the center
+column to the inner edge.</li>
+<li><strong>Outer Radius (<span
+class="math inline">\(r_2\)</span>):</strong> Distance from the center
+to the outer edge.</li>
+<li><strong>Start Angle (<span
+class="math inline">\(\theta\)</span>):</strong> The base orientation of
+the step around the <span class="math inline">\(Y\)</span>-axis.</li>
+<li><strong>Step Arc (<span
+class="math inline">\(\Delta\theta\)</span>):</strong> The angular width
+of the tread.</li>
+<li><strong>Step Height (<span
+class="math inline">\(h\)</span>):</strong> The thickness of the tread
+or riser.</li>
+<li><strong>Vertical Rise (<span class="math inline">\(\Delta
+y\)</span>):</strong> The elevation gained per step.</li>
+</ul>
+<p>For any given step index <span class="math inline">\(i\)</span>, the
+base angular position and elevation are:</p>
+<p><span class="math display">\[\theta_i = i \cdot
+\Delta\theta_{\text{rise}}\]</span> <span class="math display">\[y_i = i
+\cdot \Delta y\]</span></p>
+<p>Using polar-to-Cartesian conversion, the four corners defining the
+top surface of a step at height <span
+class="math inline">\(y_{\text{top}} = y_i + h\)</span> are calculated
+as:</p>
+<p><span class="math display">\[\mathbf{p}_{\text{inner\_start}} = (r_1
+\cos\theta_i, y_{\text{top}}, r_1 \sin\theta_i)\]</span> <span
+class="math display">\[\mathbf{p}_{\text{outer\_start}} = (r_2
+\cos\theta_i, y_{\text{top}}, r_2 \sin\theta_i)\]</span> <span
+class="math display">\[\mathbf{p}_{\text{inner\_end}} = (r_1
+\cos(\theta_i + \Delta\theta), y_{\text{top}}, r_1 \sin(\theta_i +
+\Delta\theta))\]</span> <span
+class="math display">\[\mathbf{p}_{\text{outer\_end}} = (r_2
+\cos(\theta_i + \Delta\theta), y_{\text{top}}, r_2 \sin(\theta_i +
+\Delta\theta))\]</span></p>
+<p>The bottom four corners mirror these horizontal coordinates at
+vertical height <span class="math inline">\(y_i\)</span>.</p>
+<hr />
+<h3 id="step-geometry-topology">Step Geometry Topology</h3>
+<p>Each individual step consists of an 8-vertex hexahedron (a wedge
+prism). To render proper hard surfaces with correct lighting, each face
+should have distinct vertices so normals are perpendicular to each
+plane:</p>
+<ol type="1">
+<li><strong>Top Face (Tread):</strong> 2 triangles (horizontal, normal
+pointing <span class="math inline">\(+Y\)</span>).</li>
+<li><strong>Bottom Face:</strong> 2 triangles (horizontal, normal
+pointing <span class="math inline">\(-Y\)</span>).</li>
+<li><strong>Front Face (Riser):</strong> 2 triangles (vertical, facing
+the climbing direction).</li>
+<li><strong>Back Face:</strong> 2 triangles (vertical, opposite the
+riser).</li>
+<li><strong>Inner Face:</strong> 2 triangles (curved or flat side facing
+center).</li>
+<li><strong>Outer Face:</strong> 2 triangles (outer rim edge).</li>
+</ol>
+<p>A non-indexed <code>BufferGeometry</code> stores 6 faces <span
+class="math inline">\(\times\)</span> 2 triangles <span
+class="math inline">\(\times\)</span> 3 vertices = 36 vertices (108
+float values) per step.</p>
+<hr />
+<h3 id="geometry-generator-function">Geometry Generator Function</h3>
+<p>Below is the complete function to generate the staircase geometry in
+Three.js:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> <span class="op">*</span> <span class="im">as</span> THREE <span class="im">from</span> <span class="st">&#39;three&#39;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">/**</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"> * Generates a custom BufferGeometry representing a spiral staircase.</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"> *</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{Object}</span><span class="co"> options Configuration parameters.</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.innerRadius=0.5] Radius of the inner pole/opening.</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.outerRadius=2.5] Outer radius of the steps.</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.stepCount=30] Total number of steps.</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.totalHeight=6.0] Total height of the staircase.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.totalAngle=Math.PI * 2] Total rotation in radians.</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@param</span><span class="co"> </span><span class="cv">{number}</span><span class="co"> [options.stepOverlap=1.2] Arc multiplier to overlap steps slightly.</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"> * </span><span class="an">@returns</span><span class="co"> {THREE.BufferGeometry}</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"> */</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">function</span> <span class="fu">createSpiralStaircaseGeometry</span>({</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  innerRadius <span class="op">=</span> <span class="fl">0.5</span><span class="op">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  outerRadius <span class="op">=</span> <span class="fl">2.5</span><span class="op">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  stepCount <span class="op">=</span> <span class="dv">30</span><span class="op">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  totalHeight <span class="op">=</span> <span class="fl">6.0</span><span class="op">,</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  totalAngle <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">*</span> <span class="dv">2</span><span class="op">,</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  stepOverlap <span class="op">=</span> <span class="fl">1.1</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>} <span class="op">=</span> {}) {</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> geometry <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferGeometry</span>()<span class="op">;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> anglePerStep <span class="op">=</span> totalAngle <span class="op">/</span> stepCount<span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> heightPerStep <span class="op">=</span> totalHeight <span class="op">/</span> stepCount<span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> stepArc <span class="op">=</span> anglePerStep <span class="op">*</span> stepOverlap<span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> stepThickness <span class="op">=</span> heightPerStep<span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 6 faces * 2 triangles * 3 vertices = 36 vertices per step</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> verticesPerStep <span class="op">=</span> <span class="dv">36</span><span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> totalVertices <span class="op">=</span> stepCount <span class="op">*</span> verticesPerStep<span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> positions <span class="op">=</span> <span class="kw">new</span> <span class="bu">Float32Array</span>(totalVertices <span class="op">*</span> <span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> offset <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="kw">function</span> <span class="fu">pushQuad</span>(p1<span class="op">,</span> p2<span class="op">,</span> p3<span class="op">,</span> p4) {</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Triangle 1: p1 -&gt; p2 -&gt; p3</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p2<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p2<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p2<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Triangle 2: p1 -&gt; p3 -&gt; p4</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p1<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p3<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>    positions[offset<span class="op">++</span>] <span class="op">=</span> p4<span class="op">.</span><span class="at">x</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p4<span class="op">.</span><span class="at">y</span><span class="op">;</span> positions[offset<span class="op">++</span>] <span class="op">=</span> p4<span class="op">.</span><span class="at">z</span><span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">let</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> stepCount<span class="op">;</span> i<span class="op">++</span>) {</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> thetaStart <span class="op">=</span> i <span class="op">*</span> anglePerStep<span class="op">;</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> thetaEnd <span class="op">=</span> thetaStart <span class="op">+</span> stepArc<span class="op">;</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> yBottom <span class="op">=</span> i <span class="op">*</span> heightPerStep<span class="op">;</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> yTop <span class="op">=</span> yBottom <span class="op">+</span> stepThickness<span class="op">;</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Precompute sine/cosine values</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> cosStart <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(thetaStart)<span class="op">;</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> sinStart <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(thetaStart)<span class="op">;</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> cosEnd <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">cos</span>(thetaEnd)<span class="op">;</span></span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> sinEnd <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">sin</span>(thetaEnd)<span class="op">;</span></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Bottom 4 points</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> b_in_start <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(innerRadius <span class="op">*</span> cosStart<span class="op">,</span> yBottom<span class="op">,</span> innerRadius <span class="op">*</span> sinStart)<span class="op">;</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> b_out_start <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(outerRadius <span class="op">*</span> cosStart<span class="op">,</span> yBottom<span class="op">,</span> outerRadius <span class="op">*</span> sinStart)<span class="op">;</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> b_out_end <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(outerRadius <span class="op">*</span> cosEnd<span class="op">,</span> yBottom<span class="op">,</span> outerRadius <span class="op">*</span> sinEnd)<span class="op">;</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> b_in_end <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(innerRadius <span class="op">*</span> cosEnd<span class="op">,</span> yBottom<span class="op">,</span> innerRadius <span class="op">*</span> sinEnd)<span class="op">;</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Top 4 points</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t_in_start <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(innerRadius <span class="op">*</span> cosStart<span class="op">,</span> yTop<span class="op">,</span> innerRadius <span class="op">*</span> sinStart)<span class="op">;</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t_out_start <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(outerRadius <span class="op">*</span> cosStart<span class="op">,</span> yTop<span class="op">,</span> outerRadius <span class="op">*</span> sinStart)<span class="op">;</span></span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t_out_end <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(outerRadius <span class="op">*</span> cosEnd<span class="op">,</span> yTop<span class="op">,</span> outerRadius <span class="op">*</span> sinEnd)<span class="op">;</span></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> t_in_end <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Vector3</span>(innerRadius <span class="op">*</span> cosEnd<span class="op">,</span> yTop<span class="op">,</span> innerRadius <span class="op">*</span> sinEnd)<span class="op">;</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 1. Top face</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(t_in_start<span class="op">,</span> t_out_start<span class="op">,</span> t_out_end<span class="op">,</span> t_in_end)<span class="op">;</span></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 2. Bottom face (reversed winding for downward normal)</span></span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(b_in_end<span class="op">,</span> b_out_end<span class="op">,</span> b_out_start<span class="op">,</span> b_in_start)<span class="op">;</span></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 3. Front riser face (thetaStart)</span></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(b_in_start<span class="op">,</span> b_out_start<span class="op">,</span> t_out_start<span class="op">,</span> t_in_start)<span class="op">;</span></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 4. Back face (thetaEnd)</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(b_out_end<span class="op">,</span> b_in_end<span class="op">,</span> t_in_end<span class="op">,</span> t_out_end)<span class="op">;</span></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 5. Outer edge face</span></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(b_out_start<span class="op">,</span> b_out_end<span class="op">,</span> t_out_end<span class="op">,</span> t_out_start)<span class="op">;</span></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a>    <span class="co">// 6. Inner edge face</span></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pushQuad</span>(b_in_end<span class="op">,</span> b_in_start<span class="op">,</span> t_in_start<span class="op">,</span> t_in_end)<span class="op">;</span></span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">setAttribute</span>(<span class="st">&#39;position&#39;</span><span class="op">,</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">BufferAttribute</span>(positions<span class="op">,</span> <span class="dv">3</span>))<span class="op">;</span></span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a>  geometry<span class="op">.</span><span class="fu">computeVertexNormals</span>()<span class="op">;</span></span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> geometry<span class="op">;</span></span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h3 id="instantiation-and-usage">Instantiation and Usage</h3>
+<p>Assign standard materials to the generated geometry and add the mesh
+directly to a scene:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> staircaseGeo <span class="op">=</span> <span class="fu">createSpiralStaircaseGeometry</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">innerRadius</span><span class="op">:</span> <span class="fl">0.8</span><span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">outerRadius</span><span class="op">:</span> <span class="fl">3.0</span><span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stepCount</span><span class="op">:</span> <span class="dv">40</span><span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">totalHeight</span><span class="op">:</span> <span class="fl">8.0</span><span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">totalAngle</span><span class="op">:</span> <span class="bu">Math</span><span class="op">.</span><span class="cn">PI</span> <span class="op">*</span> <span class="dv">3</span><span class="op">,</span> <span class="co">// 1.5 full turns</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">stepOverlap</span><span class="op">:</span> <span class="fl">1.15</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> material <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">MeshStandardMaterial</span>({</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">color</span><span class="op">:</span> <span class="bn">0x808080</span><span class="op">,</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">roughness</span><span class="op">:</span> <span class="fl">0.4</span><span class="op">,</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">metalness</span><span class="op">:</span> <span class="fl">0.1</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> staircaseMesh <span class="op">=</span> <span class="kw">new</span> THREE<span class="op">.</span><span class="fu">Mesh</span>(staircaseGeo<span class="op">,</span> material)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>scene<span class="op">.</span><span class="fu">add</span>(staircaseMesh)<span class="op">;</span></span></code></pre></div>
+<p>By generating all steps within a single <code>BufferGeometry</code>
+and calling <code>computeVertexNormals()</code>, the GPU processes the
+staircase in a single draw call with accurate lighting across all tread
+and riser surfaces.</p></article>
+        <div id="comments-container"></div>
+
+        <script>
+            const utterancesScript = document.createElement('script');
+            
+            utterancesScript.setAttribute('src', 'https://utteranc.es/client.js');
+            utterancesScript.setAttribute('repo', 'salivity/three.js'); 
+            utterancesScript.setAttribute('issue-term', 'pathname'); 
+            utterancesScript.setAttribute('theme', localStorage.getItem('theme') === 'dark' ? 'github-dark' : 'github-light'); 
+            utterancesScript.setAttribute('crossorigin', 'anonymous');
+            utterancesScript.async = true;
+
+            document.getElementById('comments-container').appendChild(utterancesScript);
+        </script>
+    
+    </main>
+    <footer>
+        <nav>
+            <ul class="social-links">
+            </ul>
+        </nav>
+        <nav>
+            <ul class="footer-links">
+                <li><a href="/three.js/privacy-policy">Privacy Policy</a></li>
+                <li><a href="/three.js/terms-and-conditions">Terms and Conditions</a></li>
+            </ul>
+        </nav>
+        <div class="copyright">
+            Copyright &copy; <span id="current-year"></span>
+        </div>
+    </footer>
+</body>
+</html>
