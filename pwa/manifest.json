@@ -1,0 +1,22 @@
+{
+  "short_name": "three.js",
+  "name": "three.js",
+  "icons": [
+    {
+      "src": "/three.js/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/three.js/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "https://salivity.github.io/three.js",
+  "background_color": "#F0F4F8",
+  "theme_color": "#F0F4F8",
+  "display": "standalone",
+  "orientation": "portrait"
+}
